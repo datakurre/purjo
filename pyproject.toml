@@ -1,0 +1,58 @@
+[project]
+name = "operaton-robot-runner"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+authors = [
+    {name = "Asko Soukka", email = "asko.soukka@iki.fi"},
+]
+license = {text = "Apache Software License" }
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+]
+requires-python = ">= 3.9"
+dependencies =[
+    "uvicorn>=0.32.1",
+    "typer>=0.15.1",
+    "operaton-tasks",
+    "robotframework>=7.1.1",
+    "javaobj-py3>=0.4.4",
+    "pillow>=11.0.0",
+    "pyyaml>=6.0.2",
+]
+
+[project.scripts]
+operaton-robot-runner= "operaton_robot_runner.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/operaton_robot_runner"]
+
+
+[dependency-groups]
+dev = [
+    "black>=24.10.0",
+    "flake8>=7.1.1",
+    "isort>=5.13.2",
+    "mypy>=1.13.0",
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+]
+
+[tool.isort]
+force_alphabetical_sort_within_sections = true
+force_single_line = true
+from_first = true
+line_length = 200
+lines_after_imports = 2
+lines_between_types = 0
+no_sections = true
+
+[tool.uv.sources]
+operaton-tasks = { git = "https://github.com/datakurre/operaton-tasks.git" }
