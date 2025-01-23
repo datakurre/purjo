@@ -1,4 +1,5 @@
 from robot.errors import DataError
+from robot.parsing.model.statements import Statement
 from robot.running import TestDefaults
 from robot.running import TestSuite
 from robot.running.builder.parsers import RobotParser as BaseParser
@@ -28,6 +29,11 @@ def set_bpmn_process(self, name, value):
 VariableScopes.set_bpmn = set_bpmn_task
 VariableScopes.set_bpmn_task = set_bpmn_task
 VariableScopes.set_bpmn_process = set_bpmn_process
+
+Statement.statement_handlers["VAR"].options["scope"] = tuple(
+    list(Statement.statement_handlers["VAR"].options["scope"])  # type: ignore
+    + ["BPMN", "BPMN:TASK", "BPMN:PROCESS"]
+)
 
 
 @Body.register
