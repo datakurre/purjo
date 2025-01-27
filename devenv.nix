@@ -27,8 +27,10 @@
   packages = [
     pkgs.entr
     pkgs.findutils
+    pkgs.git
     pkgs.gnumake
     pkgs.openssl
+    pkgs.zip
   ];
 
   dotenv.disableHint = true;
@@ -40,7 +42,7 @@
     export REPO_ROOT=$(git rev-parse --show-toplevel)
   '';
 
-  processes.runner.exec = "make -s watch";
+  # processes.runner.exec = "make -s watch";
 
   enterTest = ''
     wait_for_port 8080 60
