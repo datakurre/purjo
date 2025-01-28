@@ -25,7 +25,7 @@ import re
 
 
 async def run(
-    program: str, args: List[str], cwd: str, env: Dict[str, str]
+    program: str, args: List[str], cwd: Path, env: Dict[str, str]
 ) -> Tuple[int, bytes, bytes]:
     proc = await asyncio.create_subprocess_exec(
         program,
@@ -106,7 +106,7 @@ def create_task(
                         working_dir,
                         robot_dir,
                     ],
-                    working_dir,
+                    Path(working_dir),
                     {"BPMN_TASK_SCOPE": str(task_variables_file), "UV_NO_SYNC": "0"},
                 )
                 assert return_code == 0, lazydecode(stdout + stderr)

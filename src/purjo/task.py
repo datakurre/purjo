@@ -54,7 +54,7 @@ async def robot_runner(task: LockedExternalTaskDto) -> ExternalTaskComplete:
                 working_dir,
                 robot_dir,
             ],
-            working_dir,
+            Path(working_dir),
             {"BPMN_TASK_SCOPE": str(task_variables_file)},
         )
         assert return_code == 0, lazydecode(stdout + stderr)

@@ -5,6 +5,7 @@ from operaton.tasks import settings
 from operaton.tasks import task
 from pathlib import Path
 from purjo.runner import create_task
+from purjo.runner import run
 from pydantic import FilePath
 from typing import List
 from typing import Optional
@@ -60,6 +61,54 @@ def cli_serve(
     asyncio.get_event_loop().run_until_complete(external_task_worker(handlers=handlers))
 
 
+@cli.command(name="init")
+def cli_init():
+    """Initialize a new robot.zip package."""
+    cwd_path = Path(os.getcwd())
+    pyproject_path = cwd_path / "pyproject.toml"
+    assert not pyproject_path.exists()
+
+    if not shutil.which("uv"):
+        raise FileNotFoundError("The 'uv' executable is not found in the system PATH.")
+
+    async def init():
+        await run(
+            "uv",
+            [
+                "init",
+                "--no-workspace",
+            ],
+            cwd_path,
+            {
+                "UV_NO_SYNC": "0",
+            },
+        )
+        (cwd_path / "hello.py").unlink()
+        (cwd_path / "pyproject.toml").write_text(
+            (cwd_path / "pyproject.toml").read_text()
+            + """
+["bpmn:serviceTask"]
+My Topic = { name = "My Task" }
+"""
+        )
+        (cwd_path / "hello.robot").write_text(
+            """\
+*** Variables ***
+
+${BPMN_SCOPE}  local
+${name}        World!
+
+*** Tasks ***
+
+My Task
+    VAR    ${message}   Hello ${name}!   scope=${BPMN_SCOPE}
+"""
+        )
+        (cwd_path / ".wrapignore").touch()
+
+    asyncio.run(init())
+
+
 @cli.command(name="wrap")
 def cli_wrap():
     """Wrap the current directory into a robot.zip package."""
@@ -69,11 +118,13 @@ def cli_wrap():
     spec = pathspec.GitIgnoreSpec.from_lines(
         spec_text.splitlines()
         + [
-            ".venv/",
+            ".gitignore",
+            ".python-version",
             "log.html",
-            "report.html",
             "output.xml",
+            "report.html",
             "robot.zip",
+            ".venv/",
             ".wrapignore",
         ]
     )
