@@ -63,7 +63,7 @@ def cli_serve(
 
 @cli.command(name="init")
 def cli_init():
-    """Initialize a new robot.zip package."""
+    """Initialize a new robot package."""
     cwd_path = Path(os.getcwd())
     pyproject_path = cwd_path / "pyproject.toml"
     assert not pyproject_path.exists()
