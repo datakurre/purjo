@@ -4,12 +4,12 @@ from operaton.tasks.types import ExternalTaskComplete
 from operaton.tasks.types import LockedExternalTaskDto
 from operaton.tasks.types import VariableValueDto
 from operaton.tasks.types import VariableValueType
-from operaton_robot_runner.config import settings
-from operaton_robot_runner.runner import run
-from operaton_robot_runner.utils import json_serializer
-from operaton_robot_runner.utils import lazydecode
-from operaton_robot_runner.utils import py_from_operaton
 from pathlib import Path
+from purjo.config import settings
+from purjo.runner import run
+from purjo.utils import json_serializer
+from purjo.utils import lazydecode
+from purjo.utils import py_from_operaton
 from tempfile import TemporaryDirectory
 import asyncio
 import importlib.resources
@@ -24,7 +24,7 @@ async def robot_runner(task: LockedExternalTaskDto) -> ExternalTaskComplete:
     variables = py_from_operaton(task.variables)
     suite = variables.pop("suite")
     robot_parser = (
-        importlib.resources.files("operaton_robot_runner.data") / "RobotParser.py"
+        importlib.resources.files("purjo.data") / "RobotParser.py"
     ).read_text()
     with TemporaryDirectory() as robot_dir, TemporaryDirectory() as working_dir:
         (Path(robot_dir) / "__init__.robot").write_text("")

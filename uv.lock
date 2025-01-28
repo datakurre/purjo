@@ -629,52 +629,9 @@ wheels = [
 ]
 
 [[package]]
-name = "operaton-robot-runner"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "javaobj-py3" },
-    { name = "operaton-tasks" },
-    { name = "pillow" },
-    { name = "robotframework" },
-    { name = "typer" },
-    { name = "uvicorn" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "black" },
-    { name = "flake8" },
-    { name = "isort" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "javaobj-py3", specifier = ">=0.4.4" },
-    { name = "operaton-tasks", git = "https://github.com/datakurre/operaton-tasks.git" },
-    { name = "pillow", specifier = ">=11.0.0" },
-    { name = "robotframework", specifier = ">=7.1.1" },
-    { name = "typer", specifier = ">=0.15.1" },
-    { name = "uvicorn", specifier = ">=0.32.1" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "black", specifier = ">=24.10.0" },
-    { name = "flake8", specifier = ">=7.1.1" },
-    { name = "isort", specifier = ">=5.13.2" },
-    { name = "mypy", specifier = ">=1.13.0" },
-    { name = "pytest", specifier = ">=8.3.4" },
-    { name = "pytest-cov", specifier = ">=6.0.0" },
-]
-
-[[package]]
 name = "operaton-tasks"
 version = "0.1.0"
-source = { git = "https://github.com/datakurre/operaton-tasks.git#d542d50538fa92d4da2bc52f494a7587e0879efd" }
+source = { git = "https://github.com/datakurre/operaton-tasks.git#482f2ba855a6fab1c3c681c8a287ea922b4de1c5" }
 dependencies = [
     { name = "aiohttp" },
     { name = "fastapi" },
@@ -888,6 +845,49 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d7/fe/2d18612096ed2212cfef821b6fccdba5d52efc1d64511c206c5c16be28fd/propcache-0.2.1-cp39-cp39-win32.whl", hash = "sha256:9caac6b54914bdf41bcc91e7eb9147d331d29235a7c967c150ef5df6464fd1bb", size = 40866 },
     { url = "https://files.pythonhosted.org/packages/24/2e/b5134802e7b57c403c7b73c7a39374e7a6b7f128d1968b4a4b4c0b700250/propcache-0.2.1-cp39-cp39-win_amd64.whl", hash = "sha256:92fc4500fcb33899b05ba73276dfb684a20d31caa567b7cb5252d48f896a91b1", size = 44975 },
     { url = "https://files.pythonhosted.org/packages/41/b6/c5319caea262f4821995dca2107483b94a3345d4607ad797c76cb9c36bcc/propcache-0.2.1-py3-none-any.whl", hash = "sha256:52277518d6aae65536e9cea52d4e7fd2f7a66f4aa2d30ed3f2fcea620ace3c54", size = 11818 },
+]
+
+[[package]]
+name = "purjo"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "javaobj-py3" },
+    { name = "operaton-tasks" },
+    { name = "pillow" },
+    { name = "robotframework" },
+    { name = "typer" },
+    { name = "uvicorn" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "black" },
+    { name = "flake8" },
+    { name = "isort" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "javaobj-py3", specifier = ">=0.4.4" },
+    { name = "operaton-tasks", git = "https://github.com/datakurre/operaton-tasks.git" },
+    { name = "pillow", specifier = ">=11.0.0" },
+    { name = "robotframework", specifier = ">=7.1.1" },
+    { name = "typer", specifier = ">=0.15.1" },
+    { name = "uvicorn", specifier = ">=0.32.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "black", specifier = ">=24.10.0" },
+    { name = "flake8", specifier = ">=7.1.1" },
+    { name = "isort", specifier = ">=5.13.2" },
+    { name = "mypy", specifier = ">=1.13.0" },
+    { name = "pytest", specifier = ">=8.3.4" },
+    { name = "pytest-cov", specifier = ">=6.0.0" },
 ]
 
 [[package]]
