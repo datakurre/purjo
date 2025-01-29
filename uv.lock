@@ -314,6 +314,15 @@ wheels = [
 ]
 
 [[package]]
+name = "file-magic"
+version = "0.4.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/d0/c6de1473a87dc74bbc694490c627d47c57b49d2f62be3c6c2871512d3c07/file-magic-0.4.1.tar.gz", hash = "sha256:a91d1483117f7ed48cd0238ad9be36b04824d57e9c38ea7523113989e81b9c53", size = 5656 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/13/de7c05b7b64f4e41cca7385642884490e2fa704dc1e695d1429119caa9c2/file_magic-0.4.1-py3-none-any.whl", hash = "sha256:cb9496a1656baf75cadd771479f63b53081095e968d0be72b9b7a7ed538e4fb8", size = 6298 },
+]
+
+[[package]]
 name = "flake8"
 version = "7.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -845,11 +854,13 @@ name = "purjo"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "file-magic" },
     { name = "javaobj-py3" },
     { name = "operaton-tasks" },
     { name = "pillow" },
     { name = "robotframework" },
     { name = "typer" },
+    { name = "tzlocal" },
     { name = "uvicorn" },
 ]
 
@@ -865,11 +876,13 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "file-magic", specifier = ">=0.4.1" },
     { name = "javaobj-py3", specifier = ">=0.4.4" },
     { name = "operaton-tasks", git = "https://github.com/datakurre/operaton-tasks.git" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "robotframework", specifier = ">=7.1.1" },
     { name = "typer", specifier = ">=0.15.1" },
+    { name = "tzlocal", specifier = ">=5.2" },
     { name = "uvicorn", specifier = ">=0.32.1" },
 ]
 
@@ -1188,6 +1201,27 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/df/db/f35a00659bc03fec321ba8bce9420de607a1d37f8342eee1863174c69557/typing_extensions-4.12.2.tar.gz", hash = "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8", size = 85321 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl", hash = "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d", size = 37438 },
+]
+
+[[package]]
+name = "tzdata"
+version = "2025.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/0f/fa4723f22942480be4ca9527bbde8d43f6c3f2fe8412f00e7f5f6746bc8b/tzdata-2025.1.tar.gz", hash = "sha256:24894909e88cdb28bd1636c6887801df64cb485bd593f2fd83ef29075a81d694", size = 194950 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0f/dd/84f10e23edd882c6f968c21c2434fe67bd4a528967067515feca9e611e5e/tzdata-2025.1-py2.py3-none-any.whl", hash = "sha256:7e127113816800496f027041c570f50bcd464a020098a3b6b199517772303639", size = 346762 },
+]
+
+[[package]]
+name = "tzlocal"
+version = "5.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzdata", marker = "platform_system == 'Windows'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/04/d3/c19d65ae67636fe63953b20c2e4a8ced4497ea232c43ff8d01db16de8dc0/tzlocal-5.2.tar.gz", hash = "sha256:8d399205578f1a9342816409cc1e46a93ebd5755e39ea2d85334bea911bf0e6e", size = 30201 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/97/3f/c4c51c55ff8487f2e6d0e618dba917e3c3ee2caae6cf0fbb59c9b1876f2e/tzlocal-5.2-py3-none-any.whl", hash = "sha256:49816ef2fe65ea8ac19d19aa7a1ae0551c834303d5014c6d5a62e4cbda8047b8", size = 17859 },
 ]
 
 [[package]]

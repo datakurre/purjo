@@ -1,10 +1,12 @@
 from io import BytesIO
 from operaton.tasks.types import VariableValueDto
 from operaton.tasks.types import VariableValueType
+from pathlib import Path
 from PIL import Image
 from pydantic import BaseModel
 from typing import Any
 from typing import Dict
+from typing import List
 from typing import Optional
 from urllib.parse import unquote
 import base64
@@ -15,6 +17,35 @@ import json
 import os
 import pprint
 import re
+import tzlocal
+
+
+try:
+    import magic
+
+    HAS_MAGIC = True
+except (ImportError, TypeError, AttributeError):
+    import mimetypes
+
+    HAS_MAGIC = False
+
+
+def from_iso_to_dt(iso_str: str) -> datetime.datetime:
+    """Convert ISO string to datetime."""
+    dt = datetime.datetime.fromisoformat(iso_str)
+    if dt.tzinfo is None:  # If naive, assign local timezone
+        local_tz = tzlocal.get_localzone()
+        dt = dt.replace(tzinfo=local_tz)
+    return dt
+
+
+def mimetype_from_filename(path: Path) -> str:
+    """Get mimetype from filename."""
+    if HAS_MAGIC:
+        return magic.detect_from_filename(path).mime_type
+    else:
+        mime_type, _ = mimetypes.guess_type(path)
+        return mime_type or "text/plain"
 
 
 class ValueInfo(BaseModel):
@@ -76,6 +107,78 @@ def py_from_operaton(
     }
 
 
+def operaton_value_from_py(
+    value: Any,
+    sandbox: List[Path],
+) -> VariableValueDto:
+    if value is None:
+        return VariableValueDto(value=None, type=VariableValueType.Null)
+    elif isinstance(value, list):
+        return VariableValueDto(
+            value=json.dumps(value, default=json_serializer),
+            type=VariableValueType.Json,
+        )
+    elif isinstance(value, list):
+        return VariableValueDto(
+            value=json.dumps(value, default=json_serializer),
+            type=VariableValueType.Json,
+        )
+    elif isinstance(value, bool):
+        return VariableValueDto(value=value, type=VariableValueType.Boolean)
+    elif isinstance(value, float):
+        return VariableValueDto(value=value, type=VariableValueType.Double)
+    elif isinstance(value, int):
+        if -(2**31) <= value <= (2**31 - 1):
+            return VariableValueDto(value=value, type=VariableValueType.Integer)
+        else:
+            return VariableValueDto(value=value, type=VariableValueType.Long)
+    elif isinstance(value, str):
+        for path in sandbox:
+            try:
+                # Test for datetime
+                return VariableValueDto(
+                    value=dt_to_operaton(from_iso_to_dt(value)),
+                    type=VariableValueType.Date,
+                )
+            except ValueError:
+                # Not datetime
+                pass
+            if Path(value).is_file() and value.startswith(f"{path}"):
+                mime = mimetype_from_filename(Path(value))
+                return VariableValueDto(
+                    value=base64.b64encode(Path(value).read_bytes()),
+                    type=VariableValueType.File,
+                    valueInfo={
+                        "filename": Path(value).name,
+                        "mimetype": mime,
+                        "mimeType": mime,
+                        "encoding": "utf-8",
+                    },
+                )
+            elif (path / value).is_file() and f"{path / value}".startswith(f"{path}"):
+                mime = mimetype_from_filename(path / value)
+                return VariableValueDto(
+                    value=base64.b64encode((path / value).read_bytes()),
+                    type=VariableValueType.File,
+                    valueInfo={
+                        "filename": (path / value).name,
+                        "mimetype": mime,
+                        "mimeType": mime,
+                        "encoding": "utf-8",
+                    },
+                )
+    return VariableValueDto(value=f"{value}", type=VariableValueType.String)
+
+
+def operaton_from_py(
+    variables: Dict[str, Any],
+    sandbox: List[Path],
+) -> Dict[str, VariableValueDto]:
+    return {
+        key: operaton_value_from_py(value, sandbox) for key, value in variables.items()
+    }
+
+
 def json_serializer(obj):
     if isinstance(obj, datetime.datetime):
         return obj.isoformat()
@@ -98,7 +201,7 @@ class lazydecode:
         return "\n".join([b.decode() for b in self.data])
 
 
-def inline_screenshots(file_path: str) -> None:
+def inline_screenshots(file_path: Path) -> None:
     data_str = ""
     data_bytes = b""
     mimetype = None
