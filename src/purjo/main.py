@@ -12,6 +12,7 @@ from typing import Optional
 from zipfile import ZipFile
 import aiohttp
 import asyncio
+import importlib.resources
 import json
 import os
 import pathspec
@@ -83,28 +84,36 @@ def cli_init():
                 "UV_NO_SYNC": "0",
             },
         )
+        await run(
+            "uv",
+            [
+                "add",
+                "robotframework",
+                "--no-sources",
+            ],
+            cwd_path,
+            {
+                "UV_NO_SYNC": "0",
+            },
+        )
         (cwd_path / "hello.py").unlink()
         (cwd_path / "pyproject.toml").write_text(
             (cwd_path / "pyproject.toml").read_text()
             + """
 ["bpmn:serviceTask"]
-My Topic = { name = "My Task" }
+"My Topic" = { name = "My Task" }
 """
+        )
+        (cwd_path / "hello.bpmn").write_text(
+            (importlib.resources.files("purjo.data") / "hello.bpmn").read_text()
         )
         (cwd_path / "hello.robot").write_text(
-            """\
-*** Variables ***
-
-${BPMN_SCOPE}  local
-${name}        World!
-
-*** Tasks ***
-
-My Task
-    VAR    ${message}   Hello ${name}!   scope=${BPMN_SCOPE}
-"""
+            (importlib.resources.files("purjo.data") / "hello.robot").read_text()
         )
-        (cwd_path / ".wrapignore").touch()
+        (cwd_path / "Hello.py").write_text(
+            (importlib.resources.files("purjo.data") / "Hello.py").read_text()
+        )
+        (cwd_path / ".wrapignore").write_text("*.bpmn\n")
 
     asyncio.run(init())
 

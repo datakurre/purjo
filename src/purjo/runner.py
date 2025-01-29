@@ -67,7 +67,14 @@ def create_task(
 ) -> Callable[[LockedExternalTaskDto], Coroutine[None, None, ExternalTaskComplete]]:
     async def execute_task(task: LockedExternalTaskDto) -> ExternalTaskComplete:
         async with semaphore:
-            variables = py_from_operaton(task.variables)
+            variables = py_from_operaton(task.variables) | {
+                "BPMN": "BPMN",
+                "BPMN_SCOPE": "BPMN",
+                "BPMN_TASK": "BPMN:TASK",
+                "BPMN_TASK_SCOPE": "BPMN:TASK",
+                "BPMN_PROCESS": "BPMN:PROCESS",
+                "BPMN_PROCESS_SCOPE": "BPMN:PROCESS",
+            }
             robot_parser = (
                 importlib.resources.files("purjo.data") / "RobotParser.py"
             ).read_text()
@@ -80,6 +87,8 @@ def create_task(
                 (Path(working_dir) / "RobotParser.py").write_text(robot_parser)
                 task_variables_file = Path(working_dir) / "task_variables.json"
                 task_variables_file.write_text("{}")
+                process_variables_file = Path(working_dir) / "process_variables.json"
+                process_variables_file.write_text("{}")
                 return_code, stdout, stderr = await run(
                     settings.UV_EXECUTABLE,
                     [
@@ -98,8 +107,6 @@ def create_task(
                         robot_dir,
                         "--parser",
                         "RobotParser",
-                        "--variable",
-                        "BPMN_SCOPE:BPMN",
                         "--variablefile",
                         "variables.json",
                         "--outputdir",
@@ -107,7 +114,11 @@ def create_task(
                         robot_dir,
                     ],
                     Path(working_dir),
-                    {"BPMN_TASK_SCOPE": str(task_variables_file), "UV_NO_SYNC": "0"},
+                    {
+                        "BPMN_TASK_SCOPE": str(task_variables_file),
+                        "BPMN_PROCESS_SCOPE": str(process_variables_file),
+                        "UV_NO_SYNC": "0",
+                    },
                 )
                 assert return_code == 0, lazydecode(stdout + stderr)
                 return ExternalTaskComplete(

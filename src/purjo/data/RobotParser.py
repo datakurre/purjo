@@ -12,6 +12,7 @@ import pathlib
 
 
 BPMN_TASK_SCOPE = "BPMN_TASK_SCOPE"
+BPMN_PROCESS_SCOPE = "BPMN_PROCESS_SCOPE"
 
 
 def set_bpmn_task(self, name, value):
@@ -23,7 +24,11 @@ def set_bpmn_task(self, name, value):
 
 
 def set_bpmn_process(self, name, value):
-    raise NotImplementedError()
+    assert BPMN_PROCESS_SCOPE in os.environ
+    path = pathlib.Path(os.environ[BPMN_PROCESS_SCOPE])
+    data = json.loads(path.read_text()) if path.exists() else {}
+    data[name[2:-1]] = value
+    path.write_text(json.dumps(data))
 
 
 VariableScopes.set_bpmn = set_bpmn_task
