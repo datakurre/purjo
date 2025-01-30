@@ -59,13 +59,13 @@ def cli_serve(
         with ZipFile(robot, "r") as fp:
             robot_toml = tomllib.loads(fp.read("pyproject.toml").decode("utf-8"))
             for topic, config in (robot_toml.get("bpmn:serviceTask") or {}).items():
-                task(topic)(create_task(config["name"], robot, semaphore))
+                task(topic)(create_task(config["name"], robot, on_fail, semaphore))
 
     asyncio.get_event_loop().run_until_complete(external_task_worker(handlers=handlers))
 
 
 @cli.command(name="init")
-def cli_init():
+def cli_init() -> None:
     """Initialize a new robot package."""
     cwd_path = Path(os.getcwd())
     pyproject_path = cwd_path / "pyproject.toml"
@@ -74,7 +74,7 @@ def cli_init():
     if not shutil.which("uv"):
         raise FileNotFoundError("The 'uv' executable is not found in the system PATH.")
 
-    async def init():
+    async def init() -> None:
         await run(
             "uv",
             [
@@ -121,7 +121,7 @@ def cli_init():
 
 
 @cli.command(name="wrap")
-def cli_wrap():
+def cli_wrap() -> None:
     """Wrap the current directory into a robot.zip package."""
     cwd_path = Path(os.getcwd())
     spec_path = cwd_path / ".wrapignore"
@@ -159,7 +159,7 @@ def bpmn_deploy(
     settings.ENGINE_REST_BASE_URL = base_url
     settings.ENGINE_REST_AUTHORIZATION = authorization
 
-    async def deploy():
+    async def deploy() -> None:
         async with operaton_session(headers={"Content-Type": None}) as session:
             form = aiohttp.FormData()
             for resource in resources:
@@ -189,7 +189,7 @@ def bpmn_start(
     settings.ENGINE_REST_BASE_URL = base_url
     settings.ENGINE_REST_AUTHORIZATION = authorization
 
-    async def start():
+    async def start() -> None:
         async with operaton_session() as session:
             async with session.post(
                 f"{base_url}/process-definition/key/{key}/start",

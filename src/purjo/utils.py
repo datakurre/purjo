@@ -14,20 +14,11 @@ import binascii
 import datetime
 import javaobj.v2 as javaobj  # type: ignore
 import json
+import mimetypes
 import os
 import pprint
 import re
 import tzlocal
-
-
-try:
-    import magic
-
-    HAS_MAGIC = True
-except (ImportError, TypeError, AttributeError):
-    import mimetypes
-
-    HAS_MAGIC = False
 
 
 def from_iso_to_dt(iso_str: str) -> datetime.datetime:
@@ -37,15 +28,6 @@ def from_iso_to_dt(iso_str: str) -> datetime.datetime:
         local_tz = tzlocal.get_localzone()
         dt = dt.replace(tzinfo=local_tz)
     return dt
-
-
-def mimetype_from_filename(path: Path) -> str:
-    """Get mimetype from filename."""
-    if HAS_MAGIC:
-        return magic.detect_from_filename(path).mime_type
-    else:
-        mime_type, _ = mimetypes.guess_type(path)
-        return mime_type or "text/plain"
 
 
 class ValueInfo(BaseModel):
@@ -144,7 +126,7 @@ def operaton_value_from_py(
                 # Not datetime
                 pass
             if Path(value).is_file() and value.startswith(f"{path}"):
-                mime = mimetype_from_filename(Path(value))
+                mime = mimetypes.guess_type(value)[0] or "text/plain"
                 return VariableValueDto(
                     value=base64.b64encode(Path(value).read_bytes()),
                     type=VariableValueType.File,
@@ -156,7 +138,7 @@ def operaton_value_from_py(
                     },
                 )
             elif (path / value).is_file() and f"{path / value}".startswith(f"{path}"):
-                mime = mimetype_from_filename(path / value)
+                mime = mimetypes.guess_type(path / value)[0] or "text/plain"
                 return VariableValueDto(
                     value=base64.b64encode((path / value).read_bytes()),
                     type=VariableValueType.File,
@@ -179,7 +161,7 @@ def operaton_from_py(
     }
 
 
-def json_serializer(obj):
+def json_serializer(obj: Any) -> str:
     if isinstance(obj, datetime.datetime):
         return obj.isoformat()
     raise TypeError(f"Type {type(obj)} not serializable")

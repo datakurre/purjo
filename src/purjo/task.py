@@ -66,7 +66,7 @@ async def robot_runner(task: LockedExternalTaskDto) -> ExternalTaskComplete:
                     "output": VariableValueDto(
                         value=(
                             task_variables_file.read_text()
-                            if task_variables_file.exists
+                            if task_variables_file.exists()
                             else "{}"
                         ),
                         type=VariableValueType.Json,
