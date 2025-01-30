@@ -314,15 +314,6 @@ wheels = [
 ]
 
 [[package]]
-name = "file-magic"
-version = "0.4.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a3/d0/c6de1473a87dc74bbc694490c627d47c57b49d2f62be3c6c2871512d3c07/file-magic-0.4.1.tar.gz", hash = "sha256:a91d1483117f7ed48cd0238ad9be36b04824d57e9c38ea7523113989e81b9c53", size = 5656 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/13/de7c05b7b64f4e41cca7385642884490e2fa704dc1e695d1429119caa9c2/file_magic-0.4.1-py3-none-any.whl", hash = "sha256:cb9496a1656baf75cadd771479f63b53081095e968d0be72b9b7a7ed538e4fb8", size = 6298 },
-]
-
-[[package]]
 name = "flake8"
 version = "7.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -632,14 +623,18 @@ wheels = [
 
 [[package]]
 name = "operaton-tasks"
-version = "0.1.0"
-source = { git = "https://github.com/datakurre/operaton-tasks.git#482f2ba855a6fab1c3c681c8a287ea922b4de1c5" }
+version = "1.0.0a1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "fastapi" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "starlette" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/26/ae/fbf6a8d10508e111980d984b065d922904acc60957cf18f01a31528fa2f7/operaton_tasks-1.0.0a1.tar.gz", hash = "sha256:f1d203fdebbd3ec463fd6841295559b1a4e234733335aec9b699cc38819d33ef", size = 1229490 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/af/46/41afc496fca82defc9d7681697692ce7f8451799166cb7b4eea67fcdbe6f/operaton_tasks-1.0.0a1-py3-none-any.whl", hash = "sha256:404029d69f5abb8a9e0524460fff0b219e258664f10f896f88a1830413e44df5", size = 58665 },
 ]
 
 [[package]]
@@ -854,7 +849,6 @@ name = "purjo"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "file-magic" },
     { name = "javaobj-py3" },
     { name = "operaton-tasks" },
     { name = "pillow" },
@@ -876,9 +870,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "file-magic", specifier = ">=0.4.1" },
     { name = "javaobj-py3", specifier = ">=0.4.4" },
-    { name = "operaton-tasks", git = "https://github.com/datakurre/operaton-tasks.git" },
+    { name = "operaton-tasks" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "robotframework", specifier = ">=7.1.1" },
     { name = "typer", specifier = ">=0.15.1" },

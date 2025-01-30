@@ -53,6 +53,3 @@ line_length = 200
 lines_after_imports = 2
 lines_between_types = 0
 no_sections = true
-
-[tool.uv.sources]
-operaton-tasks = { git = "https://github.com/datakurre/operaton-tasks.git" }

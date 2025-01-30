@@ -14,15 +14,7 @@
   package.operaton.path = ./fixture;
 
   languages.python.interpreter = pkgs.python312;
-  languages.python.pyprojectOverrides = final: prev: {
-    "operaton-tasks" = prev."operaton-tasks".overrideAttrs (old: {
-      nativeBuildInputs =
-        old.nativeBuildInputs
-        ++ final.resolveBuildSystem ({
-          "hatchling" = [ ];
-        });
-    });
-  };
+  languages.python.pyprojectOverrides = final: prev: { };
 
   packages = [
     pkgs.entr
