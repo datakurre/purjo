@@ -1,4 +1,7 @@
 from io import BytesIO
+from operaton.tasks import operaton_session
+from operaton.tasks import settings as operaton_settings
+from operaton.tasks.types import LockedExternalTaskDto
 from operaton.tasks.types import VariableValueDto
 from operaton.tasks.types import VariableValueType
 from pathlib import Path
@@ -75,8 +78,28 @@ def deserialize(
     raise NotImplementedError(info.serializationDataFormat)
 
 
-def py_from_operaton(
-    variables: Optional[Dict[str, VariableValueDto]]
+async def fetch(
+    task: LockedExternalTaskDto, name: str, filename: str, sandbox: Path
+) -> Path:
+    """Fetch file from Operaton."""
+    path = sandbox / "files" / name
+    async with operaton_session(
+        headers={"Content-Type": None, "Accept": "application/octet-stream"}
+    ) as session:
+        resp = await session.get(
+            f"{operaton_settings.ENGINE_REST_BASE_URL}/execution/{task.executionId}/localVariables/{name}/data",
+        )
+        resp.raise_for_status()
+        path.mkdir(parents=True, exist_ok=True)
+        with open((path / filename), "wb") as f:
+            f.write(await resp.read())
+    return path / filename
+
+
+async def py_from_operaton(
+    variables: Optional[Dict[str, VariableValueDto]],
+    task: Optional[LockedExternalTaskDto] = None,
+    sandbox: Optional[Path] = None,
 ) -> Dict[str, Any]:
     return {
         key: deserialize(
@@ -86,12 +109,27 @@ def py_from_operaton(
         )
         for key, variable in (variables.items() if variables is not None else ())
         if variable.type not in (VariableValueType.File, VariableValueType.Bytes)
-    }
+    } | (
+        {
+            key: (
+                await fetch(
+                    task,
+                    key,
+                    variable.valueInfo["filename"] if variable.valueInfo else key,
+                    sandbox,
+                )
+            )
+            for key, variable in (variables.items() if variables is not None else ())
+            if variable.type in (VariableValueType.File,)
+        }
+        if task is not None and sandbox is not None
+        else {}
+    )
 
 
 def operaton_value_from_py(
     value: Any,
-    sandbox: List[Path],
+    sandbox: Optional[List[Path]] = None,
 ) -> VariableValueDto:
     if value is None:
         return VariableValueDto(value=None, type=VariableValueType.Null)
@@ -115,7 +153,7 @@ def operaton_value_from_py(
         else:
             return VariableValueDto(value=value, type=VariableValueType.Long)
     elif isinstance(value, str):
-        for path in sandbox:
+        for path in sandbox or []:
             try:
                 # Test for datetime
                 return VariableValueDto(
@@ -154,7 +192,7 @@ def operaton_value_from_py(
 
 def operaton_from_py(
     variables: Dict[str, Any],
-    sandbox: List[Path],
+    sandbox: Optional[List[Path]] = None,
 ) -> Dict[str, VariableValueDto]:
     return {
         key: operaton_value_from_py(value, sandbox) for key, value in variables.items()
@@ -164,6 +202,8 @@ def operaton_from_py(
 def json_serializer(obj: Any) -> str:
     if isinstance(obj, datetime.datetime):
         return obj.isoformat()
+    elif isinstance(obj, Path):
+        return f"{obj.absolute()}"
     raise TypeError(f"Type {type(obj)} not serializable")
 
 

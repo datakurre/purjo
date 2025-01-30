@@ -21,7 +21,7 @@ SEMAPHORE = asyncio.Semaphore(settings.TASKS_MAX_JOBS)
 
 @task(settings.TASKS_TOPIC, localVariables=True)
 async def robot_runner(task: LockedExternalTaskDto) -> ExternalTaskComplete:
-    variables = py_from_operaton(task.variables)
+    variables = await py_from_operaton(task.variables)
     suite = variables.pop("suite")
     robot_parser = (
         importlib.resources.files("purjo.data") / "RobotParser.py"

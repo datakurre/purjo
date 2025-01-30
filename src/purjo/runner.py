@@ -83,18 +83,20 @@ def create_task(
         task: LockedExternalTaskDto,
     ) -> Union[ExternalTaskComplete, ExternalTaskFailure]:
         async with semaphore:
-            variables = py_from_operaton(task.variables) | {
-                "BPMN": "BPMN",
-                "BPMN_SCOPE": "BPMN",
-                "BPMN_TASK": "BPMN:TASK",
-                "BPMN_TASK_SCOPE": "BPMN:TASK",
-                "BPMN_PROCESS": "BPMN:PROCESS",
-                "BPMN_PROCESS_SCOPE": "BPMN:PROCESS",
-            }
             robot_parser = (
                 importlib.resources.files("purjo.data") / "RobotParser.py"
             ).read_text()
             with TemporaryDirectory() as robot_dir, TemporaryDirectory() as working_dir:
+                variables = await py_from_operaton(
+                    task.variables, task, Path(working_dir)
+                ) | {
+                    "BPMN": "BPMN",
+                    "BPMN_SCOPE": "BPMN",
+                    "BPMN_TASK": "BPMN:TASK",
+                    "BPMN_TASK_SCOPE": "BPMN:TASK",
+                    "BPMN_PROCESS": "BPMN:PROCESS",
+                    "BPMN_PROCESS_SCOPE": "BPMN:PROCESS",
+                }
                 with ZipFile(robot, "r") as fp:
                     fp.extractall(robot_dir)
                 (Path(working_dir) / "variables.json").write_text(
@@ -204,7 +206,7 @@ def create_task(
                     )
                 else:
                     async with operaton_session() as session:
-                        await session.post(
+                        resp = await session.post(
                             f"{operaton_settings.ENGINE_REST_BASE_URL}/execution/{task.executionId}/localVariables",
                             data=PatchVariablesDto(
                                 modifications={
@@ -213,6 +215,7 @@ def create_task(
                                 }
                             ).model_dump_json(),
                         )
+                        resp.raise_for_status()
                     fail_reason_ = (
                         fail_reason(output_xml_path) if output_xml_path.exists() else ""
                     )

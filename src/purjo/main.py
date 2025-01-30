@@ -174,7 +174,6 @@ def bpmn_deploy(
                 data=form,
             ) as response:
                 print(json.dumps(await response.json(), indent=2))
-                response.raise_for_status()
 
     asyncio.run(deploy())
 
@@ -196,7 +195,6 @@ def bpmn_start(
                 json={},
             ) as response:
                 print(json.dumps(await response.json(), indent=2))
-                response.raise_for_status
 
     asyncio.run(start())
 
