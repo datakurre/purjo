@@ -1,6 +1,6 @@
 [project]
 name = "purjo"
-version = "0.1.0"
+version = "1.0.0a1"
 description = "UV based Robot Framework external service task runner for Operaton"
 readme = "README.md"
 authors = [
@@ -8,7 +8,7 @@ authors = [
 ]
 license = {text = "Apache Software License" }
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
@@ -33,7 +33,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/purjo"]
-
 
 [dependency-groups]
 dev = [
