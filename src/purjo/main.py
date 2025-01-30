@@ -4,6 +4,7 @@ from operaton.tasks import operaton_session
 from operaton.tasks import settings
 from operaton.tasks import task
 from pathlib import Path
+from purjo.config import OnFail
 from purjo.runner import create_task
 from purjo.runner import run
 from pydantic import FilePath
@@ -35,6 +36,7 @@ def cli_serve(
     max_jobs: int = 1,
     worker_id: str = "operaton-robot-runner",
     log_level: str = "DEBUG",
+    on_fail: OnFail = OnFail.FAIL,
 ) -> None:
     """
     Serve robot.zip packages as BPMN service tasks.

@@ -1,4 +1,10 @@
 from pydantic_settings import BaseSettings
+import enum
+
+
+class OnFail(str, enum.Enum):
+    FAIL = "FAIL"
+    COMPLETE = "COMPLETE"
 
 
 class Settings(BaseSettings):

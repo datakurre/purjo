@@ -10,6 +10,7 @@ from operaton.tasks.types import PatchVariablesDto
 from operaton.tasks.types import VariableValueDto
 from operaton.tasks.types import VariableValueType
 from pathlib import Path
+from purjo.config import OnFail
 from purjo.config import settings
 from purjo.utils import inline_screenshots
 from purjo.utils import json_serializer
@@ -72,6 +73,7 @@ def fail_reason(path: Path) -> str:
 def create_task(
     name: str,
     robot: FilePath,
+    on_fail: OnFail,
     semaphore: asyncio.Semaphore,
 ) -> Callable[
     [LockedExternalTaskDto],
@@ -173,7 +175,25 @@ def create_task(
                             "encoding": "utf-8",
                         },
                     )
-                if return_code == 0:
+                if return_code == 0 or on_fail == OnFail.COMPLETE:
+                    if return_code != 0:
+                        fail_reason_ = (
+                            fail_reason(output_xml_path)
+                            if output_xml_path.exists()
+                            else ""
+                        )
+                        task_variables.update(
+                            {
+                                "errorMessage": VariableValueDto(
+                                    value=fail_reason_,
+                                    type=VariableValueType.String,
+                                ),
+                                "errorDetails": VariableValueDto(
+                                    value=(stdout + stderr).decode("utf-8"),
+                                    type=VariableValueType.String,
+                                ),
+                            }
+                        )
                     return ExternalTaskComplete(
                         task=task,
                         response=CompleteExternalTaskDto(
