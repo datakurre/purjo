@@ -2,6 +2,7 @@ from operaton.tasks import operaton_session
 from operaton.tasks.config import logger
 from operaton.tasks.config import settings as operaton_settings
 from operaton.tasks.types import CompleteExternalTaskDto
+from operaton.tasks.types import ExternalTaskBpmnError
 from operaton.tasks.types import ExternalTaskComplete
 from operaton.tasks.types import ExternalTaskFailure
 from operaton.tasks.types import ExternalTaskFailureDto
@@ -90,12 +91,8 @@ def create_task(
                 variables = await py_from_operaton(
                     task.variables, task, Path(working_dir)
                 ) | {
-                    "BPMN": "BPMN",
-                    "BPMN_SCOPE": "BPMN",
-                    "BPMN_TASK": "BPMN:TASK",
-                    "BPMN_TASK_SCOPE": "BPMN:TASK",
-                    "BPMN_PROCESS": "BPMN:PROCESS",
-                    "BPMN_PROCESS_SCOPE": "BPMN:PROCESS",
+                    "BPMN:PROCESS": "BPMN:PROCESS",
+                    "BPMN:TASK": "BPMN:TASK",
                 }
                 with ZipFile(robot, "r") as fp:
                     fp.extractall(robot_dir)
@@ -133,9 +130,10 @@ def create_task(
                     ],
                     Path(working_dir),
                     {
-                        "BPMN_TASK_SCOPE": str(task_variables_file),
                         "BPMN_PROCESS_SCOPE": str(process_variables_file),
+                        "BPMN_TASK_SCOPE": str(task_variables_file),
                         "UV_NO_SYNC": "0",
+                        "VIRTUAL_ENV": "",
                     },
                 )
                 task_variables = operaton_from_py(
@@ -219,15 +217,28 @@ def create_task(
                     fail_reason_ = (
                         fail_reason(output_xml_path) if output_xml_path.exists() else ""
                     )
-                    return ExternalTaskFailure(
-                        task=task,
-                        response=ExternalTaskFailureDto(
-                            workerId=task.workerId,
-                            errorMessage=fail_reason_,
-                            errorDetails=(stdout + stderr).decode("utf-8"),
-                            retries=0,
-                            retryTimeout=0,
-                        ),
+                    return (
+                        ExternalTaskComplete(
+                            task=task,
+                            response=ExternalTaskBpmnError(
+                                workerId=task.workerId,
+                                errorCode=fail_reason_.split("\n", 1)[0].strip(),
+                                errorMessage=fail_reason_.split("\n", 1)[-1].strip(),
+                                variables=process_variables,
+                            ),
+                        )
+                        if on_fail == OnFail.ERROR
+                        else ExternalTaskFailure(
+                            task=task,
+                            response=ExternalTaskFailureDto(
+                                workerId=task.workerId,
+                                errorMessage=fail_reason_,
+                                errorDetails=(stdout + stderr).decode("utf-8"),
+                                retries=0,
+                                retryTimeout=0,
+                            ),
+                        )
                     )
 
+    logger.info("purjo | Subscription | %s", name)
     return execute_task

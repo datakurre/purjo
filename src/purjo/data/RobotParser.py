@@ -38,7 +38,7 @@ VariableScopes.set_bpmn_process = set_bpmn_process
 
 Statement.statement_handlers["VAR"].options["scope"] = tuple(
     list(Statement.statement_handlers["VAR"].options["scope"])
-    + ["BPMN", "BPMN:TASK", "BPMN:PROCESS"]
+    + ["BPMN:PROCESS", "BPMN:TASK"]
 )
 
 
@@ -49,7 +49,7 @@ class Var(BaseVar):  # type: ignore
             return "local", {}
         try:
             scope = variables.replace_string(self.scope)
-            if scope.upper() in ("BPMN", "BPMN:TASK", "BPMN:PROCESS"):
+            if scope.upper() in ("BPMN:TASK", "BPMN:PROCESS"):
                 return scope.lower().replace(":", "_"), {}
         except DataError as err:
             raise DataError(f"Invalid VAR scope: {err}")

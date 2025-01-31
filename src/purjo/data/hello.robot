@@ -4,11 +4,11 @@ Library    Hello
 
 *** Variables ***
 
-${BPMN}    local
-${name}    n/a
+${BPMN:TASK}    local
+${name}         n/a
 
 *** Tasks ***
 
 My Task
     ${message}=    Hello    ${name}
-    VAR    ${message}    ${message}    scope=${BPMN}
+    VAR    ${message}    ${message}    scope=${BPMN:TASK}

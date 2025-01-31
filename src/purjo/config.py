@@ -5,6 +5,7 @@ import enum
 class OnFail(str, enum.Enum):
     FAIL = "FAIL"
     COMPLETE = "COMPLETE"
+    ERROR = "ERROR"
 
 
 class Settings(BaseSettings):

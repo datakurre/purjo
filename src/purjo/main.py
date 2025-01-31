@@ -58,7 +58,8 @@ def cli_serve(
     for robot in robots:
         with ZipFile(robot, "r") as fp:
             robot_toml = tomllib.loads(fp.read("pyproject.toml").decode("utf-8"))
-            for topic, config in (robot_toml.get("bpmn:serviceTask") or {}).items():
+            purjo_toml = (robot_toml.get("tool") or {}).get("purjo") or {}
+            for topic, config in (purjo_toml.get("topics") or {}).items():
                 task(topic)(create_task(config["name"], robot, on_fail, semaphore))
 
     asyncio.get_event_loop().run_until_complete(external_task_worker(handlers=handlers))
@@ -84,6 +85,7 @@ def cli_init() -> None:
             cwd_path,
             {
                 "UV_NO_SYNC": "0",
+                "VIRTUAL_ENV": "",
             },
         )
         await run(
@@ -96,13 +98,14 @@ def cli_init() -> None:
             cwd_path,
             {
                 "UV_NO_SYNC": "0",
+                "VIRTUAL_ENV": "",
             },
         )
         (cwd_path / "hello.py").unlink()
         (cwd_path / "pyproject.toml").write_text(
             (cwd_path / "pyproject.toml").read_text()
             + """
-["bpmn:serviceTask"]
+[tool.purjo.topics]
 "My Topic" = { name = "My Task" }
 """
         )
