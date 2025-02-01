@@ -1,4 +1,9 @@
 from io import BytesIO
+from javaobj.v2.beans import JavaString  # type: ignore
+from javaobj.v2.transformers import JavaBool  # type: ignore
+from javaobj.v2.transformers import JavaInt
+from javaobj.v2.transformers import JavaList
+from javaobj.v2.transformers import JavaMap
 from operaton.tasks import operaton_session
 from operaton.tasks import settings as operaton_settings
 from operaton.tasks.types import LockedExternalTaskDto
@@ -55,6 +60,21 @@ def dt_to_operaton(dt: datetime.datetime) -> str:
     return date_str
 
 
+def py_from_javaobj(obj: Any) -> Any:
+    """Convert Java object to Python object."""
+    if isinstance(obj, JavaMap):
+        return {py_from_javaobj(k): py_from_javaobj(v) for k, v in obj.items()}
+    elif isinstance(obj, JavaList):
+        return [py_from_javaobj(v) for v in obj]
+    elif isinstance(obj, JavaString):
+        return obj.__str__()
+    elif isinstance(obj, JavaInt):
+        return obj.__int__()
+    elif isinstance(obj, JavaBool):
+        return obj.__bool__()
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+
 def deserialize(
     value: Any,
     type_: Optional[VariableValueType] = None,
@@ -74,7 +94,7 @@ def deserialize(
     elif info.serializationDataFormat == "application/json":
         return json.loads(value)
     elif info.serializationDataFormat == "application/x-java-serialized-object":
-        return javaobj.load(BytesIO(base64.b64decode(value)))
+        return py_from_javaobj(javaobj.load(BytesIO(base64.b64decode(value))))
     raise NotImplementedError(info.serializationDataFormat)
 
 
