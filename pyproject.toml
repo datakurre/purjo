@@ -22,6 +22,7 @@ dependencies =[
     "javaobj-py3>=0.4.4",
     "pillow>=11.0.0",
     "tzlocal>=5.2",
+    "pathspec>=0.12.1",
 ]
 
 [project.scripts]
