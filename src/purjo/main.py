@@ -7,9 +7,11 @@ from pathlib import Path
 from purjo.config import OnFail
 from purjo.runner import create_task
 from purjo.runner import run
+from pydantic import DirectoryPath
 from pydantic import FilePath
 from typing import List
 from typing import Optional
+from typing import Union
 from zipfile import ZipFile
 import aiohttp
 import asyncio
@@ -27,7 +29,7 @@ cli = typer.Typer()
 
 @cli.command(name="serve")
 def cli_serve(
-    robots: List[FilePath],
+    robots: List[Union[FilePath, DirectoryPath]],
     base_url: str = "http://localhost:8080/engine-rest",
     authorization: Optional[str] = None,
     timeout: int = 20,
@@ -39,7 +41,7 @@ def cli_serve(
     on_fail: OnFail = OnFail.FAIL,
 ) -> None:
     """
-    Serve robot.zip packages as BPMN service tasks.
+    Serve robot.zip packages (or directories) as BPMN service tasks.
     """
     settings.ENGINE_REST_BASE_URL = base_url
     settings.ENGINE_REST_AUTHORIZATION = authorization
@@ -56,11 +58,15 @@ def cli_serve(
         raise FileNotFoundError("The 'uv' executable is not found in the system PATH.")
 
     for robot in robots:
-        with ZipFile(robot, "r") as fp:
-            robot_toml = tomllib.loads(fp.read("pyproject.toml").decode("utf-8"))
-            purjo_toml = (robot_toml.get("tool") or {}).get("purjo") or {}
-            for topic, config in (purjo_toml.get("topics") or {}).items():
-                task(topic)(create_task(config["name"], robot, on_fail, semaphore))
+        if robot.is_dir():
+            robot = robot.resolve()
+            robot_toml = tomllib.loads((robot / "pyproject.toml").read_text())
+        else:
+            with ZipFile(robot, "r") as fp:
+                robot_toml = tomllib.loads(fp.read("pyproject.toml").decode("utf-8"))
+        purjo_toml = (robot_toml.get("tool") or {}).get("purjo") or {}
+        for topic, config in (purjo_toml.get("topics") or {}).items():
+            task(topic)(create_task(config["name"], robot, on_fail, semaphore))
 
     asyncio.get_event_loop().run_until_complete(external_task_worker(handlers=handlers))
 

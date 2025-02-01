@@ -18,6 +18,7 @@ from purjo.utils import json_serializer
 from purjo.utils import lazydecode
 from purjo.utils import operaton_from_py
 from purjo.utils import py_from_operaton
+from pydantic import DirectoryPath
 from pydantic import FilePath
 from tempfile import TemporaryDirectory
 from typing import Callable
@@ -33,6 +34,7 @@ import importlib.resources
 import json
 import os
 import re
+import shutil
 
 
 async def run(
@@ -73,7 +75,7 @@ def fail_reason(path: Path) -> str:
 
 def create_task(
     name: str,
-    robot: FilePath,
+    robot: Union[FilePath, DirectoryPath],
     on_fail: OnFail,
     semaphore: asyncio.Semaphore,
 ) -> Callable[
@@ -94,8 +96,11 @@ def create_task(
                     "BPMN:PROCESS": "BPMN:PROCESS",
                     "BPMN:TASK": "BPMN:TASK",
                 }
-                with ZipFile(robot, "r") as fp:
-                    fp.extractall(robot_dir)
+                if robot.is_dir():
+                    shutil.copytree(robot, robot_dir, dirs_exist_ok=True)
+                else:
+                    with ZipFile(robot, "r") as fp:
+                        fp.extractall(robot_dir)
                 (Path(working_dir) / "variables.json").write_text(
                     json.dumps(variables, default=json_serializer)
                 )
