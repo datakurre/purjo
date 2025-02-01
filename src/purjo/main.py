@@ -149,7 +149,7 @@ def cli_wrap() -> None:
             zipf.write(file_path)
 
 
-bpmn = typer.Typer(help="BPMN operations.")
+bpmn = typer.Typer(help="BPMN engine operation as distinct sub commands.")
 
 
 @bpmn.command(name="deploy")
@@ -176,7 +176,17 @@ def bpmn_deploy(
                 f"{base_url}/deployment/create",
                 data=form,
             ) as response:
-                print(json.dumps(await response.json(), indent=2))
+                results = await response.json()
+                if "deployedProcessDefinitions" not in results:
+                    print(json.dumps(results, indent=2))
+                    return
+                url = (
+                    base_url.replace("/engine-rest", "").rstrip("/")
+                    + "/operaton/app/cockpit/default/#/process-definition"
+                )
+                for result in results.get("deployedProcessDefinitions").values():
+                    print(f"Deployed: {url}/{result['id']}/runtime")
+                    print(f"With key: {result['key']}")
 
     asyncio.run(deploy())
 
@@ -197,12 +207,66 @@ def bpmn_start(
                 f"{base_url}/process-definition/key/{key}/start",
                 json={},
             ) as response:
-                print(json.dumps(await response.json(), indent=2))
+                results = await response.json()
+                if "links" not in results:
+                    print(json.dumps(results, indent=2))
+                    return
+                url = (
+                    base_url.replace("/engine-rest", "").rstrip("/")
+                    + "/operaton/app/cockpit/default/#/process-instance"
+                )
+                print(f"Started: {url}/{results['id']}/runtime")
 
     asyncio.run(start())
 
 
 cli.add_typer(bpmn, name="bpmn")
+
+
+@cli.command(name="run")
+def cli_run(
+    resources: List[FilePath],
+    base_url: str = "http://localhost:8080/engine-rest",
+    authorization: Optional[str] = None,
+) -> None:
+    """Deploy and start resources to the BPMN engine."""
+    settings.ENGINE_REST_BASE_URL = base_url
+    settings.ENGINE_REST_AUTHORIZATION = authorization
+
+    async def start() -> None:
+        async with operaton_session(headers={"Content-Type": None}) as session:
+            form = aiohttp.FormData()
+            for resource in resources:
+                form.add_field(
+                    "data",
+                    resource.read_text(),
+                    filename=resource.name,
+                    content_type="application/octet-stream",
+                )
+            response = await session.post(
+                f"{base_url}/deployment/create",
+                data=form,
+            )
+            results = await response.json()
+            if "deployedProcessDefinitions" not in results:
+                print(json.dumps(results, indent=2))
+                return
+            for result in results.get("deployedProcessDefinitions").values():
+                async with session.post(
+                    f"{base_url}/process-definition/key/{result['key']}/start",
+                    json={},
+                ) as response:
+                    results = await response.json()
+                    if "links" not in results:
+                        print(json.dumps(results, indent=2))
+                        return
+                    url = (
+                        base_url.replace("/engine-rest", "").rstrip("/")
+                        + "/operaton/app/cockpit/default/#/process-instance"
+                    )
+                    print(f"Started: {url}/{results['id']}/runtime")
+
+    asyncio.run(start())
 
 
 def main() -> None:
