@@ -4,7 +4,7 @@ on-unmatched = "debug"
 command = "nixfmt"
 includes = ["*.nix"]
 
-[formatter.rust]
+[formatter.black]
 command = "black"
 includes = ["*.py"]
 
@@ -12,6 +12,6 @@ includes = ["*.py"]
 command = "isort"
 includes = ["*.py"]
 
-# [formatter.robotidy]
-# command = "robotidy"
-# includes = ["*.robot"]
+[formatter.robotidy]
+command = "robotidy"
+includes = ["*.robot"]

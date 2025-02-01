@@ -184,13 +184,26 @@ def create_task(
                         )
                         task_variables.update(
                             {
-                                "errorMessage": VariableValueDto(
-                                    value=fail_reason_,
+                                "errorCode": VariableValueDto(
+                                    value=fail_reason_.split("\n", 1)[0].strip(),
                                     type=VariableValueType.String,
                                 ),
-                                "errorDetails": VariableValueDto(
-                                    value=(stdout + stderr).decode("utf-8"),
+                                "errorMessage": VariableValueDto(
+                                    value=fail_reason_.split("\n", 1)[-1].strip(),
                                     type=VariableValueType.String,
+                                ),
+                            }
+                        )
+                    elif on_fail == OnFail.COMPLETE:
+                        task_variables.update(
+                            {
+                                "errorCode": VariableValueDto(
+                                    value=None,
+                                    type=VariableValueType.Null,
+                                ),
+                                "errorMessage": VariableValueDto(
+                                    value=None,
+                                    type=VariableValueType.Null,
                                 ),
                             }
                         )

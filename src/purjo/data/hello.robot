@@ -1,14 +1,13 @@
 *** Settings ***
+Library     Hello.py
 
-Library    Hello
 
 *** Variables ***
-
 ${BPMN:TASK}    local
 ${name}         n/a
 
-*** Tasks ***
 
+*** Tasks ***
 My Task
     ${message}=    Hello    ${name}
     VAR    ${message}    ${message}    scope=${BPMN:TASK}

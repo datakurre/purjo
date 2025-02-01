@@ -133,9 +133,9 @@ def cli_wrap() -> None:
         spec_text.splitlines()
         + [
             ".gitignore",
-            ".python-version",
             "log.html",
             "output.xml",
+            "__pycache__/",
             "report.html",
             "robot.zip",
             ".venv/",

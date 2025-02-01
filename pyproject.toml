@@ -43,6 +43,7 @@ dev = [
     "mypy>=1.13.0",
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
+    "robotframework-tidy>=4.16.0",
 ]
 
 [tool.isort]
