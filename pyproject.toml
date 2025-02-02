@@ -18,7 +18,7 @@ dependencies =[
     "typer>=0.15.1",
     "operaton-tasks>=1.0.0a2",
     "javaobj-py3>=0.4.4",
-    "pillow>=11.0.0",
+    "pillow",
     "tzlocal>=5.2",
     "pathspec>=0.12.1",
 ]
