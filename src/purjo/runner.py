@@ -1,6 +1,6 @@
 from operaton.tasks import operaton_session
-from operaton.tasks.config import logger
-from operaton.tasks.config import settings as operaton_settings
+from operaton.tasks import settings as operaton_settings
+from operaton.tasks import stream_handler
 from operaton.tasks.types import CompleteExternalTaskDto
 from operaton.tasks.types import ExternalTaskBpmnError
 from operaton.tasks.types import ExternalTaskComplete
@@ -32,9 +32,15 @@ import asyncio
 import base64
 import importlib.resources
 import json
+import logging
 import os
 import re
 import shutil
+
+
+logger = logging.getLogger(__name__)
+logger.addHandler(stream_handler)
+logger.setLevel(operaton_settings.LOG_LEVEL)
 
 
 async def run(

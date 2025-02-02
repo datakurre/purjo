@@ -16,7 +16,7 @@ classifiers = [
 requires-python = ">= 3.9"
 dependencies =[
     "typer>=0.15.1",
-    "operaton-tasks>=1.0.0a2",
+    "operaton-tasks>=1.0.0a5",
     "javaobj-py3>=0.4.4",
     "pillow",
     "tzlocal>=5.2",

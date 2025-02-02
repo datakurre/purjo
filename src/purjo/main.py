@@ -1,11 +1,13 @@
 from operaton.tasks import external_task_worker
 from operaton.tasks import handlers
 from operaton.tasks import operaton_session
+from operaton.tasks import set_log_level
 from operaton.tasks import settings
 from operaton.tasks import task
 from pathlib import Path
 from purjo.config import OnFail
 from purjo.runner import create_task
+from purjo.runner import logger
 from purjo.runner import run
 from pydantic import DirectoryPath
 from pydantic import FilePath
@@ -48,9 +50,10 @@ def cli_serve(
     settings.ENGINE_REST_TIMEOUT_SECONDS = timeout
     settings.ENGINE_REST_POLL_TTL_SECONDS = poll_ttl
     settings.ENGINE_REST_LOCK_TTL_SECONDS = lock_ttl
-    settings.LOG_LEVEL = log_level
     settings.TASKS_WORKER_ID = worker_id
     settings.TASKS_MODULE = None
+    logger.setLevel(log_level)
+    set_log_level(log_level)
 
     semaphore = asyncio.Semaphore(max_jobs)
 
@@ -72,8 +75,12 @@ def cli_serve(
 
 
 @cli.command(name="init")
-def cli_init() -> None:
+def cli_init(
+    log_level: str = "INFO",
+) -> None:
     """Initialize a new robot package."""
+    logger.setLevel(log_level)
+    set_log_level(log_level)
     cwd_path = Path(os.getcwd())
     pyproject_path = cwd_path / "pyproject.toml"
     assert not pyproject_path.exists()
@@ -125,13 +132,19 @@ def cli_init() -> None:
             (importlib.resources.files("purjo.data") / "Hello.py").read_text()
         )
         (cwd_path / ".wrapignore").write_text("*.bpmn\n")
+        cli_wrap()
+        (cwd_path / "robot.zip").unlink()
 
     asyncio.run(init())
 
 
 @cli.command(name="wrap")
-def cli_wrap() -> None:
+def cli_wrap(
+    log_level: str = "INFO",
+) -> None:
     """Wrap the current directory into a robot.zip package."""
+    logger.setLevel(log_level)
+    set_log_level(log_level)
     cwd_path = Path(os.getcwd())
     spec_path = cwd_path / ".wrapignore"
     spec_text = spec_path.read_text() if spec_path.exists() else ""
@@ -163,10 +176,13 @@ def bpmn_deploy(
     resources: List[FilePath],
     base_url: str = "http://localhost:8080/engine-rest",
     authorization: Optional[str] = None,
+    log_level: str = "INFO",
 ) -> None:
     """Deploy resources to the BPMN engine."""
     settings.ENGINE_REST_BASE_URL = base_url
     settings.ENGINE_REST_AUTHORIZATION = authorization
+    logger.setLevel(log_level)
+    set_log_level(log_level)
 
     async def deploy() -> None:
         async with operaton_session(headers={"Content-Type": None}) as session:
@@ -202,10 +218,13 @@ def bpmn_start(
     key: str,
     base_url: str = "http://localhost:8080/engine-rest",
     authorization: Optional[str] = None,
+    log_level: str = "INFO",
 ) -> None:
     """Start a process instance by key."""
     settings.ENGINE_REST_BASE_URL = base_url
     settings.ENGINE_REST_AUTHORIZATION = authorization
+    logger.setLevel(log_level)
+    set_log_level(log_level)
 
     async def start() -> None:
         async with operaton_session() as session:
@@ -234,10 +253,13 @@ def cli_run(
     resources: List[FilePath],
     base_url: str = "http://localhost:8080/engine-rest",
     authorization: Optional[str] = None,
+    log_level: str = "INFO",
 ) -> None:
     """Deploy and start resources to the BPMN engine."""
     settings.ENGINE_REST_BASE_URL = base_url
     settings.ENGINE_REST_AUTHORIZATION = authorization
+    logger.setLevel(log_level)
+    set_log_level(log_level)
 
     async def start() -> None:
         async with operaton_session(headers={"Content-Type": None}) as session:
