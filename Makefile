@@ -6,8 +6,8 @@ INDEX_HOSTNAME ?= pypi.python.org
 
 export PYTHONPATH=$(PWD)/src
 
-MODULE := operaton_robot_runner
-APP := operaton-robot-runner
+MODULE := purjo
+APP := pur
 
 build:  ## Build application
 	devenv build outputs.python.app

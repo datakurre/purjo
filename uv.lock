@@ -412,15 +412,6 @@ wheels = [
 ]
 
 [[package]]
-name = "h11"
-version = "0.14.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f5/38/3af3d3633a34a3316095b39c8e8fb4853a28a536e55d347bd8d8e9a14b03/h11-0.14.0.tar.gz", hash = "sha256:8f19fbbe99e72420ff35c00b27a34cb9937e902a8b810e2c88300c6f0a3b699d", size = 100418 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/04/ff642e65ad6b90db43e668d70ffb6736436c7ce41fcc549f4e9472234127/h11-0.14.0-py3-none-any.whl", hash = "sha256:e3fe4ac4b851c468cc8363d500db52c2ead036020723024a109d37346efaa761", size = 58259 },
-]
-
-[[package]]
 name = "idna"
 version = "3.10"
 source = { registry = "https://pypi.org/simple" }
@@ -926,17 +917,15 @@ wheels = [
 
 [[package]]
 name = "purjo"
-version = "1.0.0a2"
+version = "1.0.0a3"
 source = { editable = "." }
 dependencies = [
     { name = "javaobj-py3" },
     { name = "operaton-tasks" },
     { name = "pathspec" },
     { name = "pillow" },
-    { name = "robotframework" },
     { name = "typer" },
     { name = "tzlocal" },
-    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
@@ -956,10 +945,8 @@ requires-dist = [
     { name = "operaton-tasks", specifier = ">=1.0.0a2" },
     { name = "pathspec", specifier = ">=0.12.1" },
     { name = "pillow", specifier = ">=11.0.0" },
-    { name = "robotframework", specifier = ">=7.1.1" },
     { name = "typer", specifier = ">=0.15.1" },
     { name = "tzlocal", specifier = ">=5.2" },
-    { name = "uvicorn", specifier = ">=0.32.1" },
 ]
 
 [package.metadata.requires-dev]
@@ -1331,20 +1318,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/04/d3/c19d65ae67636fe63953b20c2e4a8ced4497ea232c43ff8d01db16de8dc0/tzlocal-5.2.tar.gz", hash = "sha256:8d399205578f1a9342816409cc1e46a93ebd5755e39ea2d85334bea911bf0e6e", size = 30201 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/97/3f/c4c51c55ff8487f2e6d0e618dba917e3c3ee2caae6cf0fbb59c9b1876f2e/tzlocal-5.2-py3-none-any.whl", hash = "sha256:49816ef2fe65ea8ac19d19aa7a1ae0551c834303d5014c6d5a62e4cbda8047b8", size = 17859 },
-]
-
-[[package]]
-name = "uvicorn"
-version = "0.32.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "click" },
-    { name = "h11" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6a/3c/21dba3e7d76138725ef307e3d7ddd29b763119b3aa459d02cc05fefcff75/uvicorn-0.32.1.tar.gz", hash = "sha256:ee9519c246a72b1c084cea8d3b44ed6026e78a4a309cbedae9c37e4cb9fbb175", size = 77630 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/c1/2d27b0a15826c2b71dcf6e2f5402181ef85acf439617bb2f1453125ce1f3/uvicorn-0.32.1-py3-none-any.whl", hash = "sha256:82ad92fd58da0d12af7482ecdb5f2470a04c9c9a53ced65b9bbb4a205377602e", size = 63828 },
 ]
 
 [[package]]

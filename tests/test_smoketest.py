@@ -3,6 +3,6 @@
 
 def test_import() -> None:
     """Test project successful import."""
-    from operaton.tasks import main
+    from purjo import main
 
     assert main
