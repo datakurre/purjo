@@ -21,7 +21,9 @@ import importlib.resources
 import json
 import os
 import pathspec
+import random
 import shutil
+import string
 import tomllib
 import typer
 
@@ -169,6 +171,30 @@ def cli_wrap(
 
 
 bpmn = typer.Typer(help="BPMN engine operation as distinct sub commands.")
+
+
+def generate_random_string(length: int = 7) -> str:
+    characters = string.ascii_lowercase + string.digits
+    return "".join(random.choice(characters) for _ in range(length))
+
+
+@bpmn.command(name="create")
+def bpmn_create(
+    filename: Path,
+    log_level: str = "INFO",
+) -> None:
+    """Deploy resources to the BPMN engine."""
+    logger.setLevel(log_level)
+    set_log_level(log_level)
+    if not filename.name.endswith(".bpmn"):
+        filename = filename.with_suffix(".bpmn")
+    assert not Path(filename).exists()
+    filename.write_text(
+        (importlib.resources.files("purjo.data") / "template.bpmn")
+        .read_text()
+        .replace("DEFINITION_ID", generate_random_string())
+        .replace("PROCESS_ID", generate_random_string())
+    )
 
 
 @bpmn.command(name="deploy")
