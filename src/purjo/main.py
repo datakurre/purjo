@@ -170,7 +170,7 @@ def cli_wrap(
             zipf.write(file_path)
 
 
-bpmn = typer.Typer(help="BPMN engine operation as distinct sub commands.")
+bpm = typer.Typer(help="BPM engine operation as distinct sub commands.")
 
 
 def generate_random_string(length: int = 7) -> str:
@@ -178,33 +178,43 @@ def generate_random_string(length: int = 7) -> str:
     return "".join(random.choice(characters) for _ in range(length))
 
 
-@bpmn.command(name="create")
-def bpmn_create(
+@bpm.command(name="create")
+def bpm_create(
     filename: Path,
     log_level: str = "INFO",
 ) -> None:
-    """Deploy resources to the BPMN engine."""
+    """Create a new BPMN (or DMN) file."""
     logger.setLevel(log_level)
     set_log_level(log_level)
-    if not filename.name.endswith(".bpmn"):
+    if not (filename.name.endswith(".bpmn") or filename.name.endswith(".dmn")):
         filename = filename.with_suffix(".bpmn")
     assert not Path(filename).exists()
-    filename.write_text(
-        (importlib.resources.files("purjo.data") / "template.bpmn")
-        .read_text()
-        .replace("DEFINITION_ID", generate_random_string())
-        .replace("PROCESS_ID", generate_random_string())
+    (
+        filename.write_text(
+            (importlib.resources.files("purjo.data") / "template.bpmn")
+            .read_text()
+            .replace("DEFINITION_ID", generate_random_string())
+            .replace("PROCESS_ID", generate_random_string())
+        )
+        if filename.name.endswith(".bpmn")
+        else filename.write_text(
+            (importlib.resources.files("purjo.data") / "template.dmn")
+            .read_text()
+            .replace("DEFINITIONS_ID", generate_random_string())
+            .replace("DEFINITIONS_TABLE_ID", generate_random_string())
+            .replace("DECISION_ID", generate_random_string())
+        )
     )
 
 
-@bpmn.command(name="deploy")
-def bpmn_deploy(
+@bpm.command(name="deploy")
+def bpm_deploy(
     resources: List[FilePath],
     base_url: str = "http://localhost:8080/engine-rest",
     authorization: Optional[str] = None,
     log_level: str = "INFO",
 ) -> None:
-    """Deploy resources to the BPMN engine."""
+    """Deploy resources to the BPM engine."""
     settings.ENGINE_REST_BASE_URL = base_url
     settings.ENGINE_REST_AUTHORIZATION = authorization
     logger.setLevel(log_level)
@@ -239,8 +249,8 @@ def bpmn_deploy(
     asyncio.run(deploy())
 
 
-@bpmn.command(name="start")
-def bpmn_start(
+@bpm.command(name="start")
+def bpm_start(
     key: str,
     base_url: str = "http://localhost:8080/engine-rest",
     authorization: Optional[str] = None,
@@ -271,7 +281,7 @@ def bpmn_start(
     asyncio.run(start())
 
 
-cli.add_typer(bpmn, name="bpmn")
+cli.add_typer(bpm, name="bpm")
 
 
 @cli.command(name="run")
