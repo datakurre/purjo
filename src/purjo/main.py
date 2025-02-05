@@ -80,7 +80,7 @@ def cli_serve(
 def cli_init(
     log_level: str = "INFO",
 ) -> None:
-    """Initialize a new robot package."""
+    """Initialize a new robot package into the current directory."""
     logger.setLevel(log_level)
     set_log_level(log_level)
     cwd_path = Path(os.getcwd())
@@ -170,7 +170,7 @@ def cli_wrap(
             zipf.write(file_path)
 
 
-bpm = typer.Typer(help="BPM engine operation as distinct sub commands.")
+bpm = typer.Typer(help="BPM engine operations as distinct sub commands.")
 
 
 def generate_random_string(length: int = 7) -> str:
