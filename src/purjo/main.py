@@ -36,7 +36,10 @@ cli = typer.Typer(
 )
 
 
-@cli.command(name="serve")
+@cli.command(
+    name="serve",
+    no_args_is_help=True,
+)
 def cli_serve(
     robots: List[Union[FilePath, DirectoryPath]],
     base_url: str = "http://localhost:8080/engine-rest",
@@ -350,7 +353,10 @@ def bpm_start(
 cli.add_typer(bpm, name="bpm")
 
 
-@cli.command(name="run")
+@cli.command(
+    name="run",
+    no_args_is_help=True,
+)
 def cli_run(
     resources: List[FilePath],
     name: str = "pur(jo) deployment",
