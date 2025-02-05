@@ -18,6 +18,7 @@ from purjo.utils import json_serializer
 from purjo.utils import lazydecode
 from purjo.utils import operaton_from_py
 from purjo.utils import py_from_operaton
+from pydantic import BaseModel
 from pydantic import DirectoryPath
 from pydantic import FilePath
 from tempfile import TemporaryDirectory
@@ -25,6 +26,7 @@ from typing import Callable
 from typing import Coroutine
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Tuple
 from typing import Union
 from zipfile import ZipFile
@@ -79,8 +81,14 @@ def fail_reason(path: Path) -> str:
     return reason
 
 
+class Task(BaseModel):
+    name: Optional[str] = None
+    include: Optional[str] = None
+    exclude: Optional[str] = None
+
+
 def create_task(
-    name: str,
+    config: Task,
     robot: Union[FilePath, DirectoryPath],
     on_fail: OnFail,
     semaphore: asyncio.Semaphore,
@@ -107,6 +115,8 @@ def create_task(
                 else:
                     with ZipFile(robot, "r") as fp:
                         fp.extractall(robot_dir)
+                        if (Path(robot_dir) / ".cache").is_dir():
+                            shutil.move(Path(robot_dir) / ".cache", working_dir)
                 (Path(working_dir) / "variables.json").write_text(
                     json.dumps(variables, default=json_serializer)
                 )
@@ -123,10 +133,45 @@ def create_task(
                         "copy",
                         "--project",
                         robot_dir,
+                    ]
+                    + (
+                        [
+                            "--offline",
+                            "--cache-dir",
+                            str(Path(working_dir) / ".cache"),
+                        ]
+                        if (Path(working_dir) / ".cache").is_dir()
+                        else []
+                    )
+                    + [
                         "--",
                         "robot",
-                        "-t",
-                        name,
+                    ]
+                    + (
+                        [
+                            "-t",
+                            config.name,
+                        ]
+                        if config.name
+                        else []
+                    )
+                    + (
+                        [
+                            "-i",
+                            config.include,
+                        ]
+                        if config.include
+                        else []
+                    )
+                    + (
+                        [
+                            "-e",
+                            config.exclude,
+                        ]
+                        if config.exclude
+                        else []
+                    )
+                    + [
                         "--pythonpath",
                         working_dir,
                         "--pythonpath",
@@ -264,5 +309,5 @@ def create_task(
                         )
                     )
 
-    logger.info("purjo | Subscription | %s", name)
+    logger.info("Subscription | %s", config)
     return execute_task

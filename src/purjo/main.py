@@ -9,6 +9,7 @@ from purjo.config import OnFail
 from purjo.runner import create_task
 from purjo.runner import logger
 from purjo.runner import run
+from purjo.runner import Task
 from pydantic import DirectoryPath
 from pydantic import FilePath
 from typing import List
@@ -30,6 +31,7 @@ import typer
 
 cli = typer.Typer(
     no_args_is_help=True,
+    pretty_exceptions_enable=False,
     help="pur(jo) is a tool for managing and serving robot packages.",
 )
 
@@ -50,15 +52,23 @@ def cli_serve(
     """
     Serve robot.zip packages (or directories) as BPMN service tasks.
     """
-    settings.ENGINE_REST_BASE_URL = base_url
-    settings.ENGINE_REST_AUTHORIZATION = authorization
-    settings.ENGINE_REST_TIMEOUT_SECONDS = timeout
-    settings.ENGINE_REST_POLL_TTL_SECONDS = poll_ttl
-    settings.ENGINE_REST_LOCK_TTL_SECONDS = lock_ttl
-    settings.TASKS_WORKER_ID = worker_id
+    settings.ENGINE_REST_BASE_URL = os.environ.get("ENGINE_REST_BASE_URL") or base_url
+    settings.ENGINE_REST_AUTHORIZATION = (
+        os.environ.get("ENGINE_REST_AUTHORIZATION") or authorization
+    )
+    settings.ENGINE_REST_TIMEOUT_SECONDS = (
+        int(os.environ.get("ENGINE_REST_TIMEOUT_SECONDS") or "0") or timeout
+    )
+    settings.ENGINE_REST_POLL_TTL_SECONDS = (
+        int(os.environ.get("ENGINE_REST_POLL_TTL_SECONDS") or "0") or poll_ttl
+    )
+    settings.ENGINE_REST_LOCK_TTL_SECONDS = (
+        int(os.environ.get("ENGINE_REST_LOCK_TTL_SECONDS") or "0") or lock_ttl
+    )
+    settings.TASKS_WORKER_ID = os.environ.get("TASKS_WORKER_ID") or worker_id
     settings.TASKS_MODULE = None
-    logger.setLevel(log_level)
-    set_log_level(log_level)
+    logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
+    set_log_level(os.environ.get("LOG_LEVEL") or log_level)
 
     semaphore = asyncio.Semaphore(max_jobs)
 
@@ -74,7 +84,7 @@ def cli_serve(
                 robot_toml = tomllib.loads(fp.read("pyproject.toml").decode("utf-8"))
         purjo_toml = (robot_toml.get("tool") or {}).get("purjo") or {}
         for topic, config in (purjo_toml.get("topics") or {}).items():
-            task(topic)(create_task(config["name"], robot, on_fail, semaphore))
+            task(topic)(create_task(Task(**config), robot, on_fail, semaphore))
 
     asyncio.get_event_loop().run_until_complete(external_task_worker(handlers=handlers))
 
@@ -136,7 +146,7 @@ def cli_init(
         (cwd_path / "Hello.py").write_text(
             (importlib.resources.files("purjo.data") / "Hello.py").read_text()
         )
-        (cwd_path / ".wrapignore").write_text("*.bpmn\n")
+        (cwd_path / ".wrapignore").write_text("/*.bpmn\n")
         cli_wrap()
         (cwd_path / "robot.zip").unlink()
 
@@ -145,25 +155,47 @@ def cli_init(
 
 @cli.command(name="wrap")
 def cli_wrap(
+    offline: bool = False,
     log_level: str = "INFO",
 ) -> None:
     """Wrap the current directory into a robot.zip package."""
-    logger.setLevel(log_level)
-    set_log_level(log_level)
+    logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
+    set_log_level(os.environ.get("LOG_LEVEL") or log_level)
     cwd_path = Path(os.getcwd())
+    if offline:
+        # Cache dependencies
+        if cwd_path.joinpath(".venv").exists():
+            shutil.rmtree(cwd_path / ".venv")
+        asyncio.run(
+            run(
+                "uv",
+                [
+                    "run",
+                    "--refresh",
+                    "--cache-dir",
+                    str(cwd_path / ".cache"),
+                    "--",
+                    "echo",
+                    "Cached.",
+                ],
+                cwd_path,
+                {"UV_NO_SYNC": "0", "VIRTUAL_ENV": ""},
+            )
+        )
     spec_path = cwd_path / ".wrapignore"
     spec_text = spec_path.read_text() if spec_path.exists() else ""
     spec = pathspec.GitIgnoreSpec.from_lines(
         spec_text.splitlines()
         + [
-            ".gitignore",
-            "log.html",
-            "output.xml",
+            "/.gitignore",
+            "/log.html",
+            "/output.xml",
             "__pycache__/",
-            "report.html",
-            "robot.zip",
-            ".venv/",
-            ".wrapignore",
+            "/report.html",
+            "/robot.zip",
+            "/.venv/",
+            "/.wrapignore",
+            "/.cache",
         ]
     )
     zip_path = cwd_path / "robot.zip"
@@ -171,10 +203,17 @@ def cli_wrap(
         for file_path in spec.match_tree(cwd_path, negate=True):
             print(f"Adding {file_path}")
             zipf.write(file_path)
+        if offline:
+            print("Adding .cache")
+            for file_path_ in (cwd_path / ".cache").rglob("*"):
+                if file_path_.is_file():
+                    zipf.write(file_path_, file_path_.relative_to(cwd_path))
 
 
 bpm = typer.Typer(
-    no_args_is_help=True, help="BPM engine operations as distinct sub commands."
+    pretty_exceptions_enable=False,
+    no_args_is_help=True,
+    help="BPM engine operations as distinct sub commands.",
 )
 
 
@@ -189,8 +228,9 @@ def bpm_create(
     log_level: str = "INFO",
 ) -> None:
     """Create a new BPMN (or DMN) file."""
-    logger.setLevel(log_level)
-    set_log_level(log_level)
+    logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
+    set_log_level(os.environ.get("LOG_LEVEL") or log_level)
+
     if not (filename.name.endswith(".bpmn") or filename.name.endswith(".dmn")):
         filename = filename.with_suffix(".bpmn")
     assert not Path(filename).exists()
@@ -215,22 +255,41 @@ def bpm_create(
 @bpm.command(name="deploy")
 def bpm_deploy(
     resources: List[FilePath],
+    name: str = "pur(jo) deployment",
+    force: bool = False,
     base_url: str = "http://localhost:8080/engine-rest",
     authorization: Optional[str] = None,
     log_level: str = "INFO",
 ) -> None:
     """Deploy resources to the BPM engine."""
-    settings.ENGINE_REST_BASE_URL = base_url
-    settings.ENGINE_REST_AUTHORIZATION = authorization
-    logger.setLevel(log_level)
-    set_log_level(log_level)
+    settings.ENGINE_REST_BASE_URL = os.environ.get("ENGINE_REST_BASE_URL") or base_url
+    settings.ENGINE_REST_AUTHORIZATION = (
+        os.environ.get("ENGINE_REST_AUTHORIZATION") or authorization
+    )
+    logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
+    set_log_level(os.environ.get("LOG_LEVEL") or log_level)
 
     async def deploy() -> None:
         async with operaton_session(headers={"Content-Type": None}) as session:
             form = aiohttp.FormData()
             for resource in resources:
                 form.add_field(
-                    "data",
+                    "deployment-name",
+                    name,
+                    content_type="text/plain",
+                )
+                form.add_field(
+                    "deployment-source",
+                    "pur(jo)",
+                    content_type="text/plain",
+                )
+                form.add_field(
+                    "deploy-changed-only",
+                    "true" if not force else "false",
+                    content_type="text/plain",
+                )
+                form.add_field(
+                    resource.name,
                     resource.read_text(),
                     filename=resource.name,
                     content_type="application/octet-stream",
@@ -240,7 +299,7 @@ def bpm_deploy(
                 data=form,
             ) as response:
                 results = await response.json()
-                if "deployedProcessDefinitions" not in results:
+                if "id" not in results:
                     print(json.dumps(results, indent=2))
                     return
                 url = (
@@ -262,10 +321,12 @@ def bpm_start(
     log_level: str = "INFO",
 ) -> None:
     """Start a process instance by key."""
-    settings.ENGINE_REST_BASE_URL = base_url
-    settings.ENGINE_REST_AUTHORIZATION = authorization
-    logger.setLevel(log_level)
-    set_log_level(log_level)
+    settings.ENGINE_REST_BASE_URL = os.environ.get("ENGINE_REST_BASE_URL") or base_url
+    settings.ENGINE_REST_AUTHORIZATION = (
+        os.environ.get("ENGINE_REST_AUTHORIZATION") or authorization
+    )
+    logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
+    set_log_level(os.environ.get("LOG_LEVEL") or log_level)
 
     async def start() -> None:
         async with operaton_session() as session:
@@ -292,22 +353,41 @@ cli.add_typer(bpm, name="bpm")
 @cli.command(name="run")
 def cli_run(
     resources: List[FilePath],
+    name: str = "pur(jo) deployment",
+    force: bool = False,
     base_url: str = "http://localhost:8080/engine-rest",
     authorization: Optional[str] = None,
     log_level: str = "INFO",
 ) -> None:
     """Deploy and start resources to the BPMN engine."""
-    settings.ENGINE_REST_BASE_URL = base_url
-    settings.ENGINE_REST_AUTHORIZATION = authorization
-    logger.setLevel(log_level)
-    set_log_level(log_level)
+    settings.ENGINE_REST_BASE_URL = os.environ.get("ENGINE_REST_BASE_URL") or base_url
+    settings.ENGINE_REST_AUTHORIZATION = (
+        os.environ.get("ENGINE_REST_AUTHORIZATION") or authorization
+    )
+    logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
+    set_log_level(os.environ.get("LOG_LEVEL") or log_level)
 
     async def start() -> None:
         async with operaton_session(headers={"Content-Type": None}) as session:
             form = aiohttp.FormData()
             for resource in resources:
                 form.add_field(
-                    "data",
+                    "deployment-name",
+                    name,
+                    content_type="text/plain",
+                )
+                form.add_field(
+                    "deployment-source",
+                    "pur(jo)",
+                    content_type="text/plain",
+                )
+                form.add_field(
+                    "deploy-changed-only",
+                    "true" if not force else "false",
+                    content_type="text/plain",
+                )
+                form.add_field(
+                    resource.name,
                     resource.read_text(),
                     filename=resource.name,
                     content_type="application/octet-stream",
@@ -317,10 +397,15 @@ def cli_run(
                 data=form,
             )
             results = await response.json()
-            if "deployedProcessDefinitions" not in results:
+            if "id" not in results:
                 print(json.dumps(results, indent=2))
                 return
-            for result in results.get("deployedProcessDefinitions").values():
+            deployment_id = results["id"]
+            for result in await (
+                await session.get(
+                    f"{base_url}/process-definition?deploymentId={deployment_id}"
+                )
+            ).json():
                 async with session.post(
                     f"{base_url}/process-definition/key/{result['key']}/start",
                     json={},
