@@ -28,7 +28,10 @@ import tomllib
 import typer
 
 
-cli = typer.Typer()
+cli = typer.Typer(
+    no_args_is_help=True,
+    help="pur(jo) is a tool for managing and serving robot packages.",
+)
 
 
 @cli.command(name="serve")
@@ -170,7 +173,9 @@ def cli_wrap(
             zipf.write(file_path)
 
 
-bpm = typer.Typer(help="BPM engine operations as distinct sub commands.")
+bpm = typer.Typer(
+    no_args_is_help=True, help="BPM engine operations as distinct sub commands."
+)
 
 
 def generate_random_string(length: int = 7) -> str:
