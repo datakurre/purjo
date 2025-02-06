@@ -88,6 +88,7 @@ def cli_serve(
         purjo_toml = (robot_toml.get("tool") or {}).get("purjo") or {}
         for topic, config in (purjo_toml.get("topics") or {}).items():
             task(topic)(create_task(Task(**config), robot, on_fail, semaphore))
+            logger.info("Topic | %s | %s", topic, config)
 
     asyncio.get_event_loop().run_until_complete(external_task_worker(handlers=handlers))
 

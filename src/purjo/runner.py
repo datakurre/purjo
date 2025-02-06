@@ -309,5 +309,4 @@ def create_task(
                         )
                     )
 
-    logger.info("Subscription | %s", config)
     return execute_task
