@@ -194,6 +194,7 @@ def cli_wrap(
     spec = pathspec.GitIgnoreSpec.from_lines(
         spec_text.splitlines()
         + [
+            "/.git",
             "/.gitignore",
             "/log.html",
             "/output.xml",
