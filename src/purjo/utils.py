@@ -10,15 +10,12 @@ from operaton.tasks.types import LockedExternalTaskDto
 from operaton.tasks.types import VariableValueDto
 from operaton.tasks.types import VariableValueType
 from pathlib import Path
-from PIL import Image
 from pydantic import BaseModel
 from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
-from urllib.parse import unquote
 import base64
-import binascii
 import datetime
 import javaobj.v2 as javaobj  # type: ignore
 import json
@@ -257,26 +254,10 @@ def inline_screenshots(file_path: Path) -> None:
             filename = os.path.join(file_path, src)
         elif os.path.exists(os.path.join(cwd, src)):
             filename = os.path.join(cwd, src)
-        elif src.startswith("data:"):
-            filename = None
-            try:
-                spec, uri = src.split(",", 1)
-                spec, encoding = spec.split(";", 1)
-                spec, mimetype = spec.split(":", 1)
-                if not (encoding == "base64" and mimetype.startswith("image/")):
-                    continue
-                data_ = base64.b64decode(unquote(uri).encode("utf-8"))
-                Image.open(BytesIO(data_))
-            except (binascii.Error, IndexError, ValueError):
-                continue
         else:
             continue
         if filename:
-            im = Image.open(filename)
-            mimetype = (Image.MIME.get(im.format) if im and im.format else None) or ""
-            # Fix issue where Pillow on Windows returns APNG for PNG
-            if mimetype == "image/apng":
-                mimetype = "image/png"
+            mimetype = mimetypes.guess_type(filename)[0] or "image/png"
             with open(filename, "rb") as fp:
                 data_bytes = fp.read()
         if data_bytes and mimetype:
