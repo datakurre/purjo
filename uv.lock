@@ -834,7 +834,7 @@ wheels = [
 
 [[package]]
 name = "purjo"
-version = "1.0.0a11"
+version = "1.0.0a12"
 source = { editable = "." }
 dependencies = [
     { name = "javaobj-py3" },
