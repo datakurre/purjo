@@ -311,8 +311,9 @@ def bpm_deploy(
                     return
                 url = (
                     base_url.replace("/engine-rest", "").rstrip("/")
-                    + "/operaton/app/cockpit/default/#/process-definition"
-                )
+                    if "CODESPACE_NAME" not in os.environ
+                    else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
+                ) + "/operaton/app/cockpit/default/#/process-definition"
                 for result in results.get("deployedProcessDefinitions").values():
                     print(f"Deployed: {url}/{result['id']}/runtime")
                     print(f"With key: {result['key']}")
@@ -360,8 +361,9 @@ def bpm_start(
                     return
                 url = (
                     base_url.replace("/engine-rest", "").rstrip("/")
-                    + "/operaton/app/cockpit/default/#/process-instance"
-                )
+                    if "CODESPACE_NAME" not in os.environ
+                    else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
+                ) + "/operaton/app/cockpit/default/#/process-instance"
                 print(f"Started: {url}/{results['id']}/runtime")
 
     asyncio.run(start())
@@ -452,8 +454,9 @@ def cli_run(
                         return
                     url = (
                         base_url.replace("/engine-rest", "").rstrip("/")
-                        + "/operaton/app/cockpit/default/#/process-instance"
-                    )
+                        if "CODESPACE_NAME" not in os.environ
+                        else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
+                    ) + "/operaton/app/cockpit/default/#/process-instance"
                     print(f"Started: {url}/{results['id']}/runtime")
 
     asyncio.run(start())
