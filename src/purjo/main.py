@@ -4,12 +4,14 @@ from operaton.tasks import operaton_session
 from operaton.tasks import set_log_level
 from operaton.tasks import settings
 from operaton.tasks import task
+from operaton.tasks.types import StartProcessInstanceDto
 from pathlib import Path
 from purjo.config import OnFail
 from purjo.runner import create_task
 from purjo.runner import logger
 from purjo.runner import run
 from purjo.runner import Task
+from purjo.utils import operaton_from_py
 from pydantic import DirectoryPath
 from pydantic import FilePath
 from typing import List
@@ -25,6 +27,7 @@ import pathspec
 import random
 import shutil
 import string
+import sys
 import tomllib
 import typer
 
@@ -320,6 +323,7 @@ def bpm_deploy(
 @bpm.command(name="start")
 def bpm_start(
     key: str,
+    variables: Optional[str] = None,
     base_url: str = "http://localhost:8080/engine-rest",
     authorization: Optional[str] = None,
     log_level: str = "INFO",
@@ -333,10 +337,22 @@ def bpm_start(
     set_log_level(os.environ.get("LOG_LEVEL") or log_level)
 
     async def start() -> None:
+        variables_data = (
+            json.load(sys.stdin)
+            if variables == "-"
+            else (
+                json.loads(Path(variables).read_text())
+                if variables and os.path.isfile(variables)
+                else (json.loads(variables) if variables else {})
+            )
+        )
         async with operaton_session() as session:
             async with session.post(
                 f"{base_url}/process-definition/key/{key}/start",
-                json={},
+                json=StartProcessInstanceDto(
+                    variables=operaton_from_py(variables_data, [Path(os.getcwd())])
+                ).model_dump(),
+                headers={"Content-Type": "application/json"},
             ) as response:
                 results = await response.json()
                 if "links" not in results:
@@ -361,6 +377,7 @@ cli.add_typer(bpm, name="bpm")
 def cli_run(
     resources: List[FilePath],
     name: str = "pur(jo) deployment",
+    variables: Optional[str] = None,
     force: bool = False,
     base_url: str = "http://localhost:8080/engine-rest",
     authorization: Optional[str] = None,
@@ -413,9 +430,21 @@ def cli_run(
                     f"{base_url}/process-definition?deploymentId={deployment_id}"
                 )
             ).json():
+                variables_data = (
+                    json.load(sys.stdin)
+                    if variables == "-"
+                    else (
+                        json.loads(Path(variables).read_text())
+                        if variables and os.path.isfile(variables)
+                        else (json.loads(variables) if variables else {})
+                    )
+                )
                 async with session.post(
                     f"{base_url}/process-definition/key/{result['key']}/start",
-                    json={},
+                    json=StartProcessInstanceDto(
+                        variables=operaton_from_py(variables_data, [Path(os.getcwd())])
+                    ).model_dump(),
+                    headers={"Content-Type": "application/json"},
                 ) as response:
                     results = await response.json()
                     if "links" not in results:

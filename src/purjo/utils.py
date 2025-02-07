@@ -183,7 +183,7 @@ def operaton_value_from_py(
             if Path(value).is_file() and value.startswith(f"{path}"):
                 mime = mimetypes.guess_type(value)[0] or "text/plain"
                 return VariableValueDto(
-                    value=base64.b64encode(Path(value).read_bytes()),
+                    value=base64.b64encode(Path(value).read_bytes()).decode("utf-8"),
                     type=VariableValueType.File,
                     valueInfo={
                         "filename": Path(value).name,
@@ -195,7 +195,7 @@ def operaton_value_from_py(
             elif (path / value).is_file() and f"{path / value}".startswith(f"{path}"):
                 mime = mimetypes.guess_type(path / value)[0] or "text/plain"
                 return VariableValueDto(
-                    value=base64.b64encode((path / value).read_bytes()),
+                    value=base64.b64encode((path / value).read_bytes()).decode("utf-8"),
                     type=VariableValueType.File,
                     valueInfo={
                         "filename": (path / value).name,
