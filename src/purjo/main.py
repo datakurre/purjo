@@ -4,6 +4,10 @@ from operaton.tasks import operaton_session
 from operaton.tasks import set_log_level
 from operaton.tasks import settings
 from operaton.tasks import task
+from operaton.tasks.types import DeploymentDto
+from operaton.tasks.types import DeploymentWithDefinitionsDto
+from operaton.tasks.types import ProcessDefinitionDto
+from operaton.tasks.types import ProcessInstanceDto
 from operaton.tasks.types import StartProcessInstanceDto
 from pathlib import Path
 from purjo.config import OnFail
@@ -11,9 +15,11 @@ from purjo.runner import create_task
 from purjo.runner import logger
 from purjo.runner import run
 from purjo.runner import Task
+from purjo.utils import migrate as migrate_all
 from purjo.utils import operaton_from_py
 from pydantic import DirectoryPath
 from pydantic import FilePath
+from pydantic import ValidationError
 from typing import List
 from typing import Optional
 from typing import Union
@@ -264,6 +270,7 @@ def bpm_create(
 def bpm_deploy(
     resources: List[FilePath],
     name: str = "pur(jo) deployment",
+    migrate: bool = True,
     force: bool = False,
     base_url: str = "http://localhost:8080/engine-rest",
     authorization: Optional[str] = None,
@@ -302,22 +309,25 @@ def bpm_deploy(
                     filename=resource.name,
                     content_type="application/octet-stream",
                 )
-            async with session.post(
+            response = await session.post(
                 f"{base_url}/deployment/create",
                 data=form,
-            ) as response:
-                results = await response.json()
-                if "id" not in results:
-                    print(json.dumps(results, indent=2))
-                    return
-                url = (
-                    base_url.replace("/engine-rest", "").rstrip("/")
-                    if "CODESPACE_NAME" not in os.environ
-                    else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
-                ) + "/operaton/app/cockpit/default/#/process-definition"
-                for result in results.get("deployedProcessDefinitions").values():
-                    print(f"Deployed: {url}/{result['id']}/runtime")
-                    print(f"With key: {result['key']}")
+            )
+            try:
+                deployment = DeploymentWithDefinitionsDto(**await response.json())
+            except ValidationError:
+                print(json.dumps(**await response.json(), indent=2))
+                return
+            url = (
+                base_url.replace("/engine-rest", "").rstrip("/")
+                if "CODESPACE_NAME" not in os.environ
+                else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
+            ) + "/operaton/app/cockpit/default/#/process-definition"
+            for definition in (deployment.deployedProcessDefinitions or {}).values():
+                if migrate:
+                    await migrate_all(definition, settings.LOG_LEVEL == "DEBUG")
+                print(f"Deployed: {url}/{definition.id}/runtime")
+                print(f"With key: {definition.key}")
 
     asyncio.run(deploy())
 
@@ -349,23 +359,24 @@ def bpm_start(
             )
         )
         async with operaton_session() as session:
-            async with session.post(
+            response = await session.post(
                 f"{base_url}/process-definition/key/{key}/start",
                 json=StartProcessInstanceDto(
                     variables=operaton_from_py(variables_data, [Path(os.getcwd())])
                 ).model_dump(),
                 headers={"Content-Type": "application/json"},
-            ) as response:
-                results = await response.json()
-                if "links" not in results:
-                    print(json.dumps(results, indent=2))
-                    return
-                url = (
-                    base_url.replace("/engine-rest", "").rstrip("/")
-                    if "CODESPACE_NAME" not in os.environ
-                    else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
-                ) + "/operaton/app/cockpit/default/#/process-instance"
-                print(f"Started: {url}/{results['id']}/runtime")
+            )
+            try:
+                instance = ProcessInstanceDto(**await response.json())
+            except ValidationError:
+                print(json.dumps(**await response.json(), indent=2))
+                return
+            url = (
+                base_url.replace("/engine-rest", "").rstrip("/")
+                if "CODESPACE_NAME" not in os.environ
+                else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
+            ) + "/operaton/app/cockpinstanceult/#/process-instance"
+            print(f"Started: {url}/{instance.id}/runtime")
 
     asyncio.run(start())
 
@@ -381,6 +392,7 @@ def cli_run(
     resources: List[FilePath],
     name: str = "pur(jo) deployment",
     variables: Optional[str] = None,
+    migrate: bool = True,
     force: bool = False,
     base_url: str = "http://localhost:8080/engine-rest",
     authorization: Optional[str] = None,
@@ -423,16 +435,24 @@ def cli_run(
                 f"{base_url}/deployment/create",
                 data=form,
             )
-            results = await response.json()
-            if "id" not in results:
-                print(json.dumps(results, indent=2))
+            try:
+                deployment = DeploymentDto(**await response.json())
+            except ValidationError:
+                print(json.dumps(**await response.json(), indent=2))
                 return
-            deployment_id = results["id"]
-            for result in await (
-                await session.get(
-                    f"{base_url}/process-definition?deploymentId={deployment_id}"
-                )
-            ).json():
+            response = await session.get(
+                f"{base_url}/process-definition?deploymentId={deployment.id}"
+            )
+            try:
+                definitions = [
+                    ProcessDefinitionDto(**element) for element in await response.json()
+                ]
+            except (TypeError, ValidationError):
+                print(json.dumps(**await response.json(), indent=2))
+                return
+            for definition in definitions:
+                if migrate:
+                    await migrate_all(definition, settings.LOG_LEVEL == "DEBUG")
                 variables_data = (
                     json.load(sys.stdin)
                     if variables == "-"
@@ -442,23 +462,24 @@ def cli_run(
                         else (json.loads(variables) if variables else {})
                     )
                 )
-                async with session.post(
-                    f"{base_url}/process-definition/key/{result['key']}/start",
+                response = await session.post(
+                    f"{base_url}/process-definition/key/{definition.key}/start",
                     json=StartProcessInstanceDto(
                         variables=operaton_from_py(variables_data, [Path(os.getcwd())])
                     ).model_dump(),
                     headers={"Content-Type": "application/json"},
-                ) as response:
-                    results = await response.json()
-                    if "links" not in results:
-                        print(json.dumps(results, indent=2))
-                        return
-                    url = (
-                        base_url.replace("/engine-rest", "").rstrip("/")
-                        if "CODESPACE_NAME" not in os.environ
-                        else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
-                    ) + "/operaton/app/cockpit/default/#/process-instance"
-                    print(f"Started: {url}/{results['id']}/runtime")
+                )
+                try:
+                    instance = ProcessInstanceDto(**await response.json())
+                except ValidationError:
+                    print(json.dumps(**await response.json(), indent=2))
+                    return
+                url = (
+                    base_url.replace("/engine-rest", "").rstrip("/")
+                    if "CODESPACE_NAME" not in os.environ
+                    else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
+                ) + "/operaton/app/cockpit/default/#/process-instance"
+                print(f"Started: {url}/{instance.id}/runtime")
 
     asyncio.run(start())
 
