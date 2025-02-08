@@ -299,7 +299,7 @@ async def migrate(target: ProcessDefinitionDto, verbose: bool) -> None:
         ]
         ids_by_definitions: Dict[str, List[str]] = {}
         for instance in instances:
-            if instance.id and instance.definitionId:
+            if instance.id and instance.id != target.id and instance.definitionId:
                 ids_by_definitions.setdefault(instance.definitionId, [])
                 ids_by_definitions[instance.definitionId].append(instance.id)
         plans: Dict[str, Any] = {}
@@ -314,19 +314,23 @@ async def migrate(target: ProcessDefinitionDto, verbose: bool) -> None:
                     ).model_dump(),
                 )
             ).json()
-        results = await asyncio.gather(
-            *[
-                session.post(
-                    f"{operaton_settings.ENGINE_REST_BASE_URL}/migration/execute",
-                    json=MigrationExecutionDto(
-                        migrationPlan=plans[definition],
-                        processInstanceIds=instances,
-                        skipCustomListeners=False,
-                        skipIoMappings=True,
-                    ).model_dump(),
-                )
-                for definition, instances in ids_by_definitions.items()
-            ]
+        results = (
+            await asyncio.gather(
+                *[
+                    session.post(
+                        f"{operaton_settings.ENGINE_REST_BASE_URL}/migration/execute",
+                        json=MigrationExecutionDto(
+                            migrationPlan=plans[definition],
+                            processInstanceIds=instances,
+                            skipCustomListeners=False,
+                            skipIoMappings=True,
+                        ).model_dump(),
+                    )
+                    for definition, instances in ids_by_definitions.items()
+                ]
+            )
+            if ids_by_definitions
+            else []
         )
         if verbose:
             print([await response.json() for response in results])
