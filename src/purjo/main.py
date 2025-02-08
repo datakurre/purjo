@@ -276,7 +276,7 @@ def bpm_deploy(
     authorization: Optional[str] = None,
     log_level: str = "INFO",
 ) -> None:
-    """Deploy resources to the BPM engine."""
+    """Deploy resources to BPM engine."""
     settings.ENGINE_REST_BASE_URL = os.environ.get("ENGINE_REST_BASE_URL") or base_url
     settings.ENGINE_REST_AUTHORIZATION = (
         os.environ.get("ENGINE_REST_AUTHORIZATION") or authorization
@@ -340,7 +340,7 @@ def bpm_start(
     authorization: Optional[str] = None,
     log_level: str = "INFO",
 ) -> None:
-    """Start a process instance by key."""
+    """Start a process instance by process definition key."""
     settings.ENGINE_REST_BASE_URL = os.environ.get("ENGINE_REST_BASE_URL") or base_url
     settings.ENGINE_REST_AUTHORIZATION = (
         os.environ.get("ENGINE_REST_AUTHORIZATION") or authorization
@@ -398,7 +398,7 @@ def cli_run(
     authorization: Optional[str] = None,
     log_level: str = "INFO",
 ) -> None:
-    """Deploy and start resources to the BPMN engine."""
+    """Deploy process resources to BPM engine and start a new instance."""
     settings.ENGINE_REST_BASE_URL = os.environ.get("ENGINE_REST_BASE_URL") or base_url
     settings.ENGINE_REST_AUTHORIZATION = (
         os.environ.get("ENGINE_REST_AUTHORIZATION") or authorization
