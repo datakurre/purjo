@@ -313,10 +313,13 @@ def bpm_deploy(
                 f"{base_url}/deployment/create",
                 data=form,
             )
+            if response.status >= 400:
+                print(json.dumps(await response.json(), indent=2))
+                return
             try:
                 deployment = DeploymentWithDefinitionsDto(**await response.json())
             except ValidationError:
-                print(json.dumps(**await response.json(), indent=2))
+                print(json.dumps(await response.json(), indent=2))
                 return
             url = (
                 base_url.replace("/engine-rest", "").rstrip("/")
@@ -366,10 +369,13 @@ def bpm_start(
                 ).model_dump(),
                 headers={"Content-Type": "application/json"},
             )
+            if response.status >= 400:
+                print(json.dumps(await response.json(), indent=2))
+                return
             try:
                 instance = ProcessInstanceDto(**await response.json())
             except ValidationError:
-                print(json.dumps(**await response.json(), indent=2))
+                print(json.dumps(await response.json(), indent=2))
                 return
             url = (
                 base_url.replace("/engine-rest", "").rstrip("/")
@@ -435,20 +441,26 @@ def cli_run(
                 f"{base_url}/deployment/create",
                 data=form,
             )
+            if response.status >= 400:
+                print(json.dumps(await response.json(), indent=2))
+                return
             try:
                 deployment = DeploymentDto(**await response.json())
             except ValidationError:
-                print(json.dumps(**await response.json(), indent=2))
+                print(json.dumps(await response.json(), indent=2))
                 return
             response = await session.get(
                 f"{base_url}/process-definition?deploymentId={deployment.id}"
             )
+            if response.status >= 400:
+                print(json.dumps(await response.json(), indent=2))
+                return
             try:
                 definitions = [
                     ProcessDefinitionDto(**element) for element in await response.json()
                 ]
             except (TypeError, ValidationError):
-                print(json.dumps(**await response.json(), indent=2))
+                print(json.dumps(await response.json(), indent=2))
                 return
             for definition in definitions:
                 if migrate:
@@ -469,10 +481,13 @@ def cli_run(
                     ).model_dump(),
                     headers={"Content-Type": "application/json"},
                 )
+                if response.status >= 400:
+                    print(json.dumps(await response.json(), indent=2))
+                    return
                 try:
                     instance = ProcessInstanceDto(**await response.json())
                 except ValidationError:
-                    print(json.dumps(**await response.json(), indent=2))
+                    print(json.dumps(await response.json(), indent=2))
                     return
                 url = (
                     base_url.replace("/engine-rest", "").rstrip("/")
