@@ -155,12 +155,12 @@ def operaton_value_from_py(
 ) -> VariableValueDto:
     if value is None:
         return VariableValueDto(value=None, type=VariableValueType.Null)
-    elif isinstance(value, list):
-        return VariableValueDto(
-            value=json.dumps(value, default=json_serializer),
-            type=VariableValueType.Json,
-        )
-    elif isinstance(value, list):
+    elif (
+        isinstance(value, dict)
+        or isinstance(value, list)
+        or isinstance(value, tuple)
+        or isinstance(value, set)
+    ):
         return VariableValueDto(
             value=json.dumps(value, default=json_serializer),
             type=VariableValueType.Json,
