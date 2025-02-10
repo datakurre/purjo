@@ -88,9 +88,9 @@ def deserialize(
         or info is None
         or info.serializationDataFormat is None
     ):
+        if type_ == VariableValueType.Date:
+            return dt_from_operaton(value)
         return value
-    elif type_ == VariableValueType.Date:
-        return dt_from_operaton(value)
     elif info.serializationDataFormat is None:
         return value
     elif info.serializationDataFormat == "application/json":

@@ -159,7 +159,7 @@ def cli_init(
         (cwd_path / "Hello.py").write_text(
             (importlib.resources.files("purjo.data") / "Hello.py").read_text()
         )
-        (cwd_path / ".wrapignore").write_text("/*.bpmn\n")
+        (cwd_path / ".wrapignore").write_text("")
         cli_wrap()
         (cwd_path / "robot.zip").unlink()
 
