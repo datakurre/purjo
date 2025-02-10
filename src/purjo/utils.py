@@ -223,7 +223,13 @@ def operaton_from_py(
 
 def json_serializer(obj: Any) -> str:
     if isinstance(obj, datetime.datetime):
-        return obj.isoformat()
+        local_tz = tzlocal.get_localzone()
+        return (
+            obj.astimezone(local_tz)
+            .replace(tzinfo=None)
+            .isoformat(timespec="milliseconds")
+            .replace("T", " ")
+        )
     elif isinstance(obj, Path):
         return f"{obj.absolute()}"
     raise TypeError(f"Type {type(obj)} not serializable")

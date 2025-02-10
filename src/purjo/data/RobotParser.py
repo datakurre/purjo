@@ -7,6 +7,7 @@ from robot.running.model import Body  # type: ignore
 from robot.running.model import Var as BaseVar
 from robot.variables import VariableScopes  # type: ignore
 from typing import Any
+import datetime
 import json
 import os
 import pathlib
@@ -16,12 +17,20 @@ BPMN_TASK_SCOPE = "BPMN_TASK_SCOPE"
 BPMN_PROCESS_SCOPE = "BPMN_PROCESS_SCOPE"
 
 
+def json_serializer(obj: Any) -> str:
+    if isinstance(obj, datetime.datetime):
+        return obj.isoformat()
+    elif isinstance(obj, pathlib.Path):
+        return f"{obj.absolute()}"
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+
 def set_bpmn_task(self: VariableScopes, name: str, value: Any) -> None:
     assert BPMN_TASK_SCOPE in os.environ
     path = pathlib.Path(os.environ[BPMN_TASK_SCOPE])
     data = json.loads(path.read_text()) if path.exists() else {}
     data[name[2:-1]] = value
-    path.write_text(json.dumps(data))
+    path.write_text(json.dumps(data, default=json_serializer))
 
 
 def set_bpmn_process(self: VariableScopes, name: str, value: Any) -> None:
@@ -29,7 +38,7 @@ def set_bpmn_process(self: VariableScopes, name: str, value: Any) -> None:
     path = pathlib.Path(os.environ[BPMN_PROCESS_SCOPE])
     data = json.loads(path.read_text()) if path.exists() else {}
     data[name[2:-1]] = value
-    path.write_text(json.dumps(data))
+    path.write_text(json.dumps(data, default=json_serializer))
 
 
 VariableScopes.set_bpmn = set_bpmn_task
