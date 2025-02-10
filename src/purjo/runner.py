@@ -87,6 +87,82 @@ class Task(BaseModel):
     exclude: Optional[str] = None
 
 
+def build_run(
+    config: Task,
+    robot_dir: str,
+    working_dir: str,
+    task_variables_file: Path,
+    process_variables_file: Path,
+) -> Coroutine[None, None, Tuple[int, bytes, bytes]]:
+    return run(
+        settings.UV_EXECUTABLE,
+        [
+            "run",
+            "--link-mode",
+            "copy",
+            "--project",
+            robot_dir,
+        ]
+        + (
+            [
+                "--offline",
+                "--cache-dir",
+                str(Path(working_dir) / ".cache"),
+            ]
+            if (Path(working_dir) / ".cache").is_dir()
+            else []
+        )
+        + [
+            "--",
+            "robot",
+        ]
+        + (
+            [
+                "-t",
+                config.name,
+            ]
+            if config.name
+            else []
+        )
+        + (
+            [
+                "-i",
+                config.include,
+            ]
+            if config.include
+            else []
+        )
+        + (
+            [
+                "-e",
+                config.exclude,
+            ]
+            if config.exclude
+            else []
+        )
+        + [
+            "--pythonpath",
+            working_dir,
+            "--pythonpath",
+            robot_dir,
+            "--parser",
+            "RobotParser",
+            "--variablefile",
+            "variables.json",
+            "--outputdir",
+            working_dir,
+            robot_dir,
+        ],
+        Path(working_dir),
+        {
+            "BPMN_PROCESS_SCOPE": str(process_variables_file),
+            "BPMN_TASK_SCOPE": str(task_variables_file),
+            "UV_NO_SYNC": "0",
+            "VIRTUAL_ENV": "",
+        },
+    )
+
+
 def create_task(
     config: Task,
     robot: Union[FilePath, DirectoryPath],
@@ -125,72 +201,12 @@ def create_task(
                 task_variables_file.write_text("{}")
                 process_variables_file = Path(working_dir) / "process_variables.json"
                 process_variables_file.write_text("{}")
-                return_code, stdout, stderr = await run(
-                    settings.UV_EXECUTABLE,
-                    [
-                        "run",
-                        "--link-mode",
-                        "copy",
-                        "--project",
-                        robot_dir,
-                    ]
-                    + (
-                        [
-                            "--offline",
-                            "--cache-dir",
-                            str(Path(working_dir) / ".cache"),
-                        ]
-                        if (Path(working_dir) / ".cache").is_dir()
-                        else []
-                    )
-                    + [
-                        "--",
-                        "robot",
-                    ]
-                    + (
-                        [
-                            "-t",
-                            config.name,
-                        ]
-                        if config.name
-                        else []
-                    )
-                    + (
-                        [
-                            "-i",
-                            config.include,
-                        ]
-                        if config.include
-                        else []
-                    )
-                    + (
-                        [
-                            "-e",
-                            config.exclude,
-                        ]
-                        if config.exclude
-                        else []
-                    )
-                    + [
-                        "--pythonpath",
-                        working_dir,
-                        "--pythonpath",
-                        robot_dir,
-                        "--parser",
-                        "RobotParser",
-                        "--variablefile",
-                        "variables.json",
-                        "--outputdir",
-                        working_dir,
-                        robot_dir,
-                    ],
-                    Path(working_dir),
-                    {
-                        "BPMN_PROCESS_SCOPE": str(process_variables_file),
-                        "BPMN_TASK_SCOPE": str(task_variables_file),
-                        "UV_NO_SYNC": "0",
-                        "VIRTUAL_ENV": "",
-                    },
+                return_code, stdout, stderr = await build_run(
+                    config,
+                    robot_dir,
+                    working_dir,
+                    task_variables_file,
+                    process_variables_file,
                 )
                 task_variables = operaton_from_py(
                     json.loads(task_variables_file.read_text()),
