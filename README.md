@@ -75,7 +75,7 @@ $ uv run --with=purjo -- run hello.bpmn
 Started: http://localhost:8080/operaton/app/cockpit/default/#/process-instance/36228e79-e97e-11ef-a0ec-52f4bfd829ae/runtime
 ```
 
-Serve the project as externa task worker:
+Serve the project as external task worker:
 
 ```console
 $ uv run --with=purjo -- serve .
