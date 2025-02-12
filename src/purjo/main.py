@@ -384,7 +384,7 @@ def bpm_start(
                 base_url.replace("/engine-rest", "").rstrip("/")
                 if "CODESPACE_NAME" not in os.environ
                 else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
-            ) + "/operaton/app/cockpinstanceult/#/process-instance"
+            ) + "/operaton/app/cockpit/default/#/process-instance"
             print(f"Started: {url}/{instance.id}/runtime")
 
     asyncio.run(start())
