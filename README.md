@@ -1,4 +1,4 @@
-# pur(jo)
+# `pur`(jo)
 
 `pur`(jo) (*/ˈpurjo/*)  is an experimental command line tool for orchestrating [Robot Framework](https://robotframework.org/) test or task suites with the [Operaton](https://operaton.org/) BPM engine. It long-polls external service tasks from the Operaton engine, executes mapped Robot Framework test and task suites with the [uv](https://docs.astral.sh/uv/) Python environment manager, and finally reports the results or errors back to the engine.
 
