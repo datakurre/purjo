@@ -36,6 +36,7 @@ import string
 import sys
 import tomllib
 import typer
+import uuid
 
 
 cli = typer.Typer(
@@ -361,11 +362,13 @@ def bpm_start(
                 else (json.loads(variables) if variables else {})
             )
         )
+        business_key = variables_data.pop("businessKey", None) or f"{uuid.uuid4()}"
         async with operaton_session() as session:
             response = await session.post(
                 f"{base_url}/process-definition/key/{key}/start",
                 json=StartProcessInstanceDto(
-                    variables=operaton_from_py(variables_data, [Path(os.getcwd())])
+                    businessKey=business_key,
+                    variables=operaton_from_py(variables_data, [Path(os.getcwd())]),
                 ).model_dump(),
                 headers={"Content-Type": "application/json"},
             )
@@ -474,10 +477,14 @@ def cli_run(
                         else (json.loads(variables) if variables else {})
                     )
                 )
+                business_key = (
+                    variables_data.pop("businessKey", None) or f"{uuid.uuid4()}"
+                )
                 response = await session.post(
                     f"{base_url}/process-definition/key/{definition.key}/start",
                     json=StartProcessInstanceDto(
-                        variables=operaton_from_py(variables_data, [Path(os.getcwd())])
+                        businessKey=business_key,
+                        variables=operaton_from_py(variables_data, [Path(os.getcwd())]),
                     ).model_dump(),
                     headers={"Content-Type": "application/json"},
                 )
