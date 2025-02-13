@@ -97,7 +97,19 @@ def cli_serve(
                 robot_toml = tomllib.loads(fp.read("pyproject.toml").decode("utf-8"))
         purjo_toml = (robot_toml.get("tool") or {}).get("purjo") or {}
         for topic, config in (purjo_toml.get("topics") or {}).items():
-            task(topic)(create_task(Task(**config), robot, on_fail, semaphore))
+            task_config = Task(**config)
+            task(topic, localVariables=not task_config.process_variables)(
+                create_task(
+                    config=task_config,
+                    robot=robot,
+                    on_fail=(
+                        task_config.on_fail
+                        if task_config.on_fail is not None
+                        else on_fail
+                    ),
+                    semaphore=semaphore,
+                )
+            )
             logger.info("Topic | %s | %s", topic, config)
 
     asyncio.get_event_loop().run_until_complete(external_task_worker(handlers=handlers))
@@ -147,8 +159,10 @@ def cli_init(
         (cwd_path / "pyproject.toml").write_text(
             (cwd_path / "pyproject.toml").read_text()
             + """
-[tool.purjo.topics]
-"My Topic" = { name = "My Task" }
+[tool.purjo.topics."My Topic in BPMN"]
+name = "My Test in Robot"
+on-fail = "ERROR"
+process-variables = true
 """
         )
         (cwd_path / "hello.bpmn").write_text(

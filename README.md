@@ -79,13 +79,13 @@ Serve the project as external task worker:
 
 ```console
 $ uv run --with=purjo -- serve .
-... | DEBUG | ... | Waiting for 1 pending asyncio task: ['My Topic:3622b58f-e97e-11ef-a0ec-52f4bfd829ae'].
+... | DEBUG | ... | Waiting for 1 pending asyncio task: ['My Topic in BPMN:3622b58f-e97e-11ef-a0ec-52f4bfd829ae'].
 ==============================================================================
 Tmpdlb85Jrp
 ==============================================================================
 Tmpdlb85Jrp.Hello
 ==============================================================================
-My Task                                                               | PASS |
+My Task in Robot                                                      | PASS |
 ------------------------------------------------------------------------------
 Tmpdlb85Jrp.Hello                                                     | PASS |
 1 task, 1 passed, 0 failed

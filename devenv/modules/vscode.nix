@@ -26,6 +26,7 @@ in
             ln -s ${pkgs.ruff}/bin/ruff $out/share/vscode/extensions/charliermarsh.ruff/bundled/libs/bin/ruff
           '';
         }))
+        extensions.vscode-marketplace.tamasfe.even-better-toml
         extensions.vscode-marketplace.d-biehl.robotcode
         pkgs.vscode-extensions.github.copilot
         pkgs.vscode-extensions.github.copilot-chat

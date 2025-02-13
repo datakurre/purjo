@@ -20,6 +20,7 @@ from purjo.utils import operaton_from_py
 from purjo.utils import py_from_operaton
 from pydantic import BaseModel
 from pydantic import DirectoryPath
+from pydantic import Field
 from pydantic import FilePath
 from tempfile import TemporaryDirectory
 from typing import Callable
@@ -85,6 +86,8 @@ class Task(BaseModel):
     name: Optional[str] = None
     include: Optional[str] = None
     exclude: Optional[str] = None
+    on_fail: Optional[OnFail] = Field(default=None, alias="on-fail")
+    process_variables: bool = Field(default=False, alias="process-variables")
 
 
 def build_run(

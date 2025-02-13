@@ -54,7 +54,7 @@ def _get_output_variables(
     ).read_text()
     with TemporaryDirectory() as robot_dir, TemporaryDirectory() as working_dir:
         variables = variables | {
-            "BPMN:PROCESS": "BPMN:BPMN:TASK",
+            "BPMN:PROCESS": "BPMN:TASK",
             "BPMN:TASK": "BPMN:TASK",
         }
         if robot.is_dir():

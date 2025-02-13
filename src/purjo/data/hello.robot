@@ -1,13 +1,22 @@
 *** Settings ***
 Library     Hello.py
+Library     random
 
 
 *** Variables ***
-${BPMN:TASK}    local
-${name}         n/a
+${BPMN:PROCESS}     local
+${name}             n/a
 
 
-*** Tasks ***
-My Task
+*** Test Cases ***
+My Test in Robot
+    ${dice}=    Randint    ${1}    ${6}
+    IF    ${dice} < 3
+        ${errorCodeAndMessage}=    Catenate    SEPARATOR=\n
+        ...    Bad luck
+        ...    You rolled ${dice}, which is less than 3.
+        Fail    ${errorCodeAndMessage}
+    END
     ${message}=    Hello    ${name}
-    VAR    ${message}    ${message}    scope=${BPMN:TASK}
+    Should Be Equal    ${message}    Hello ${name}!
+    VAR    ${message}    ${message}    scope=${BPMN:PROCESS}
