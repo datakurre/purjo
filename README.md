@@ -96,7 +96,7 @@ Tmpdlb85Jrp                                                           | PASS |
 Output:  /tmp/nix-shell-49641-0/tmp2721mpez/output.xml
 Log:     /tmp/nix-shell-49641-0/tmp2721mpez/log.html
 Report:  /tmp/nix-shell-49641-0/tmp2721mpez/report.html
-... | INFO | ... | Completing My Topic:3622b58f-e97e-11ef-a0ec-52f4bfd829ae.
+... | INFO | ... | Completing My Topic in BPMN:3622b58f-e97e-11ef-a0ec-52f4bfd829ae.
 ```
 
 ## More information
