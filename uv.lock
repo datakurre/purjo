@@ -694,7 +694,7 @@ wheels = [
 
 [[package]]
 name = "operaton-tasks"
-version = "1.0.0a5"
+version = "1.0.0a6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -704,7 +704,7 @@ dependencies = [
     { name = "starlette" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/4f/f566ef7a35ce54d1c58cc0b1694b6a5a81fc5c407ad59b8b5e48740af886/operaton_tasks-1.0.0a5-py3-none-any.whl", hash = "sha256:9133cbb1d71e16044118b6c73135a4733de1d4d3f229e48e9b63c625f5c12df9", size = 59085 },
+    { url = "https://files.pythonhosted.org/packages/68/39/9d05062c46a9b26ebc2ea1c40ea423e30c0a7cb43608d8676c3c7a218773/operaton_tasks-1.0.0a6-py3-none-any.whl", hash = "sha256:1f38134dd1478838193c0b30cdc0220e2939d5953b88a58a5488641a1fd61109", size = 59138 },
 ]
 
 [[package]]
@@ -834,7 +834,7 @@ wheels = [
 
 [[package]]
 name = "purjo"
-version = "1.0.0a12"
+version = "1.0.0a25"
 source = { editable = "." }
 dependencies = [
     { name = "javaobj-py3" },
@@ -858,7 +858,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "javaobj-py3", specifier = ">=0.4.4" },
-    { name = "operaton-tasks", specifier = ">=1.0.0a5" },
+    { name = "operaton-tasks", specifier = ">=1.0.0a6" },
     { name = "pathspec", specifier = ">=0.12.1" },
     { name = "typer", specifier = ">=0.15.1" },
     { name = "tzlocal", specifier = ">=5.2" },
