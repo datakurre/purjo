@@ -241,10 +241,10 @@ def cli_wrap(
                     zipf.write(file_path_, file_path_.relative_to(cwd_path))
 
 
-bpm = typer.Typer(
+operaton = typer.Typer(
     pretty_exceptions_enable=False,
     no_args_is_help=True,
-    help="BPM engine operations as distinct sub commands.",
+    help='BPM engine operations as distinct sub commands (also as "bpm").',
 )
 
 
@@ -253,8 +253,8 @@ def generate_random_string(length: int = 7) -> str:
     return "".join(random.choice(characters) for _ in range(length))
 
 
-@bpm.command(name="create")
-def bpm_create(
+@operaton.command(name="create")
+def operaton_create(
     filename: Path,
     log_level: str = "INFO",
 ) -> None:
@@ -283,8 +283,8 @@ def bpm_create(
     )
 
 
-@bpm.command(name="deploy")
-def bpm_deploy(
+@operaton.command(name="deploy")
+def operaton_deploy(
     resources: List[FilePath],
     name: str = "pur(jo) deployment",
     migrate: bool = True,
@@ -352,8 +352,8 @@ def bpm_deploy(
     asyncio.run(deploy())
 
 
-@bpm.command(name="start")
-def bpm_start(
+@operaton.command(name="start")
+def operaton_start(
     key: str,
     variables: Optional[str] = None,
     base_url: str = "http://localhost:8080/engine-rest",
@@ -406,7 +406,8 @@ def bpm_start(
     asyncio.run(start())
 
 
-cli.add_typer(bpm, name="bpm")
+cli.add_typer(operaton, name="operaton")
+cli.add_typer(operaton, name="bpm", hidden=True)
 
 
 @cli.command(
