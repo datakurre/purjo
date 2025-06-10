@@ -1,9 +1,24 @@
-{ pkgs, ... }:
+{
+  pkgs,
+  inputs,
+  lib,
+  ...
+}:
 {
   package.operaton.port = 8080;
 
   languages.python.interpreter = pkgs.python312;
   languages.python.workspaceRoot = ./.;
+  languages.python.uv.package = lib.mkForce (
+    pkgs.buildFHSEnv {
+      name = "uv";
+      targetPkgs = pkgs: [
+        pkgs.python312
+        inputs.uv2nix.packages.${pkgs.system}.uv-bin
+      ];
+      runScript = "uv";
+    }
+  );
   languages.python.pyprojectOverrides =
     final: prev:
     let
