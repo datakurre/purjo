@@ -1,20 +1,32 @@
+{ pkgs, ... }:
 {
-  pkgs,
-  lib,
-  config,
-  inputs,
-  ...
-}:
-{
-  imports = [
-    ./devenv/modules/operaton.nix
-    ./devenv/modules/python.nix
-  ];
-
-  package.operaton.path = ./fixture;
+  package.operaton.port = 8080;
 
   languages.python.interpreter = pkgs.python312;
-  languages.python.pyprojectOverrides = final: prev: { };
+  languages.python.workspaceRoot = ./.;
+  languages.python.pyprojectOverrides =
+    final: prev:
+    let
+      packagesToBuildWithSetuptools = [
+      ];
+    in
+    {
+      "hatchling" = prev."hatchling".overrideAttrs (old: {
+        propagatedBuildInputs = [ final."editables" ];
+      });
+    }
+    // builtins.listToAttrs (
+      map (pkg: {
+        name = pkg;
+        value = prev.${pkg}.overrideAttrs (old: {
+          nativeBuildInputs =
+            old.nativeBuildInputs
+            ++ final.resolveBuildSystem ({
+              "setuptools" = [ ];
+            });
+        });
+      }) packagesToBuildWithSetuptools
+    );
 
   packages = [
     pkgs.entr
@@ -26,15 +38,6 @@
   ];
 
   dotenv.disableHint = true;
-
-  enterShell = ''
-    unset PYTHONPATH
-    export UV_NO_SYNC=1
-    export UV_PYTHON_DOWNLOADS=never
-    export REPO_ROOT=$(git rev-parse --show-toplevel)
-  '';
-
-  # processes.runner.exec = "make -s watch";
 
   enterTest = ''
     wait_for_port 8080 60
