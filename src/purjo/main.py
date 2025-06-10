@@ -155,7 +155,9 @@ def cli_init(
                 "VIRTUAL_ENV": "",
             },
         )
-        (cwd_path / "hello.py").unlink()
+        for fixture_py in [cwd_path / "hello.py"]:
+            if fixture_py.exists():
+                fixture_py.unlink()
         (cwd_path / "pyproject.toml").write_text(
             (cwd_path / "pyproject.toml").read_text()
             + """
