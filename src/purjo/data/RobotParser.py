@@ -75,4 +75,42 @@ class RobotParser(BaseParser):  # type: ignore
         return super().parse_init_file(source, defaults)
 
 
-__all__ = ["RobotParser"]
+class PythonParser(BaseParser):  # type: ignore
+    """Opinionated parser to support wrapping of a single configured Python function as a Robot Framework test case.
+    The function should be specified in the format `module.function`, where `module` is the name of the Python module.
+    """
+
+    extension = ".py"
+
+    def __init__(self, fqfn: str = ""):
+        self.fqfn = fqfn
+
+    def parse(self, source: pathlib.Path, defaults: TestDefaults) -> TestSuite:
+        # Sanity check for missing configuration
+        if not self.fqfn:
+            return TestSuite()
+
+        module_path, function_name = self.fqfn.rsplit(".", 1)
+        # Check if the module_path matches the source
+        if not source.name.startswith(module_path):
+            return TestSuite()
+
+        # Dynamically generate a TestSuite
+        suite = TestSuite(name=self.fqfn)
+
+        # Import the module in module_path as a library
+        suite.resource.imports.library(module_path)
+
+        # Create a single test case
+        test_case = suite.tests.create(name=self.fqfn)
+
+        # Add a single keyword to the test case that calls the function in function_name
+        test_case.body.create_keyword(name=function_name)
+
+        return suite
+
+    def parse_init(self, source: pathlib.Path, defaults: TestDefaults) -> TestSuite:
+        return TestSuite()
+
+
+__all__ = ["RobotParser", "PythonParser"]

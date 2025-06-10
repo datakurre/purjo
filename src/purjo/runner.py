@@ -90,6 +90,11 @@ class Task(BaseModel):
     process_variables: bool = Field(default=False, alias="process-variables")
 
 
+def is_python_fqfn(value: str) -> bool:
+    """Check if a string looks like a fully qualified function name (fqfn)."""
+    return bool(re.match(r"^[a-zA-Z_][\w\.]*\.[a-zA-Z_][\w]*$", value))
+
+
 def build_run(
     config: Task,
     robot_dir: str,
@@ -97,6 +102,7 @@ def build_run(
     task_variables_file: Path,
     process_variables_file: Path,
 ) -> Coroutine[None, None, Tuple[int, bytes, bytes]]:
+    is_python = config.name and is_python_fqfn(config.name)
     return run(
         settings.UV_EXECUTABLE,
         [
@@ -149,7 +155,11 @@ def build_run(
             "--pythonpath",
             robot_dir,
             "--parser",
-            "RobotParser",
+            (
+                "RobotParser"
+                if not is_python
+                else f"RobotParser.PythonParser:{config.name}"
+            ),
             "--variablefile",
             "variables.json",
             "--outputdir",
