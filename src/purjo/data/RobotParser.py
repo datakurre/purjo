@@ -86,8 +86,8 @@ class PythonParser(BaseParser):  # type: ignore
         self.fqfn = fqfn
 
     def parse(self, source: pathlib.Path, defaults: TestDefaults) -> TestSuite:
-        # Sanity check for missing configuration
-        if not self.fqfn:
+        # Sanity check for missing or invalid configuration
+        if not self.fqfn or "." not in self.fqfn:
             return TestSuite()
 
         module_path, function_name = self.fqfn.rsplit(".", 1)
@@ -96,7 +96,7 @@ class PythonParser(BaseParser):  # type: ignore
             return TestSuite()
 
         # Dynamically generate a TestSuite
-        suite = TestSuite(name=self.fqfn)
+        suite = TestSuite(name=self.fqfn.split(".")[0])
 
         # Import the module in module_path as a library
         suite.resource.imports.library(module_path)
