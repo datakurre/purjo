@@ -20,6 +20,7 @@ from purjo.utils import operaton_from_py
 from pydantic import DirectoryPath
 from pydantic import FilePath
 from pydantic import ValidationError
+from typing import Annotated
 from typing import List
 from typing import Optional
 from typing import Union
@@ -52,36 +53,34 @@ cli = typer.Typer(
 )
 def cli_serve(
     robots: List[Union[FilePath, DirectoryPath]],
-    base_url: str = "http://localhost:8080/engine-rest",
-    authorization: Optional[str] = None,
-    timeout: int = 20,
-    poll_ttl: int = 10,
-    lock_ttl: int = 30,
+    base_url: Annotated[
+        str, typer.Option(envvar="ENGINE_REST_BASE_URL")
+    ] = "http://localhost:8080/engine-rest",
+    authorization: Annotated[
+        Optional[str], typer.Option(envvar="ENGINE_REST_AUTHORIZATION")
+    ] = None,
+    timeout: Annotated[int, typer.Option(envvar="ENGINE_REST_TIMEOUT_SECONDS")] = 20,
+    poll_ttl: Annotated[int, typer.Option(envvar="ENGINE_REST_POLL_TTL_SECONDS")] = 10,
+    lock_ttl: Annotated[int, typer.Option(envvar="ENGINE_REST_LOCK_TTL_SECONDS")] = 30,
     max_jobs: int = 1,
-    worker_id: str = "operaton-robot-runner",
-    log_level: str = "DEBUG",
+    worker_id: Annotated[
+        str, typer.Option(envvar="TASKS_WORKER_ID")
+    ] = "operaton-robot-runner",
+    log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "DEBUG",
     on_fail: OnFail = OnFail.FAIL,
 ) -> None:
     """
     Serve robot.zip packages (or directories) as BPMN service tasks.
     """
-    settings.ENGINE_REST_BASE_URL = os.environ.get("ENGINE_REST_BASE_URL") or base_url
-    settings.ENGINE_REST_AUTHORIZATION = (
-        os.environ.get("ENGINE_REST_AUTHORIZATION") or authorization
-    )
-    settings.ENGINE_REST_TIMEOUT_SECONDS = (
-        int(os.environ.get("ENGINE_REST_TIMEOUT_SECONDS") or "0") or timeout
-    )
-    settings.ENGINE_REST_POLL_TTL_SECONDS = (
-        int(os.environ.get("ENGINE_REST_POLL_TTL_SECONDS") or "0") or poll_ttl
-    )
-    settings.ENGINE_REST_LOCK_TTL_SECONDS = (
-        int(os.environ.get("ENGINE_REST_LOCK_TTL_SECONDS") or "0") or lock_ttl
-    )
-    settings.TASKS_WORKER_ID = os.environ.get("TASKS_WORKER_ID") or worker_id
+    settings.ENGINE_REST_BASE_URL = base_url
+    settings.ENGINE_REST_AUTHORIZATION = authorization
+    settings.ENGINE_REST_TIMEOUT_SECONDS = timeout
+    settings.ENGINE_REST_POLL_TTL_SECONDS = poll_ttl
+    settings.ENGINE_REST_LOCK_TTL_SECONDS = lock_ttl
+    settings.TASKS_WORKER_ID = worker_id
     settings.TASKS_MODULE = None
-    logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
-    set_log_level(os.environ.get("LOG_LEVEL") or log_level)
+    logger.setLevel(log_level)
+    set_log_level(log_level)
 
     semaphore = asyncio.Semaphore(max_jobs)
 
@@ -117,7 +116,7 @@ def cli_serve(
 
 @cli.command(name="init")
 def cli_init(
-    log_level: str = "INFO",
+    log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "INFO",
 ) -> None:
     """Initialize a new robot package into the current directory."""
     logger.setLevel(log_level)
@@ -186,11 +185,11 @@ process-variables = true
 @cli.command(name="wrap")
 def cli_wrap(
     offline: bool = False,
-    log_level: str = "INFO",
+    log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "INFO",
 ) -> None:
     """Wrap the current directory into a robot.zip package."""
-    logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
-    set_log_level(os.environ.get("LOG_LEVEL") or log_level)
+    logger.setLevel(log_level)
+    set_log_level(log_level)
     cwd_path = Path(os.getcwd())
     if offline:
         # Cache dependencies
@@ -256,11 +255,11 @@ def generate_random_string(length: int = 7) -> str:
 @operaton.command(name="create")
 def operaton_create(
     filename: Path,
-    log_level: str = "INFO",
+    log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "INFO",
 ) -> None:
     """Create a new BPMN (or DMN) file."""
-    logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
-    set_log_level(os.environ.get("LOG_LEVEL") or log_level)
+    logger.setLevel(log_level)
+    set_log_level(log_level)
 
     if not (filename.name.endswith(".bpmn") or filename.name.endswith(".dmn")):
         filename = filename.with_suffix(".bpmn")
@@ -286,20 +285,22 @@ def operaton_create(
 @operaton.command(name="deploy")
 def operaton_deploy(
     resources: List[FilePath],
-    name: str = "pur(jo) deployment",
+    name: Annotated[str, typer.Option(envvar="DEPLOYMENT_NAME")] = "pur(jo) deployment",
     migrate: bool = True,
     force: bool = False,
-    base_url: str = "http://localhost:8080/engine-rest",
-    authorization: Optional[str] = None,
-    log_level: str = "INFO",
+    base_url: Annotated[
+        str, typer.Option(envvar="ENGINE_REST_BASE_URL")
+    ] = "http://localhost:8080/engine-rest",
+    authorization: Annotated[
+        Optional[str], typer.Option(envvar="ENGINE_REST_AUTHORIZATION")
+    ] = None,
+    log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "INFO",
 ) -> None:
     """Deploy resources to BPM engine."""
-    settings.ENGINE_REST_BASE_URL = os.environ.get("ENGINE_REST_BASE_URL") or base_url
-    settings.ENGINE_REST_AUTHORIZATION = (
-        os.environ.get("ENGINE_REST_AUTHORIZATION") or authorization
-    )
-    logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
-    set_log_level(os.environ.get("LOG_LEVEL") or log_level)
+    settings.ENGINE_REST_BASE_URL = base_url
+    settings.ENGINE_REST_AUTHORIZATION = authorization
+    logger.setLevel(log_level)
+    set_log_level(log_level)
 
     async def deploy() -> None:
         async with operaton_session(headers={"Content-Type": None}) as session:
@@ -356,17 +357,19 @@ def operaton_deploy(
 def operaton_start(
     key: str,
     variables: Optional[str] = None,
-    base_url: str = "http://localhost:8080/engine-rest",
-    authorization: Optional[str] = None,
-    log_level: str = "INFO",
+    base_url: Annotated[
+        str, typer.Option(envvar="ENGINE_REST_BASE_URL")
+    ] = "http://localhost:8080/engine-rest",
+    authorization: Annotated[
+        Optional[str], typer.Option(envvar="ENGINE_REST_AUTHORIZATION")
+    ] = None,
+    log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "INFO",
 ) -> None:
     """Start a process instance by process definition key."""
-    settings.ENGINE_REST_BASE_URL = os.environ.get("ENGINE_REST_BASE_URL") or base_url
-    settings.ENGINE_REST_AUTHORIZATION = (
-        os.environ.get("ENGINE_REST_AUTHORIZATION") or authorization
-    )
-    logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
-    set_log_level(os.environ.get("LOG_LEVEL") or log_level)
+    settings.ENGINE_REST_BASE_URL = base_url
+    settings.ENGINE_REST_AUTHORIZATION = authorization
+    logger.setLevel(log_level)
+    set_log_level(log_level)
 
     async def start() -> None:
         variables_data = (
@@ -416,21 +419,24 @@ cli.add_typer(operaton, name="bpm", hidden=True)
 )
 def cli_run(
     resources: List[FilePath],
-    name: str = "pur(jo) deployment",
+    name: Annotated[str, typer.Option(envvar="DEPLOYMENT_NAME")] = "pur(jo) deployment",
     variables: Optional[str] = None,
     migrate: bool = True,
     force: bool = False,
-    base_url: str = "http://localhost:8080/engine-rest",
-    authorization: Optional[str] = None,
-    log_level: str = "INFO",
+    base_url: Annotated[
+        str, typer.Option(envvar="ENGINE_REST_BASE_URL")
+    ] = "http://localhost:8080/engine-rest",
+    authorization: Annotated[
+        Optional[str], typer.Option(envvar="ENGINE_REST_AUTHORIZATION")
+    ] = None,
+    log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "INFO",
 ) -> None:
     """Deploy process resources to BPM engine and start a new instance."""
-    settings.ENGINE_REST_BASE_URL = os.environ.get("ENGINE_REST_BASE_URL") or base_url
-    settings.ENGINE_REST_AUTHORIZATION = (
-        os.environ.get("ENGINE_REST_AUTHORIZATION") or authorization
-    )
-    logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
-    set_log_level(os.environ.get("LOG_LEVEL") or log_level)
+    settings.ENGINE_REST_BASE_URL = base_url
+    settings.ENGINE_REST_AUTHORIZATION = authorization
+    settings.LOG_LEVEL = log_level
+    logger.setLevel(log_level)
+    set_log_level(log_level)
 
     async def start() -> None:
         async with operaton_session(headers={"Content-Type": None}) as session:
