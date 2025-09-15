@@ -41,6 +41,7 @@ dev = [
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
     "robotframework-tidy>=4.16.0",
+    "zest-releaser>=9.6.2",
 ]
 
 [tool.isort]
