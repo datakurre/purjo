@@ -116,6 +116,12 @@ def cli_serve(
 
 @cli.command(name="init")
 def cli_init(
+    python: Annotated[
+        bool,
+        typer.Option(
+            "--python", help="Create a Python template instead of a Robot template"
+        ),
+    ] = False,
     log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "INFO",
 ) -> None:
     """Initialize a new robot package into the current directory."""
@@ -146,6 +152,9 @@ def cli_init(
             [
                 "add",
                 "robotframework",
+            ]
+            + (["pydantic"] if python else [])
+            + [
                 "--no-sources",
             ],
             cwd_path,
@@ -159,9 +168,9 @@ def cli_init(
                 fixture_py.unlink()
         (cwd_path / "pyproject.toml").write_text(
             (cwd_path / "pyproject.toml").read_text()
-            + """
+            + f"""
 [tool.purjo.topics."My Topic in BPMN"]
-name = "My Test in Robot"
+name = "{'tasks.main' if python else 'My Test in Robot'}"
 on-fail = "ERROR"
 process-variables = true
 """
@@ -169,12 +178,17 @@ process-variables = true
         (cwd_path / "hello.bpmn").write_text(
             (importlib.resources.files("purjo.data") / "hello.bpmn").read_text()
         )
-        (cwd_path / "hello.robot").write_text(
-            (importlib.resources.files("purjo.data") / "hello.robot").read_text()
-        )
-        (cwd_path / "Hello.py").write_text(
-            (importlib.resources.files("purjo.data") / "Hello.py").read_text()
-        )
+        if python:
+            (cwd_path / "tasks.py").write_text(
+                (importlib.resources.files("purjo.data") / "tasks.py").read_text()
+            )
+        else:
+            (cwd_path / "hello.robot").write_text(
+                (importlib.resources.files("purjo.data") / "hello.robot").read_text()
+            )
+            (cwd_path / "Hello.py").write_text(
+                (importlib.resources.files("purjo.data") / "Hello.py").read_text()
+            )
         (cwd_path / ".wrapignore").write_text("")
         cli_wrap()
         (cwd_path / "robot.zip").unlink()
