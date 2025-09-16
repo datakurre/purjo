@@ -171,7 +171,7 @@ def cli_init(
             + f"""
 [tool.purjo.topics."My Topic in BPMN"]
 name = "{'tasks.main' if python else 'My Test in Robot'}"
-on-fail = "ERROR"
+on-fail = "{'FAIL' if python else 'ERROR'}"
 process-variables = true
 """
         )
