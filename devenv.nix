@@ -23,6 +23,7 @@
     final: prev:
     let
       packagesToBuildWithSetuptools = [
+        "robotframework"
       ];
     in
     {

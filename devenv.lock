@@ -3,10 +3,10 @@
     "devenv": {
       "locked": {
         "dir": "src/modules",
-        "lastModified": 1747185494,
+        "lastModified": 1758366037,
         "owner": "cachix",
         "repo": "devenv",
-        "rev": "b292bc94c2daccda165bc9f909bf6c8056e37a80",
+        "rev": "ebb56bfe1aa0936de2f8a68c616dabff1285e905",
         "type": "github"
       },
       "original": {
@@ -34,10 +34,10 @@
     "devenv-module-operaton": {
       "flake": false,
       "locked": {
-        "lastModified": 1747244780,
+        "lastModified": 1757529071,
         "owner": "vasara-bpm",
         "repo": "devenv-module-operaton",
-        "rev": "dbd27dc7373d4750552cdf0a852f77d587c570d7",
+        "rev": "a11d8aee593f7fd72e965b505bfae17157d41d4d",
         "type": "gitlab"
       },
       "original": {
@@ -49,10 +49,10 @@
     "devenv-module-uv2nix": {
       "flake": false,
       "locked": {
-        "lastModified": 1747244726,
+        "lastModified": 1749538023,
         "owner": "vasara-bpm",
         "repo": "devenv-module-uv2nix",
-        "rev": "16656d01cab09b0ec20460d545e09afd42153995",
+        "rev": "73d14cd37cdcc2ee11c8e6ccf18d59f26c449a60",
         "type": "gitlab"
       },
       "original": {
@@ -64,10 +64,10 @@
     "devenv-module-vscodium": {
       "flake": false,
       "locked": {
-        "lastModified": 1747247565,
+        "lastModified": 1757499884,
         "owner": "datakurre",
         "repo": "devenv-module-vscodium",
-        "rev": "f9279f356c467d212cd337b9afeed5bdd4be6a71",
+        "rev": "fbf8a145f23c121714f9987f461baa18045a78ff",
         "type": "github"
       },
       "original": {
@@ -117,10 +117,10 @@
         ]
       },
       "locked": {
-        "lastModified": 1747372754,
+        "lastModified": 1758108966,
         "owner": "cachix",
         "repo": "git-hooks.nix",
-        "rev": "80479b6ec16fefd9c1db3ea13aeb038c60530f46",
+        "rev": "54df955a695a84cd47d4a43e08e1feaf90b1fd9b",
         "type": "github"
       },
       "original": {
@@ -173,10 +173,10 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1747383427,
+        "lastModified": 1758332913,
         "owner": "nix-community",
         "repo": "nix-vscode-extensions",
-        "rev": "84fa86a820a365b12d7bbae3556ad737f7091af3",
+        "rev": "b5d08cee3a983228fe5040c11e475a724a6d447b",
         "type": "github"
       },
       "original": {
@@ -187,10 +187,10 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1746904237,
+        "lastModified": 1758277210,
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d89fc19e405cb2d55ce7cc114356846a0ee5e956",
+        "rev": "8eaee110344796db060382e15d3af0a9fc396e0e",
         "type": "github"
       },
       "original": {
@@ -217,15 +217,15 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1746957726,
+        "lastModified": 1758216857,
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "a39ed32a651fdee6842ec930761e31d1f242cb94",
+        "rev": "d2ed99647a4b195f0bcc440f76edfa10aeb3b743",
         "type": "github"
       },
       "original": {
         "owner": "nixos",
-        "ref": "nixos-24.11",
+        "ref": "nixos-25.05",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -243,10 +243,10 @@
         ]
       },
       "locked": {
-        "lastModified": 1744599653,
+        "lastModified": 1757296493,
         "owner": "pyproject-nix",
         "repo": "build-system-pkgs",
-        "rev": "7dba6dbc73120e15b558754c26024f6c93015dd7",
+        "rev": "5b8e37fe0077db5c1df3a5ee90a651345f085d38",
         "type": "github"
       },
       "original": {
@@ -262,10 +262,10 @@
         ]
       },
       "locked": {
-        "lastModified": 1746540146,
+        "lastModified": 1758265079,
         "owner": "pyproject-nix",
         "repo": "pyproject.nix",
-        "rev": "e09c10c24ebb955125fda449939bfba664c467fd",
+        "rev": "02e9418fd4af638447dca4b17b1280da95527fc9",
         "type": "github"
       },
       "original": {
@@ -291,7 +291,8 @@
         "pyproject-build-systems": "pyproject-build-systems",
         "pyproject-nix": "pyproject-nix",
         "unstable": "unstable",
-        "uv2nix": "uv2nix"
+        "uv2nix": "uv2nix",
+        "vscode-python": "vscode-python"
       }
     },
     "systems": {
@@ -324,10 +325,10 @@
     },
     "unstable": {
       "locked": {
-        "lastModified": 1747385905,
+        "lastModified": 1758389623,
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "715854e728e3fd99598372ff28cf966afb102363",
+        "rev": "03845ec2f3aa41bfbb98273f34c6f18211deb276",
         "type": "github"
       },
       "original": {
@@ -364,15 +365,30 @@
         ]
       },
       "locked": {
-        "lastModified": 1746649034,
+        "lastModified": 1758170327,
         "owner": "pyproject-nix",
         "repo": "uv2nix",
-        "rev": "fe540e91c26f378c62bf6da365a97e848434d0cd",
+        "rev": "95e72c3af99115eb51fc963445d4e3f222d8feea",
         "type": "github"
       },
       "original": {
         "owner": "pyproject-nix",
         "repo": "uv2nix",
+        "type": "github"
+      }
+    },
+    "vscode-python": {
+      "locked": {
+        "lastModified": 1735563628,
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "b134951a4c9f3c995fd7be05f3243f8ecd65d798",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-24.05",
+        "repo": "nixpkgs",
         "type": "github"
       }
     }

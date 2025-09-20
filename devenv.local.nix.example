@@ -1,8 +1,11 @@
 {
-  package.vscodium.copilot= true;
   package.vscodium.enable = true;
-  package.vscodium.python = true;
-  package.vscodium.robot = true;
-  package.vscodium.unfree = true;
-  package.vscodium.vim = true;
+  package.vscodium.features =[
+    "copilot"
+    "python"
+    "robot"
+    "unfree"
+    "bpmn"
+    "vim"
+  ];
 }
