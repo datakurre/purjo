@@ -7,10 +7,23 @@ from robot.running.model import Body  # type: ignore
 from robot.running.model import Var as BaseVar
 from robot.variables import VariableScopes  # type: ignore
 from typing import Any
+from typing import Dict
 import datetime
 import json
 import os
 import pathlib
+
+
+try:
+    from robot.api.types import Secret
+
+    HAS_SECRET = True
+except ImportError:
+    HAS_SECRET = False
+
+    class Secret(str):
+        def __repr__(self) -> str:
+            return f"<Secret: {self}>"
 
 
 BPMN_TASK_SCOPE = "BPMN_TASK_SCOPE"
@@ -113,4 +126,17 @@ class PythonParser(BaseParser):  # type: ignore
         return TestSuite()
 
 
-__all__ = ["RobotParser", "PythonParser"]
+class Variables:
+    def get_variables(self, variables: str, secrets: str) -> Dict[str, Any]:
+        result = {}
+        if pathlib.Path(variables).exists():
+            with open(variables, "r") as f:
+                result.update(json.load(f))
+        if HAS_SECRET and pathlib.Path(secrets).exists():
+            with open(secrets, "r") as f:
+                data = json.load(f)
+            result.update({k: Secret(v) for k, v in data.items()})
+        return result
+
+
+__all__ = ["RobotParser", "PythonParser", "Variables"]

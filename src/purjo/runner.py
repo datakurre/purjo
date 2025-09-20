@@ -161,7 +161,7 @@ def build_run(
                 else f"RobotParser.PythonParser:{config.name}"
             ),
             "--variablefile",
-            "variables.json",
+            "RobotParser.Variables:variables.json:secrets.json",
             "--outputdir",
             working_dir,
             robot_dir,
