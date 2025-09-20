@@ -209,6 +209,9 @@ def create_task(
                 (Path(working_dir) / "variables.json").write_text(
                     json.dumps(variables, default=json_serializer)
                 )
+                (Path(working_dir) / "secrets.json").write_text(
+                    json.dumps({}, default=json_serializer)
+                )
                 (Path(working_dir) / "RobotParser.py").write_text(robot_parser)
                 task_variables_file = Path(working_dir) / "task_variables.json"
                 task_variables_file.write_text("{}")
