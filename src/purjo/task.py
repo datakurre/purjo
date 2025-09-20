@@ -21,6 +21,7 @@ SEMAPHORE = asyncio.Semaphore(settings.TASKS_MAX_JOBS)
 
 @task(settings.TASKS_TOPIC, localVariables=True)
 async def robot_runner(task: LockedExternalTaskDto) -> ExternalTaskComplete:
+    """Generic Robot Framework task runner for Operaton, which reads suite files from task variables."""
     variables = await py_from_operaton(task.variables)
     suite = variables.pop("suite")
     robot_parser = (

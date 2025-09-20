@@ -15,13 +15,13 @@ import pathlib
 
 
 try:
-    from robot.api.types import Secret
+    from robot.api.types import Secret  # type: ignore
 
     HAS_SECRET = True
 except ImportError:
     HAS_SECRET = False
 
-    class Secret(str):
+    class Secret(str):  # type: ignore
         def __repr__(self) -> str:
             return f"<Secret: {self}>"
 

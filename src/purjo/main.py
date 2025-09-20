@@ -173,10 +173,14 @@ def cli_init(
 name = "{'tasks.main' if python else 'My Test in Robot'}"
 on-fail = "{'FAIL' if python else 'ERROR'}"
 process-variables = true
+secrets = {{type = "file", path = "secrets.json"}}
 """
         )
         (cwd_path / "hello.bpmn").write_text(
             (importlib.resources.files("purjo.data") / "hello.bpmn").read_text()
+        )
+        (cwd_path / "secrets.json").write_text(
+            json.dumps({"api_key": "my-secret-key"}, indent=2)
         )
         if python:
             (cwd_path / "tasks.py").write_text(
@@ -189,7 +193,11 @@ process-variables = true
             (cwd_path / "Hello.py").write_text(
                 (importlib.resources.files("purjo.data") / "Hello.py").read_text()
             )
-        (cwd_path / ".wrapignore").write_text("")
+        (cwd_path / ".wrapignore").write_text(
+            """\
+secrets.json
+"""
+        )
         cli_wrap()
         (cwd_path / "robot.zip").unlink()
 

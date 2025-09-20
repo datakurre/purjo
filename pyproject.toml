@@ -20,6 +20,7 @@ dependencies =[
     "javaobj-py3>=0.4.4",
     "tzlocal>=5.2",
     "pathspec>=0.12.1",
+    "hvac>=2.3.0",
 ]
 
 [project.scripts]
@@ -41,6 +42,7 @@ dev = [
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
     "robotframework-tidy>=4.16.0",
+    "types-hvac>=2.3.0.20250914",
     "zest-releaser>=9.6.2",
 ]
 
@@ -52,3 +54,6 @@ line_length = 200
 lines_after_imports = 2
 lines_between_types = 0
 no_sections = true
+
+[tool.mypy]
+exclude = "src/purjo/data"
