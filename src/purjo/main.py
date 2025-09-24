@@ -284,23 +284,35 @@ def operaton_create(
     logger.setLevel(log_level)
     set_log_level(log_level)
 
-    if not (filename.name.endswith(".bpmn") or filename.name.endswith(".dmn")):
+    if not (
+        filename.name.endswith(".bpmn")
+        or filename.name.endswith(".dmn")
+        or filename.name.endswith(".form")
+    ):
         filename = filename.with_suffix(".bpmn")
     assert not Path(filename).exists()
     (
         filename.write_text(
-            (importlib.resources.files("purjo.data") / "template.bpmn")
+            (importlib.resources.files("purjo.data") / "template.form")
             .read_text()
-            .replace("DEFINITION_ID", generate_random_string())
-            .replace("PROCESS_ID", generate_random_string())
+            .replace("FORM_ID", generate_random_string())
         )
-        if filename.name.endswith(".bpmn")
-        else filename.write_text(
-            (importlib.resources.files("purjo.data") / "template.dmn")
-            .read_text()
-            .replace("DEFINITIONS_ID", generate_random_string())
-            .replace("DEFINITIONS_TABLE_ID", generate_random_string())
-            .replace("DECISION_ID", generate_random_string())
+        if filename.name.endswith(".form")
+        else (
+            filename.write_text(
+                (importlib.resources.files("purjo.data") / "template.bpmn")
+                .read_text()
+                .replace("DEFINITION_ID", generate_random_string())
+                .replace("PROCESS_ID", generate_random_string())
+            )
+            if filename.name.endswith(".bpmn")
+            else filename.write_text(
+                (importlib.resources.files("purjo.data") / "template.dmn")
+                .read_text()
+                .replace("DEFINITIONS_ID", generate_random_string())
+                .replace("DEFINITIONS_TABLE_ID", generate_random_string())
+                .replace("DECISION_ID", generate_random_string())
+            )
         )
     )
 
