@@ -24,6 +24,7 @@ from typing import Annotated
 from typing import List
 from typing import Optional
 from typing import Union
+from urllib.parse import urlparse
 from zipfile import ZipFile
 import aiohttp
 import asyncio
@@ -361,10 +362,11 @@ def operaton_deploy(
             except ValidationError:
                 print(json.dumps(await response.json(), indent=2))
                 return
+            port = urlparse(base_url).port or 8080
             url = (
                 base_url.replace("/engine-rest", "").rstrip("/")
                 if "CODESPACE_NAME" not in os.environ
-                else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
+                else f"https://{os.environ['CODESPACE_NAME']}-{port}.app.github.dev"
             ) + "/operaton/app/cockpit/default/#/process-definition"
             for definition in (deployment.deployedProcessDefinitions or {}).values():
                 if migrate:
@@ -421,10 +423,11 @@ def operaton_start(
             except ValidationError:
                 print(json.dumps(await response.json(), indent=2))
                 return
+            port = urlparse(base_url).port or 8080
             url = (
                 base_url.replace("/engine-rest", "").rstrip("/")
                 if "CODESPACE_NAME" not in os.environ
-                else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
+                else f"https://{os.environ['CODESPACE_NAME']}-{port}.app.github.dev"
             ) + "/operaton/app/cockpit/default/#/process-instance"
             print(f"Started: {url}/{instance.id}/runtime")
 
@@ -541,10 +544,11 @@ def cli_run(
                 except ValidationError:
                     print(json.dumps(await response.json(), indent=2))
                     return
+                port = urlparse(base_url).port or 8080
                 url = (
                     base_url.replace("/engine-rest", "").rstrip("/")
                     if "CODESPACE_NAME" not in os.environ
-                    else f"https://{os.environ['CODESPACE_NAME']}-8080.app.github.dev"
+                    else f"https://{os.environ['CODESPACE_NAME']}-{port}.app.github.dev"
                 ) + "/operaton/app/cockpit/default/#/process-instance"
                 print(f"Started: {url}/{instance.id}/runtime")
 
