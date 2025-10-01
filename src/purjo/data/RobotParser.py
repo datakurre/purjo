@@ -39,7 +39,7 @@ def json_serializer(obj: Any) -> str:
 
 
 def set_bpmn_task(self: VariableScopes, name: str, value: Any) -> None:
-    assert BPMN_TASK_SCOPE in os.environ
+    assert BPMN_TASK_SCOPE in os.environ, f"{BPMN_TASK_SCOPE} not set in environment"
     path = pathlib.Path(os.environ[BPMN_TASK_SCOPE])
     data = json.loads(path.read_text()) if path.exists() else {}
     data[name[2:-1]] = value
@@ -47,7 +47,9 @@ def set_bpmn_task(self: VariableScopes, name: str, value: Any) -> None:
 
 
 def set_bpmn_process(self: VariableScopes, name: str, value: Any) -> None:
-    assert BPMN_PROCESS_SCOPE in os.environ
+    assert (
+        BPMN_PROCESS_SCOPE in os.environ
+    ), f"{BPMN_PROCESS_SCOPE} not set in environment"
     path = pathlib.Path(os.environ[BPMN_PROCESS_SCOPE])
     data = json.loads(path.read_text()) if path.exists() else {}
     data[name[2:-1]] = value

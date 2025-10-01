@@ -13,8 +13,7 @@ from operaton.tasks.types import VariableValueType
 from pathlib import Path
 from purjo.config import OnFail
 from purjo.config import settings
-from purjo.secrets import get_secrets
-from purjo.secrets import SecretsConfig
+from purjo.secrets import SecretsProvider
 from purjo.utils import inline_screenshots
 from purjo.utils import json_serializer
 from purjo.utils import lazydecode
@@ -27,7 +26,6 @@ from pydantic import FilePath
 from tempfile import TemporaryDirectory
 from typing import Any
 from typing import Callable
-from typing import cast
 from typing import Coroutine
 from typing import Dict
 from typing import List
@@ -92,7 +90,6 @@ class Task(BaseModel):
     exclude: Optional[str] = None
     on_fail: Optional[OnFail] = Field(default=None, alias="on-fail")
     process_variables: bool = Field(default=False, alias="process-variables")
-    secrets: Optional[SecretsConfig] = None
 
 
 def is_python_fqfn(value: str) -> bool:
@@ -186,6 +183,7 @@ def create_task(
     robot: Union[FilePath, DirectoryPath],
     on_fail: OnFail,
     semaphore: asyncio.Semaphore,
+    secrets_provider: Optional[SecretsProvider],
 ) -> Callable[
     [LockedExternalTaskDto],
     Coroutine[None, None, Union[ExternalTaskComplete, ExternalTaskFailure]],
@@ -214,11 +212,9 @@ def create_task(
                 (Path(working_dir) / "variables.json").write_text(
                     json.dumps(variables, default=json_serializer)
                 )
-                # Create secrets.json from config.secrets if present
+                # Create secrets.json from secrets provider if set
                 secrets_data: dict[str, Any] = (
-                    get_secrets(cast(SecretsConfig, config.secrets))
-                    if config.secrets
-                    else {}
+                    secrets_provider.read() if secrets_provider else {}
                 )
                 (Path(working_dir) / "secrets.json").write_text(
                     json.dumps(secrets_data, default=json_serializer)

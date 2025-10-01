@@ -15,6 +15,7 @@ from purjo.runner import create_task
 from purjo.runner import logger
 from purjo.runner import run
 from purjo.runner import Task
+from purjo.secrets import get_secrets_provider
 from purjo.utils import migrate as migrate_all
 from purjo.utils import operaton_from_py
 from pydantic import DirectoryPath
@@ -60,6 +61,9 @@ def cli_serve(
     authorization: Annotated[
         Optional[str], typer.Option(envvar="ENGINE_REST_AUTHORIZATION")
     ] = None,
+    secrets: Annotated[
+        Optional[str], typer.Option(envvar="TASKS_SECRETS_PROFILE")
+    ] = None,
     timeout: Annotated[int, typer.Option(envvar="ENGINE_REST_TIMEOUT_SECONDS")] = 20,
     poll_ttl: Annotated[int, typer.Option(envvar="ENGINE_REST_POLL_TTL_SECONDS")] = 10,
     lock_ttl: Annotated[int, typer.Option(envvar="ENGINE_REST_LOCK_TTL_SECONDS")] = 30,
@@ -96,6 +100,9 @@ def cli_serve(
             with ZipFile(robot, "r") as fp:
                 robot_toml = tomllib.loads(fp.read("pyproject.toml").decode("utf-8"))
         purjo_toml = (robot_toml.get("tool") or {}).get("purjo") or {}
+        secrets_provider = get_secrets_provider(
+            purjo_toml.get("secrets"), profile=secrets
+        )
         for topic, config in (purjo_toml.get("topics") or {}).items():
             task_config = Task(**config)
             task(topic, localVariables=not task_config.process_variables)(
@@ -108,6 +115,7 @@ def cli_serve(
                         else on_fail
                     ),
                     semaphore=semaphore,
+                    secrets_provider=secrets_provider,
                 )
             )
             logger.info("Topic | %s | %s", topic, config)
@@ -164,6 +172,23 @@ def cli_init(
                 "VIRTUAL_ENV": "",
             },
         )
+        if python:
+            await run(
+                "uv",
+                [
+                    "add",
+                    "--dev",
+                    "purjo",
+                ]
+                + [
+                    "--no-sources",
+                ],
+                cwd_path,
+                {
+                    "UV_NO_SYNC": "0",
+                    "VIRTUAL_ENV": "",
+                },
+            )
         for fixture_py in [cwd_path / "hello.py", cwd_path / "main.py"]:
             if fixture_py.exists():
                 fixture_py.unlink()
@@ -174,14 +199,10 @@ def cli_init(
 name = "{'tasks.main' if python else 'My Test in Robot'}"
 on-fail = "{'FAIL' if python else 'ERROR'}"
 process-variables = true
-secrets = {{type = "file", path = "secrets.json"}}
 """
         )
         (cwd_path / "hello.bpmn").write_text(
             (importlib.resources.files("purjo.data") / "hello.bpmn").read_text()
-        )
-        (cwd_path / "secrets.json").write_text(
-            json.dumps({"api_key": "my-secret-key"}, indent=2)
         )
         if python:
             (cwd_path / "tasks.py").write_text(
@@ -194,11 +215,7 @@ secrets = {{type = "file", path = "secrets.json"}}
             (cwd_path / "Hello.py").write_text(
                 (importlib.resources.files("purjo.data") / "Hello.py").read_text()
             )
-        (cwd_path / ".wrapignore").write_text(
-            """\
-secrets.json
-"""
-        )
+        (cwd_path / ".wrapignore").write_text("")
         cli_wrap()
         (cwd_path / "robot.zip").unlink()
 
