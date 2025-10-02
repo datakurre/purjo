@@ -30,6 +30,7 @@ class FileProviderConfig(BaseModel):
 class VaultProviderConfig(BaseModel):
     provider: Literal["vault"]
     path: str
+    mount_point: str = Field(alias="mount-point")
     address: Optional[str] = Field(default_factory=lambda: os.getenv("VAULT_ADDR"))
     token: Optional[str] = Field(default_factory=lambda: os.getenv("VAULT_TOKEN"))
 
@@ -56,7 +57,9 @@ def vault_secrets_provider(
     assert config.address, "VAULT_ADDR is required for Vault secrets"
     assert config.token, "VAULT_TOKEN is required for Vault secrets"
     client = hvac.Client(url=config.address, token=config.token)
-    secret = client.secrets.kv.v2.read_secret_version(path=config.path)
+    secret = client.secrets.kv.v2.read_secret_version(
+        path=config.path, mount_point=config.mount_point
+    )
     return dict(secret["data"]["data"])
 
 
