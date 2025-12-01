@@ -10,6 +10,7 @@ from pydantic import FilePath
 from tempfile import TemporaryDirectory
 from typing import Any
 from typing import Dict
+from typing import Optional
 from typing import Union
 from zipfile import ZipFile
 import asyncio
@@ -24,6 +25,7 @@ def _get_output_variables(
     robot: Union[FilePath, DirectoryPath],
     topic: str,
     variables: Dict[str, Any],
+    secrets: Optional[Dict[str, Any]] = None,
     log_level: str = "DEBUG",
 ) -> Dict[str, Any]:
     """
@@ -67,6 +69,9 @@ def _get_output_variables(
         (Path(working_dir) / "variables.json").write_text(
             json.dumps(variables, default=json_serializer)
         )
+        (Path(working_dir) / "secrets.json").write_text(
+            json.dumps(secrets or {}, default=json_serializer)
+        )
         (Path(working_dir) / "RobotParser.py").write_text(robot_parser)
         task_variables_file = Path(working_dir) / "task_variables.json"
         task_variables_file.write_text("{}")
@@ -94,7 +99,12 @@ class Purjo:
     """Robot Framework keyword library for `pur`(jo)."""
 
     def get_output_variables(
-        self, path: str, topic: str, variables: Dict[str, Any], log_level: str = "DEBUG"
+        self,
+        path: str,
+        topic: str,
+        variables: Dict[str, Any],
+        secrets: Optional[Dict[str, Any]] = None,
+        log_level: str = "DEBUG",
     ) -> Dict[str, Any]:
         """
         Executes test or task package at given path with given input variables and
@@ -105,5 +115,6 @@ class Purjo:
             FilePath(path) if Path(path).is_file() else DirectoryPath(path),
             topic,
             variables,
+            secrets,
             log_level,
         )

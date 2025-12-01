@@ -10,6 +10,7 @@
 .pre-commit-config.yaml
 .pytest_cache/
 __pycache__/
+_build/
 devenv.local.nix
 env
 fixture/target/
@@ -20,3 +21,6 @@ output.xml
 report.html
 result
 src/operaton/__init__.py
+TODO.md
+examples/
+docs/_site

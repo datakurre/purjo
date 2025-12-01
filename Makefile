@@ -12,6 +12,12 @@ APP := pur
 build:  ## Build application
 	devenv build outputs.python.app
 
+build-docs: ## Build the Sphinx documentation site
+	sphinx-build docs docs/_build/html
+
+watch-docs: ## Serve the Sphinx documentation site locally
+	sphinx-autobuild docs docs/_build/html
+
 env:  ## Build and link the Python virtual environment
 	ln -s $(shell devenv build outputs.python.virtualenv) env
 
