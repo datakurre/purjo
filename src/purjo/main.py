@@ -218,6 +218,8 @@ process-variables = true
         (cwd_path / ".wrapignore").write_text("")
         cli_wrap()
         (cwd_path / "robot.zip").unlink()
+        if (cwd_path / ".venv").exists():
+            shutil.rmtree(cwd_path / ".venv")
 
     asyncio.run(init())
 
