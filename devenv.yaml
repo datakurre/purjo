@@ -10,6 +10,9 @@ inputs:
   devenv-module-operaton:
     url: gitlab:vasara-bpm/devenv-module-operaton
     flake: false
+  devenv-module-image:
+    url: gitlab:vasara-bpm/devenv-module-image
+    flake: false
   devenv-module-uv2nix:
     url: gitlab:vasara-bpm/devenv-module-uv2nix
     flake: false
@@ -50,3 +53,4 @@ imports:
 - devenv-module-operaton
 - devenv-module-uv2nix
 - devenv-module-vscodium
+- devenv-module-image

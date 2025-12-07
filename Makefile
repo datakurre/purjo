@@ -94,3 +94,5 @@ nix-%:  ## Run command in devenv shell
 	devenv shell -- $(MAKE) $*
 
 FORCE:
+
+include release-container.mk

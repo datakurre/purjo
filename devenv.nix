@@ -6,6 +6,12 @@
   ...
 }:
 {
+  package.image.group = "datakurre";
+  package.image.repo = "purjo";
+  package.image.name = "purjo";
+  package.image.package = config.outputs.python.app;
+  package.image.callable = "pur";
+
   package.operaton.port = 8080;
 
   services.vault = {
