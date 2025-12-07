@@ -1,6 +1,6 @@
 [project]
 name = "purjo"
-version = "1.0b2.dev0"
+version = "1.0b2"
 description = "UV based Robot Framework external service task runner for Operaton"
 readme = "README.md"
 authors = [
