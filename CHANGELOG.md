@@ -1,7 +1,7 @@
 ## 1.0b2 (unreleased)
 
 
-- Nothing changed yet.
+- Fix regression where pur(jo) itself  unintentionally dependend on robotframework
 
 
 ## 1.0b1 (2025-12-01)
