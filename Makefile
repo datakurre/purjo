@@ -4,13 +4,23 @@ help:
 INDEX_URL ?= https://pypi.python.org/simple
 INDEX_HOSTNAME ?= pypi.python.org
 
+export NETRC ?= $(HOME)/.netrc
+
 export PYTHONPATH=$(PWD)/src
 
 MODULE := purjo
 APP := pur
 
+# Check if 'devenv' exists
+ifeq (, $(shell command -v devenv))
+DEVENV := nix run nixpkgs/nixos-25.05\#devenv --
+else
+DEVENV := devenv
+endif
+DEVENV_OPTIONS ?= --nix-option extra-sandbox-paths $(NETRC)
+
 build:  ## Build application
-	devenv build outputs.python.app
+	$(DEVENV) $(DEVENV_OPTIONS) build outputs.python.app
 
 build-docs: ## Build the Sphinx documentation site
 	sphinx-build docs docs/_build/html
@@ -19,7 +29,7 @@ watch-docs: ## Serve the Sphinx documentation site locally
 	sphinx-autobuild docs docs/_build/html
 
 env:  ## Build and link the Python virtual environment
-	ln -s $(shell devenv build outputs.python.virtualenv) env
+	ln -s $(shell $(DEVENV) $(DEVENV_OPTIONS) build outputs.python.virtualenv) env
 
 check:  ## Run static analysis checks
 	black --check src tests
@@ -28,29 +38,29 @@ check:  ## Run static analysis checks
 	MYPYPATH=$(PWD)/stubs mypy --show-error-codes --strict src tests
 
 clean:  ## Remove build artifacts and temporary files
-	devenv gc
+	$(DEVENV) $(DEVENV_OPTIONS) gc
 	$(RM) -r env htmlcov .devenv
 
 devenv-up:  ## Start background services
-	devenv processes up -d
+	$(DEVENV) $(DEVENV_OPTIONS) processes up -d
 
 devenv-attach:  ## Attach to background services monitor
-	devenv shell -- process-compose attach
+	$(DEVENV) $(DEVENV_OPTIONS) shell -- process-compose attach
 
 devenv-down:  ## Stop background services
-	devenv processes down
+	$(DEVENV) $(DEVENV_OPTIONS) processes down
 
 devenv-test: ## Run all test and checks with background services
-	devenv test
+	$(DEVENV) $(DEVENV_OPTIONS) test
 
 format:  ## Format the codebase
 	treefmt
 
 shell:  ## Start an interactive development shell
-	@devenv shell
+	@$(DEVENV) $(DEVENV_OPTIONS) shell
 
 show:  ## Show build environment information
-	@devenv info
+	@$(DEVENV) $(DEVENV_OPTIONS) info
 
 test: check test-pytest  ## Run all tests and checks
 
@@ -87,11 +97,11 @@ endef
 export env_script = $(value _env_script)
 .env: ; @ eval "$$env_script"
 
-devenv-%:  ## Run command in devenv shell
-	devenv shell -- $(MAKE) $*
+devenv-%:  ## Run command in $(DEVENV) $(DEVENV_OPTIONS) shell
+	$(DEVENV) $(DEVENV_OPTIONS) shell -- $(MAKE) $*
 
-nix-%:  ## Run command in devenv shell
-	devenv shell -- $(MAKE) $*
+nix-%:  ## Run command in $(DEVENV) $(DEVENV_OPTIONS) shell
+	$(DEVENV) $(DEVENV_OPTIONS) shell -- $(MAKE) $*
 
 FORCE:
 
