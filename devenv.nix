@@ -11,6 +11,13 @@
   package.image.name = "purjo";
   package.image.package = config.outputs.python.app;
   package.image.callable = "pur";
+  package.image.extraPackages = [
+    pkgs.uv
+    pkgs.python311
+    pkgs.python312
+    pkgs.python313
+    pkgs.python314
+  ];
 
   package.operaton.port = 8080;
 
