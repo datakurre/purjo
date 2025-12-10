@@ -1,7 +1,7 @@
 ## 1.0b3 (unreleased)
 
 
-- Nothing changed yet.
+- Fix 'pur wrap' to not follow symlinks
 
 
 ## 1.0b2 (2025-12-07)
