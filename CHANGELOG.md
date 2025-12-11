@@ -1,20 +1,15 @@
 ## 1.0b4 (unreleased)
 
-
-- Nothing changed yet.
-
+- Fix serve to apply .wrapignore
+- robot: Add Purjo.Get Output Variables to log pur execution
 
 ## 1.0b3 (2025-12-10)
 
-
 - Fix 'pur wrap' to not follow symlinks
-
 
 ## 1.0b2 (2025-12-07)
 
-
 - Fix regression where pur(jo) itself  unintentionally dependend on robotframework
-
 
 ## 1.0b1 (2025-12-01)
 
