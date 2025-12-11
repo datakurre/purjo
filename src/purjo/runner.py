@@ -14,6 +14,7 @@ from pathlib import Path
 from purjo.config import OnFail
 from purjo.config import settings
 from purjo.secrets import SecretsProvider
+from purjo.utils import get_wrap_pathspec
 from purjo.utils import inline_screenshots
 from purjo.utils import json_serializer
 from purjo.utils import lazydecode
@@ -203,7 +204,14 @@ def create_task(
                     "BPMN:TASK": "BPMN:TASK",
                 }
                 if robot.is_dir():
-                    shutil.copytree(robot, robot_dir, dirs_exist_ok=True)
+                    spec = get_wrap_pathspec(robot.absolute())
+                    for file_path in spec.match_tree(
+                        robot, negate=True, follow_links=False
+                    ):
+                        src = robot / file_path
+                        dst = Path(robot_dir) / file_path
+                        dst.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(src, dst)
                 else:
                     with ZipFile(robot, "r") as fp:
                         fp.extractall(robot_dir)
