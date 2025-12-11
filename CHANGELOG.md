@@ -1,3 +1,9 @@
+## 1.0b5 (unreleased)
+
+
+- Nothing changed yet.
+
+
 ## 1.0b4 (2025-12-11)
 
 - Fix serve to apply .wrapignore
