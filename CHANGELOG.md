@@ -1,8 +1,6 @@
 ## 1.0b5 (unreleased)
 
-
-- Nothing changed yet.
-
+- robot: Add Purjo.Get Output Variables to debug log Purjo log.html
 
 ## 1.0b4 (2025-12-11)
 
