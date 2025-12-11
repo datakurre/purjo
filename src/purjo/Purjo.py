@@ -16,6 +16,7 @@ from typing import Optional
 from typing import Union
 from zipfile import ZipFile
 import asyncio
+import base64
 import importlib.resources
 import json
 import os
@@ -87,12 +88,27 @@ def _get_output_variables(
                 config, robot_dir, working_dir, task_variables_file, task_variables_file
             )
         )
+        log_html_path = Path(working_dir) / "log.html"
+        if log_html_path.exists():
+            log_html_data = base64.b64encode(log_html_path.read_bytes()).decode("utf-8")
+            tmpdir_name = Path(working_dir).name
+            log_html_uri = f"data:text/html;base64,{log_html_data}"
         if return_code == 0:
+            if log_html_path.exists():
+                robot_logger.debug(
+                    f'<a href="{log_html_uri}" download="{tmpdir_name}.log.html" target="_blank">Purjo log.html</a>',
+                    html=True,
+                )
             robot_logger.debug(
                 f"Purjo inputs:\n{json.dumps(variables, default=json_serializer, indent=2)}"
             )
             robot_logger.debug(f"Purjo secrets:\n{list(secrets.keys())}")
         else:
+            if log_html_path.exists():
+                robot_logger.info(
+                    f'<a href="{log_html_uri}" download="{tmpdir_name}.log.html" target="_blank">Purjo log.html</a>',
+                    html=True,
+                )
             robot_logger.info(
                 f"Purjo inputs:\n{json.dumps(variables, default=json_serializer, indent=2)}"
             )
