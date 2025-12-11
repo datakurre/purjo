@@ -1,4 +1,4 @@
-## 1.0b4 (unreleased)
+## 1.0b4 (2025-12-11)
 
 - Fix serve to apply .wrapignore
 - robot: Add Purjo.Get Output Variables to log pur execution
