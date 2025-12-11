@@ -1,8 +1,6 @@
-## 1.0b6 (unreleased)
+## 1.0b6 (2025-12-11)
 
-
-- Nothing changed yet.
-
+- Fix pur serve for directory to also apply .wrapignore
 
 ## 1.0b5 (2025-12-11)
 
