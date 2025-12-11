@@ -4,9 +4,11 @@ from purjo.runner import build_run
 from purjo.runner import fail_reason
 from purjo.runner import logger
 from purjo.runner import Task
+from purjo.utils import get_wrap_pathspec
 from purjo.utils import json_serializer
 from pydantic import DirectoryPath
 from pydantic import FilePath
+from robot.api import logger as robot_logger
 from tempfile import TemporaryDirectory
 from typing import Any
 from typing import Dict
@@ -60,7 +62,12 @@ def _get_output_variables(
             "BPMN:TASK": "BPMN:TASK",
         }
         if robot.is_dir():
-            shutil.copytree(robot, robot_dir, dirs_exist_ok=True)
+            spec = get_wrap_pathspec(robot.absolute())
+            for file_path in spec.match_tree(robot, negate=True, follow_links=False):
+                src = robot / file_path
+                dst = Path(robot_dir) / file_path
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
         else:
             with ZipFile(robot, "r") as fp:
                 fp.extractall(robot_dir)
@@ -80,8 +87,29 @@ def _get_output_variables(
                 config, robot_dir, working_dir, task_variables_file, task_variables_file
             )
         )
+        if return_code == 0:
+            robot_logger.debug(
+                f"Purjo inputs:\n{json.dumps(variables, default=json_serializer, indent=2)}"
+            )
+            robot_logger.debug(f"Purjo secrets:\n{list(secrets.keys())}")
+        else:
+            robot_logger.info(
+                f"Purjo inputs:\n{json.dumps(variables, default=json_serializer, indent=2)}"
+            )
+            robot_logger.info(f"Purjo secrets:\n{list(secrets.keys())}")
         variables = json.loads(task_variables_file.read_text())
-        if return_code != 0:
+        if return_code == 0:
+            robot_logger.debug(f"Purjo stdout:\n{stdout}")
+            robot_logger.debug(f"Purjo stderr:\n{stderr}")
+            robot_logger.debug(
+                f"Purjo outputs:\n{json.dumps(variables, default=json_serializer, indent=2)}"
+            )
+        else:
+            robot_logger.info(f"Purjo stdout:\n{stdout}")
+            robot_logger.info(f"Purjo stderr:\n{stderr}")
+            robot_logger.info(
+                f"Purjo outputs:\n{json.dumps(variables, default=json_serializer, indent=2)}"
+            )
             output_xml_path = Path(working_dir) / "output.xml"
             fail_reason_ = (
                 fail_reason(output_xml_path) if output_xml_path.exists() else ""

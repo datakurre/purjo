@@ -16,6 +16,7 @@ from purjo.runner import logger
 from purjo.runner import run
 from purjo.runner import Task
 from purjo.secrets import get_secrets_provider
+from purjo.utils import get_wrap_pathspec
 from purjo.utils import migrate as migrate_all
 from purjo.utils import operaton_from_py
 from pydantic import DirectoryPath
@@ -32,7 +33,6 @@ import asyncio
 import importlib.resources
 import json
 import os
-import pathspec
 import random
 import shutil
 import string
@@ -253,23 +253,7 @@ def cli_wrap(
                 {"UV_NO_SYNC": "0", "VIRTUAL_ENV": ""},
             )
         )
-    spec_path = cwd_path / ".wrapignore"
-    spec_text = spec_path.read_text() if spec_path.exists() else ""
-    spec = pathspec.GitIgnoreSpec.from_lines(
-        spec_text.splitlines()
-        + [
-            "/.git",
-            "/.gitignore",
-            "/log.html",
-            "/output.xml",
-            "__pycache__/",
-            "/report.html",
-            "/robot.zip",
-            "/.venv/",
-            "/.wrapignore",
-            "/.cache",
-        ]
-    )
+    spec = get_wrap_pathspec(cwd_path)
     zip_path = cwd_path / "robot.zip"
     with ZipFile(zip_path, "w") as zipf:
         for file_path in spec.match_tree(cwd_path, negate=True, follow_links=False):

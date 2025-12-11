@@ -26,9 +26,32 @@ import javaobj.v2 as javaobj  # type: ignore
 import json
 import mimetypes
 import os
+import pathspec
 import pprint
 import re
 import tzlocal
+
+
+def get_wrap_pathspec(cwd_path: Path) -> pathspec.GitIgnoreSpec:
+    """Get pathspec for wrapping robot packages, excluding common build artifacts."""
+    spec_path = cwd_path / ".wrapignore"
+    spec_text = spec_path.read_text() if spec_path.exists() else ""
+    return pathspec.GitIgnoreSpec.from_lines(
+        spec_text.splitlines()
+        + [
+            "/.git",
+            "/.devenv",
+            "/.gitignore",
+            "/log.html",
+            "/output.xml",
+            "__pycache__/",
+            "/report.html",
+            "/robot.zip",
+            "/.venv/",
+            "/.wrapignore",
+            "/.cache",
+        ]
+    )
 
 
 def from_iso_to_dt(iso_str: str) -> datetime.datetime:
