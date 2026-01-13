@@ -19,6 +19,12 @@ DEVENV := devenv
 endif
 DEVENV_OPTIONS ?= --nix-option extra-sandbox-paths $(NETRC)
 
+develop: devenv.local.nix ## Launch opinionated IDE
+	devenv shell --profile devcontainer -- code .
+
+devenv.local.nix:
+	cp devenv.local.nix.example devenv.local.nix
+
 build:  ## Build application
 	$(DEVENV) $(DEVENV_OPTIONS) build outputs.python.app
 

@@ -4,7 +4,6 @@ from robot.libraries import BuiltIn
 from typing import Literal
 import json
 
-
 VariableScope = Literal["BPMN:TASK", "BPMN:PROCESS"]
 
 

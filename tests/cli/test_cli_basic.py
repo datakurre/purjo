@@ -35,12 +35,10 @@ class TestCliWrap:
         monkeypatch.chdir(temp_dir)
 
         # Create a minimal pyproject.toml
-        (temp_dir / "pyproject.toml").write_text(
-            """
+        (temp_dir / "pyproject.toml").write_text("""
 [tool.purjo.topics."test"]
 name = "Test"
-"""
-        )
+""")
 
         # Create a simple robot file
         (temp_dir / "test.robot").write_text(

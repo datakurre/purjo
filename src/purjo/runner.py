@@ -52,7 +52,6 @@ import os
 import re
 import shutil
 
-
 logger = logging.getLogger(__name__)
 logger.addHandler(stream_handler)
 logger.setLevel(operaton_settings.LOG_LEVEL)

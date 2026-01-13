@@ -13,7 +13,6 @@ import json
 import os
 import pathlib
 
-
 try:
     from robot.api.types import Secret  # type: ignore
 

@@ -182,12 +182,10 @@ class TestRobotParser:
     def test_parse_valid_robot_file(self, temp_dir: Path) -> None:
         """Test parsing a valid .robot file."""
         robot_file = temp_dir / "test.robot"
-        robot_file.write_text(
-            """*** Test Cases ***
+        robot_file.write_text("""*** Test Cases ***
 My Test Case
     Log    Hello World
-"""
-        )
+""")
 
         parser = RobotParser()
         defaults = TestDefaults()
@@ -204,11 +202,9 @@ My Test Case
         robot_dir = temp_dir / "robot_suite"
         robot_dir.mkdir()
         init_file = robot_dir / "__init__.robot"
-        init_file.write_text(
-            """*** Settings ***
+        init_file.write_text("""*** Settings ***
 Documentation    Suite initialization
-"""
-        )
+""")
 
         parser = RobotParser()
         defaults = TestDefaults()
@@ -228,12 +224,10 @@ class TestPythonParser:
     def test_parse_with_valid_fqfn(self, temp_dir: Path) -> None:
         """Test parsing with valid fully qualified function name."""
         python_file = temp_dir / "tasks.py"
-        python_file.write_text(
-            """
+        python_file.write_text("""
 def main():
     print("Hello from Python")
-"""
-        )
+""")
 
         parser = PythonParser(fqfn="tasks.main")
         defaults = TestDefaults()
