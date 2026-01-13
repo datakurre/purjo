@@ -22,7 +22,6 @@ from purjo.serialization import ValueInfo
 from typing import Any
 import pprint
 
-
 __all__ = [
     "dt_from_operaton",
     "dt_to_operaton",

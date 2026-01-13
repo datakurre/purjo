@@ -15,6 +15,7 @@ htmlcov/
 
 # Development Tools
 .devenv*
+.vscode/
 .env
 .vscode/
 .idea/

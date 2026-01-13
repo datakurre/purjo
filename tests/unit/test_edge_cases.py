@@ -58,26 +58,22 @@ class TestSubprocessFailures:
 
         # Create a minimal pyproject.toml
         pyproject = task_dir / "pyproject.toml"
-        pyproject.write_text(
-            """
+        pyproject.write_text("""
 [project]
 name = "failing-task"
 version = "0.1.0"
 
 [tool.purjo.robot]
 module = "failing_task"
-"""
-        )
+""")
 
         # Create a robot file that will fail
         robot_file = task_dir / "failing_task.robot"
-        robot_file.write_text(
-            """
+        robot_file.write_text("""
 *** Test Cases ***
 Failing Test
     Fail    This test intentionally fails
-"""
-        )
+""")
 
         task_config = Task(name="test")
         task_func = create_task(
@@ -97,16 +93,14 @@ Failing Test
         task_dir.mkdir()
 
         pyproject = task_dir / "pyproject.toml"
-        pyproject.write_text(
-            """
+        pyproject.write_text("""
 [project]
 name = "timeout-task"
 version = "0.1.0"
 
 [tool.purjo.robot]
 module = "timeout_task"
-"""
-        )
+""")
 
         task_config = Task(name="test")
         task_func = create_task(
@@ -129,16 +123,14 @@ class TestFileSystemErrors:
         task_dir = temp_dir / "no_perms"
         task_dir.mkdir()
         pyproject = task_dir / "pyproject.toml"
-        pyproject.write_text(
-            """
+        pyproject.write_text("""
 [project]
 name = "no-perms"
 version = "0.1.0"
 
 [tool.purjo.robot]
 module = "no_perms"
-"""
-        )
+""")
 
         # Make file unreadable
         pyproject.chmod(0o000)
@@ -277,13 +269,11 @@ class TestMalformedInput:
 
         pyproject = task_dir / "pyproject.toml"
         # Missing tool.purjo section
-        pyproject.write_text(
-            """
+        pyproject.write_text("""
 [project]
 name = "incomplete"
 version = "0.1.0"
-"""
-        )
+""")
 
         # Test that accessing missing keys raises errors
         with pytest.raises(KeyError):

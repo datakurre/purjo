@@ -16,16 +16,10 @@ inputs:
   devenv-module-uv2nix:
     url: gitlab:vasara-bpm/devenv-module-uv2nix
     flake: false
-  devenv-module-vscodium:
-    url: github:datakurre/devenv-module-vscodium
+  devenv-module-devcontainer:
+    url: github:datakurre/devenv-module-devcontainer
     flake: false
   # module dependencies, because devenv.yaml does not compose yet
-  unstable:
-    url: github:nixos/nixpkgs/master
-  vscode-python:
-    url: github:nixos/nixpkgs/nixos-24.05
-  nix-vscode-extensions:
-    url: github:nix-community/nix-vscode-extensions
   pyproject-nix:
     url: github:pyproject-nix/pyproject.nix
     inputs:
@@ -52,5 +46,6 @@ imports:
 - devenv-module-mvn2nix
 - devenv-module-operaton
 - devenv-module-uv2nix
-- devenv-module-vscodium
 - devenv-module-image
+- devenv-module-devcontainer
+profile: shell

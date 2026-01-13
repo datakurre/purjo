@@ -18,7 +18,6 @@ import os
 import pathspec
 import re
 
-
 # Default exclusion patterns for wrapping robot packages
 DEFAULT_WRAP_EXCLUDES = [
     "/.git",
