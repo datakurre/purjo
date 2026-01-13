@@ -6,9 +6,7 @@
   ...
 }:
 {
-  package.image.group = "datakurre";
-  package.image.repo = "purjo";
-  package.image.name = "purjo";
+  package.image.path = "datakurre/purjo/purjo";
   package.image.package = config.outputs.python.app;
   package.image.callable = "pur";
   package.image.extraPackages = [
@@ -111,7 +109,7 @@
       mockoon-cli
     ];
 
-  dotenv.disableHint = true;
+  dotenv.enable = true;
 
   enterShell = ''
     # Export VAULT_TOKEN
@@ -130,12 +128,32 @@
 
   cachix.pull = [ "datakurre" ];
 
-  devcontainer.enable = true;
-
   git-hooks.hooks.treefmt = {
     enable = true;
     settings.formatters = [
       pkgs.nixfmt-rfc-style
     ];
+  };
+
+  devcontainer.settings.customizations.vscode.extensions = [
+    "bbenoist.Nix"
+    "be5invis.toml"
+    "eamodio.gitlens"
+    "GitHub.copilot"
+    "GitHub.copilot-chat"
+    "google.gemini-cli-vscode-ide-companion"
+    "mkhl.direnv"
+    "ms-vscode.makefile-tools"
+    "d-biehl.robotcode"
+  ];
+
+  profiles = {
+    "self-contained".module = {
+      devcontainer.enable = true;
+      devcontainer.mode = "self-contained";
+      devcontainer.settings.customizations.vscode.extensions = [
+        "vscodevim.vim"
+      ];
+    };
   };
 }

@@ -3,6 +3,7 @@
 *.pyc
 .coverage
 .devenv*
+.vscode/
 .env
 .idea/
 .devcontainer.json

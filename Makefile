@@ -19,6 +19,9 @@ DEVENV := devenv
 endif
 DEVENV_OPTIONS ?= --nix-option extra-sandbox-paths $(NETRC)
 
+develop: ## Launch opinionated IDE
+	devenv --profile self-contained shell -- code .
+
 build:  ## Build application
 	$(DEVENV) $(DEVENV_OPTIONS) build outputs.python.app
 
