@@ -57,7 +57,6 @@ import tomllib
 import typer
 import uuid
 
-
 cli = typer.Typer(
     no_args_is_help=True,
     pretty_exceptions_enable=False,
@@ -386,8 +385,7 @@ async def initialize_robot_package(cwd_path: Path, python: bool = False) -> None
         if fixture_py.exists():  # pragma: no cover
             fixture_py.unlink()  # pragma: no cover
     (cwd_path / "pyproject.toml").write_text(
-        (cwd_path / "pyproject.toml").read_text()
-        + f"""
+        (cwd_path / "pyproject.toml").read_text() + f"""
 [tool.purjo.topics."My Topic in BPMN"]
 name = "{'tasks.main' if python else 'My Test in Robot'}"
 on-fail = "{'FAIL' if python else 'ERROR'}"

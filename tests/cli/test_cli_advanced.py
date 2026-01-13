@@ -76,13 +76,11 @@ class TestCliServe:
         # Create a minimal robot directory
         robot_dir = temp_dir / "robot_package"
         robot_dir.mkdir()
-        (robot_dir / "pyproject.toml").write_text(
-            """
+        (robot_dir / "pyproject.toml").write_text("""
 [tool.purjo.topics.test_topic]
 name = "Test Task"
 on-fail = "ERROR"
-"""
-        )
+""")
         (robot_dir / "test.robot").write_text(
             "*** Test Cases ***\nTest\n    Log    Test"
         )
@@ -165,16 +163,14 @@ name = "Test Task"
         # Create robot with secrets config
         robot_dir = temp_dir / "robot_package"
         robot_dir.mkdir()
-        (robot_dir / "pyproject.toml").write_text(
-            """
+        (robot_dir / "pyproject.toml").write_text("""
 [tool.purjo.secrets]
 type = "file"
 path = "secrets.json"
 
 [tool.purjo.topics.test_topic]
 name = "Test Task"
-"""
-        )
+""")
         (robot_dir / "test.robot").write_text(
             "*** Test Cases ***\nTest\n    Log    Test"
         )
@@ -210,12 +206,10 @@ name = "Test Task"
         # Create minimal robot
         robot_dir = temp_dir / "robot_package"
         robot_dir.mkdir()
-        (robot_dir / "pyproject.toml").write_text(
-            """
+        (robot_dir / "pyproject.toml").write_text("""
 [tool.purjo.topics.test_topic]
 name = "Test Task"
-"""
-        )
+""")
 
         # Mock asyncio event loop
         mock_event_loop = Mock()

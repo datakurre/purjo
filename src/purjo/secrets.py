@@ -18,7 +18,6 @@ import hvac
 import json
 import os
 
-
 PROVIDER = Literal["file", "vault"]
 
 

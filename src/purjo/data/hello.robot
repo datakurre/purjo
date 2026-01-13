@@ -19,4 +19,4 @@ My Test in Robot
     END
     ${message}=    Hello    ${name}
     Should Be Equal    ${message}    Hello ${name}!
-    VAR    ${message}    ${message}    scope=${BPMN:PROCESS}
+    VAR    ${message}=    ${message}    scope=${BPMN:PROCESS}
