@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>pur(jo) documentation &#8212; purjo documentation 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Getting started" href="getting_started.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section class="tex2jax_ignore mathjax_ignore" id="pur-jo-documentation">
+<h1><code class="docutils literal notranslate"><span class="pre">pur</span></code>(jo) documentation<a class="headerlink" href="#pur-jo-documentation" title="Link to this heading">¶</a></h1>
+<p>Welcome to the documentation for <code class="docutils literal notranslate"><span class="pre">purjo</span></code>, an experimental command line tool for orchestrating Robot Framework task suites with the Operaton BPM engine.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#initializing-a-new-project">Initializing a new project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#project-structure-overview">Project structure overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#running-a-bpmn-process">Running a BPMN process</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#serving-tasks">Serving tasks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="creating_tasks.html">Creating tasks</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="creating_tasks.html#basic-task-robot-framework">Basic task (Robot Framework)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating_tasks.html#advanced-task-pure-python">Advanced task (Pure Python)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating_tasks.html#adding-dependencies">Adding dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating_tasks.html#packaging">Packaging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="creating_tasks.html#creating-bpmn-resources">Creating BPMN resources</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testing_tasks.html">Testing tasks</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="testing_tasks.html#the-purjo-library">The <code class="docutils literal notranslate"><span class="pre">purjo</span></code> Library</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="handling_variables.html">Handling variables</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="handling_variables.html#passing-variables-from-bpmn-to-tasks">Passing variables from BPMN to tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="handling_variables.html#setting-variables-from-tasks-to-bpmn">Setting variables from tasks to BPMN</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="managing_secrets.html">Managing secrets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="managing_secrets.html#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="managing_secrets.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="managing_secrets.html#security-best-practices">Security best practices</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_use_cases.html">Advanced use cases</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="advanced_use_cases.html#file-i-o-within-tasks">File I/O within tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_use_cases.html#immediate-execution-with-pur-run">Immediate execution with <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_use_cases.html#managing-deployments">Managing deployments</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cli_reference.html">CLI reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="cli_reference.html#pur-serve"><code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">serve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli_reference.html#pur-init"><code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">init</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli_reference.html#pur-wrap"><code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">wrap</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli_reference.html#pur-run"><code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli_reference.html#pur-operaton"><code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">operaton</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">purjo documentation</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating_tasks.html">Creating tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing_tasks.html">Testing tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="handling_variables.html">Handling variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="managing_secrets.html">Managing secrets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_use_cases.html">Advanced use cases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_reference.html">CLI reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="getting_started.html" title="next chapter">Getting started</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, datakurre.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/index.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

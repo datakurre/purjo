@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Advanced use cases &#8212; purjo documentation 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="CLI reference" href="cli_reference.html" />
+    <link rel="prev" title="Managing secrets" href="managing_secrets.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section class="tex2jax_ignore mathjax_ignore" id="advanced-use-cases">
+<h1>Advanced use cases<a class="headerlink" href="#advanced-use-cases" title="Link to this heading">¶</a></h1>
+<p>This section covers more advanced scenarios and capabilities when working with <code class="docutils literal notranslate"><span class="pre">purjo</span></code>.</p>
+<section id="file-i-o-within-tasks">
+<h2>File I/O within tasks<a class="headerlink" href="#file-i-o-within-tasks" title="Link to this heading">¶</a></h2>
+<p>Tasks often need to interact with the file system, whether it’s reading input files, generating reports, or processing documents. <code class="docutils literal notranslate"><span class="pre">purjo</span></code> tasks, being based on Python and Robot Framework, can leverage their respective libraries for file input/output (I/O) operations.</p>
+<section id="example-pdf-manipulation">
+<h3>Example: PDF manipulation<a class="headerlink" href="#example-pdf-manipulation" title="Link to this heading">¶</a></h3>
+<p>This example illustrates how to perform file I/O operations, specifically creating and merging PDF documents using Python libraries.</p>
+<section id="pdf-py-python-library-for-pdf-operations">
+<h4><code class="docutils literal notranslate"><span class="pre">PDF.py</span></code> (Python library for PDF operations)<a class="headerlink" href="#pdf-py-python-library-for-pdf-operations" title="Link to this heading">¶</a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyPDF2</span> <span class="kn">import</span> <span class="n">PdfReader</span>
+<span class="kn">from</span> <span class="nn">PyPDF2</span> <span class="kn">import</span> <span class="n">PdfWriter</span>
+<span class="kn">from</span> <span class="nn">reportlab.lib.pagesizes</span> <span class="kn">import</span> <span class="n">letter</span>
+<span class="kn">from</span> <span class="nn">reportlab.pdfgen</span> <span class="kn">import</span> <span class="n">canvas</span>
+
+
+<span class="k">class</span> <span class="nc">PDF</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">create_pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">canvas</span><span class="o">.</span><span class="n">Canvas</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">pagesize</span><span class="o">=</span><span class="n">letter</span><span class="p">)</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">drawString</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">750</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">merge_pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">pdf_writer</span> <span class="o">=</span> <span class="n">PdfWriter</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="n">PdfReader</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">.</span><span class="n">pages</span><span class="p">:</span>
+            <span class="n">pdf_writer</span><span class="o">.</span><span class="n">add_page</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="n">PdfReader</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="o">.</span><span class="n">pages</span><span class="p">:</span>
+            <span class="n">pdf_writer</span><span class="o">.</span><span class="n">add_page</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">output_pdf</span><span class="p">:</span>
+            <span class="n">pdf_writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output_pdf</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This Python file defines a <code class="docutils literal notranslate"><span class="pre">PDF</span></code> class with methods <code class="docutils literal notranslate"><span class="pre">create_pdf</span></code> to generate a new PDF with text and <code class="docutils literal notranslate"><span class="pre">merge_pdf</span></code> to combine two existing PDF files into one. These methods utilize <code class="docutils literal notranslate"><span class="pre">PyPDF2</span></code> and <code class="docutils literal notranslate"><span class="pre">reportlab</span></code>, which are standard Python libraries for PDF handling.</p>
+</section>
+<section id="using-in-robot-framework">
+<h4>Using in Robot Framework<a class="headerlink" href="#using-in-robot-framework" title="Link to this heading">¶</a></h4>
+<p>These Python functions can be exposed as keywords in a Robot Framework file (e.g., <code class="docutils literal notranslate"><span class="pre">pdf.robot</span></code>) and then called from your BPMN process.</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="gh">*** Settings ***</span>
+<span class="kn">Library</span><span class="p">    </span><span class="nn">PDF.py</span>
+
+<span class="gh">*** Tasks ***</span>
+<span class="gu">Generate and Merge Documents</span>
+<span class="p">    </span><span class="nf">PDF.Create Pdf</span><span class="p">    </span><span class="s">first.pdf</span><span class="p">    </span><span class="s">Hello from purjo!</span>
+<span class="p">    </span><span class="nf">PDF.Create Pdf</span><span class="p">    </span><span class="s">second.pdf</span><span class="p">   </span><span class="s">Another page.</span>
+<span class="p">    </span><span class="nf">PDF.Merge Pdf</span><span class="p">     </span><span class="s">first.pdf</span><span class="p">    </span><span class="s">second.pdf</span><span class="p">    </span><span class="s">merged.pdf</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="considerations-for-file-i-o">
+<h3>Considerations for file I/O<a class="headerlink" href="#considerations-for-file-i-o" title="Link to this heading">¶</a></h3>
+<ul>
+<li><p><strong>File Paths:</strong> When working with file paths, ensure they are relative to your project’s root or correctly resolved as absolute paths.</p></li>
+<li><p><strong>Temporary Files:</strong> For intermediate files, consider using Python’s <code class="docutils literal notranslate"><span class="pre">tempfile</span></code> module or Robot Framework’s <code class="docutils literal notranslate"><span class="pre">OperatingSystem</span></code> library to create and manage temporary files, ensuring they are cleaned up after use.</p></li>
+<li><p><strong>Dependencies:</strong> Remember to declare any third-party Python libraries (like <code class="docutils literal notranslate"><span class="pre">PyPDF2</span></code> or <code class="docutils literal notranslate"><span class="pre">reportlab</span></code> in this example) in your <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> or <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> so <code class="docutils literal notranslate"><span class="pre">uv</span></code> can install them. You can add them using <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">add</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>uv<span class="w"> </span>add<span class="w"> </span>PyPDF2<span class="w"> </span>reportlab
+</pre></div>
+</div>
+</li>
+<li><p><strong>Passing Files as Variables:</strong> If you need to pass file contents or file paths between tasks or back to the BPMN engine, consider serializing the content (e.g., base64 encoding for binary files) or passing file paths as string variables.</p></li>
+</ul>
+</section>
+</section>
+<section id="immediate-execution-with-pur-run">
+<h2>Immediate execution with <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">run</span></code><a class="headerlink" href="#immediate-execution-with-pur-run" title="Link to this heading">¶</a></h2>
+<p>For rapid development and testing, <code class="docutils literal notranslate"><span class="pre">purjo</span></code> provides the <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">run</span></code> command. This command combines deployment and execution into a single step.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pur<span class="w"> </span>run<span class="w"> </span>&lt;process.bpmn&gt;<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p>It performs the following actions:</p>
+<ol class="arabic simple">
+<li><p>Deploys the specified BPMN (and DMN/Form) resources to the configured Operaton engine.</p></li>
+<li><p>Starts a new process instance of the deployed process.</p></li>
+<li><p>Prints the URL to the Operaton Cockpit for the new instance.</p></li>
+</ol>
+<section id="options">
+<h3>Options<a class="headerlink" href="#options" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--variables</span> <span class="pre">&lt;json_string_or_file&gt;</span></code>: Pass initial process variables. You can provide a JSON string or a path to a JSON file.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--name</span> <span class="pre">&lt;deployment_name&gt;</span></code>: Set a custom name for the deployment (default: “pur(jo) deployment”).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--force</span></code>: Force deployment even if resources haven’t changed.</p></li>
+</ul>
+</section>
+<section id="example">
+<h3>Example<a class="headerlink" href="#example" title="Link to this heading">¶</a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pur<span class="w"> </span>run<span class="w"> </span>hello.bpmn<span class="w"> </span>--variables<span class="w"> </span><span class="s1">&#39;{&quot;user&quot;: &quot;Alice&quot;}&#39;</span>
+<span class="go">Started: http://localhost:8080/operaton/app/cockpit/default/#/process-instance/36228e79...</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="managing-deployments">
+<h2>Managing deployments<a class="headerlink" href="#managing-deployments" title="Link to this heading">¶</a></h2>
+<p>For more granular control over the deployment lifecycle, you can use the <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">operaton</span></code> (or <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">bpm</span></code>) subcommands.</p>
+<section id="deploying-resources">
+<h3>Deploying resources<a class="headerlink" href="#deploying-resources" title="Link to this heading">¶</a></h3>
+<p>To deploy resources without starting an instance:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pur<span class="w"> </span>operaton<span class="w"> </span>deploy<span class="w"> </span>&lt;file1&gt;<span class="w"> </span>&lt;file2&gt;<span class="w"> </span>...
+</pre></div>
+</div>
+<p>This is useful when you have multiple related files (e.g., a BPMN process and a DMN decision table) that should be deployed together.</p>
+</section>
+<section id="starting-processes">
+<h3>Starting processes<a class="headerlink" href="#starting-processes" title="Link to this heading">¶</a></h3>
+<p>To start a process instance from an existing deployment (using its Process Definition Key):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pur<span class="w"> </span>operaton<span class="w"> </span>start<span class="w"> </span>&lt;process_key&gt;
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">purjo documentation</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating_tasks.html">Creating tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing_tasks.html">Testing tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="handling_variables.html">Handling variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="managing_secrets.html">Managing secrets</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Advanced use cases</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#file-i-o-within-tasks">File I/O within tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#immediate-execution-with-pur-run">Immediate execution with <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#managing-deployments">Managing deployments</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cli_reference.html">CLI reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="managing_secrets.html" title="previous chapter">Managing secrets</a></li>
+      <li>Next: <a href="cli_reference.html" title="next chapter">CLI reference</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, datakurre.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/advanced_use_cases.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

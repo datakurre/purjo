@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Creating tasks &#8212; purjo documentation 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Testing tasks" href="testing_tasks.html" />
+    <link rel="prev" title="Getting started" href="getting_started.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section class="tex2jax_ignore mathjax_ignore" id="creating-tasks">
+<h1>Creating tasks<a class="headerlink" href="#creating-tasks" title="Link to this heading">¶</a></h1>
+<p>This guide explains how to create tasks that can be orchestrated by <code class="docutils literal notranslate"><span class="pre">purjo</span></code> using either traditional Robot Framework keyword libraries or a more advanced pure Python approach.</p>
+<section id="basic-task-robot-framework">
+<h2>Basic task (Robot Framework)<a class="headerlink" href="#basic-task-robot-framework" title="Link to this heading">¶</a></h2>
+<p>The most common way to define tasks in <code class="docutils literal notranslate"><span class="pre">purjo</span></code> is by using Robot Framework keyword libraries. This involves creating a Python file with your custom keywords and a <code class="docutils literal notranslate"><span class="pre">.robot</span></code> file to define the task suite.</p>
+<section id="example-the-hello-task">
+<h3>Example: The “Hello” task<a class="headerlink" href="#example-the-hello-task" title="Link to this heading">¶</a></h3>
+<p>Here is a basic illustration.</p>
+<section id="hello-py-keyword-library">
+<h4><code class="docutils literal notranslate"><span class="pre">Hello.py</span></code> (Keyword library)<a class="headerlink" href="#hello-py-keyword-library" title="Link to this heading">¶</a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">robot.api.deco</span> <span class="kn">import</span> <span class="n">keyword</span>
+<span class="kn">from</span> <span class="nn">robot.api.deco</span> <span class="kn">import</span> <span class="n">library</span>
+
+
+<span class="nd">@library</span><span class="p">()</span>
+<span class="k">class</span> <span class="nc">Hello</span><span class="p">:</span>
+    <span class="nd">@keyword</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Hello </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">!&quot;</span>
+</pre></div>
+</div>
+<p>This Python file defines a simple Robot Framework library named <code class="docutils literal notranslate"><span class="pre">Hello</span></code> with one keyword: <code class="docutils literal notranslate"><span class="pre">hello</span></code>. This keyword takes a <code class="docutils literal notranslate"><span class="pre">name</span></code> and returns a greeting string.</p>
+</section>
+<section id="hello-robot-task-suite">
+<h4><code class="docutils literal notranslate"><span class="pre">hello.robot</span></code> (Task suite)<a class="headerlink" href="#hello-robot-task-suite" title="Link to this heading">¶</a></h4>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="gh">*** Settings ***</span>
+<span class="kn">Library</span><span class="p">    </span><span class="nn">Hello</span>
+
+<span class="gh">*** Tasks ***</span>
+<span class="gu">My Task in Robot</span>
+<span class="p">    ${</span><span class="nv">greeting</span><span class="p">}=    </span><span class="nf">Hello</span><span class="p">    </span><span class="s">World</span>
+<span class="p">    </span><span class="nf">Log To Console</span><span class="p">    ${</span><span class="nv">greeting</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">hello.robot</span></code> file imports the <code class="docutils literal notranslate"><span class="pre">Hello</span></code> library and defines a task named “My Task in Robot”. This task calls the <code class="docutils literal notranslate"><span class="pre">hello</span></code> keyword, passes “World” as the name, and logs the returned greeting to the console.</p>
+</section>
+<section id="hello-bpmn-bpmn-process">
+<h4><code class="docutils literal notranslate"><span class="pre">hello.bpmn</span></code> (BPMN process)<a class="headerlink" href="#hello-bpmn-bpmn-process" title="Link to this heading">¶</a></h4>
+<p>Your BPMN process would then include an external service task that references this Robot Framework task. For instance, a service task with <code class="docutils literal notranslate"><span class="pre">Topic</span></code> “My Topic in BPMN” might be configured to execute “My Task in Robot” from <code class="docutils literal notranslate"><span class="pre">hello.robot</span></code>.</p>
+</section>
+</section>
+<section id="configuration">
+<h3>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">¶</a></h3>
+<p>To map the BPMN topic to the Robot Framework task, you need to configure <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>.</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[tool.purjo.topics.</span><span class="s2">&quot;My Topic in BPMN&quot;</span><span class="k">]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;My Task in Robot&quot;</span>
+<span class="n">on-fail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;ERROR&quot;</span>
+<span class="n">process-variables</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">pythonpath</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;./libs&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;./modules&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">[tool.purjo.topics.&quot;&lt;Topic</span> <span class="pre">Name&gt;&quot;]</span></code>: Defines the configuration for a specific BPMN topic.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: The name of the Robot Framework task (or Python function) to execute.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">on-fail</span></code>: Determines the behavior when the task fails (e.g., “ERROR”, “FAIL”).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">process-variables</span></code>: If <code class="docutils literal notranslate"><span class="pre">true</span></code>, process variables are passed to the task. If <code class="docutils literal notranslate"><span class="pre">false</span></code>, only task scope variables are passed to the task.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pythonpath</span></code>: (Optional) A list of additional paths to add to Robot Framework’s <code class="docutils literal notranslate"><span class="pre">--pythonpath</span></code>. This allows importing custom libraries and modules from specified directories.</p></li>
+</ul>
+</section>
+</section>
+<section id="advanced-task-pure-python">
+<h2>Advanced task (Pure Python)<a class="headerlink" href="#advanced-task-pure-python" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">purjo</span></code> also supports defining tasks directly in Python, allowing for more complex logic and direct integration with Python’s type hinting and data validation features like Pydantic. This approach can replace the need for a separate <code class="docutils literal notranslate"><span class="pre">.robot</span></code> file for simple tasks.</p>
+<section id="example-a-pure-python-task">
+<h3>Example: A pure Python task<a class="headerlink" href="#example-a-pure-python-task" title="Link to this heading">¶</a></h3>
+<p>This approach is demonstrated below.</p>
+<section id="tasks-py-pure-python-task">
+<h4><code class="docutils literal notranslate"><span class="pre">tasks.py</span></code> (Pure Python task)<a class="headerlink" href="#tasks-py-pure-python-task" title="Link to this heading">¶</a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+<span class="kn">from</span> <span class="nn">robot.api</span> <span class="kn">import</span> <span class="n">logger</span>
+<span class="kn">from</span> <span class="nn">robot.libraries</span> <span class="kn">import</span> <span class="n">BuiltIn</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Literal</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+
+<span class="n">VariableScope</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;BPMN:TASK&quot;</span><span class="p">,</span> <span class="s2">&quot;BPMN:PROCESS&quot;</span><span class="p">]</span>
+
+
+<span class="k">class</span> <span class="nc">InputVariables</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;John Doe&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">OutputVariables</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">message</span><span class="p">:</span> <span class="nb">str</span>
+
+
+<span class="k">def</span> <span class="nf">get_variables</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">InputVariables</span><span class="p">:</span>
+    <span class="n">library</span> <span class="o">=</span> <span class="n">BuiltIn</span><span class="o">.</span><span class="n">BuiltIn</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">InputVariables</span><span class="p">(</span><span class="o">**</span><span class="n">library</span><span class="o">.</span><span class="n">get_variables</span><span class="p">(</span><span class="n">no_decoration</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">set_variables</span><span class="p">(</span>
+    <span class="n">variables</span><span class="p">:</span> <span class="n">OutputVariables</span><span class="p">,</span> <span class="n">scope</span><span class="p">:</span> <span class="n">VariableScope</span> <span class="o">=</span> <span class="s2">&quot;BPMN:PROCESS&quot;</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">library</span> <span class="o">=</span> <span class="n">BuiltIn</span><span class="o">.</span><span class="n">BuiltIn</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">scope</span> <span class="o">==</span> <span class="s2">&quot;BPMN:TASK&quot;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">variables</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<span class="p">{</span><span class="o">%</span> <span class="n">raw</span> <span class="o">%</span><span class="p">}</span>
+                <span class="n">library</span><span class="o">.</span><span class="n">_variables</span><span class="o">.</span><span class="n">set_bpmn_task</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;$</span><span class="se">{{</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="se">}}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">variables</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">library</span><span class="o">.</span><span class="n">_variables</span><span class="o">.</span><span class="n">set_bpmn_process</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;$</span><span class="se">{{</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="se">}}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+<span class="p">{</span><span class="o">%</span> <span class="n">endraw</span> <span class="o">%</span><span class="p">}</span>
+    <span class="k">except</span> <span class="ne">AssertionError</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">variables</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(),</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">variables</span> <span class="o">=</span> <span class="n">get_variables</span><span class="p">()</span>
+    <span class="n">set_variables</span><span class="p">(</span><span class="n">OutputVariables</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Hello, </span><span class="si">{</span><span class="n">variables</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">!&quot;</span><span class="p">))</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">purjo</span> <span class="kn">import</span> <span class="n">PythonParser</span>
+    <span class="kn">from</span> <span class="nn">robot</span> <span class="kn">import</span> <span class="n">run</span>
+
+    <span class="n">run</span><span class="p">(</span><span class="vm">__file__</span><span class="p">,</span> <span class="n">parser</span><span class="o">=</span><span class="n">PythonParser</span><span class="p">(</span><span class="s2">&quot;tasks.main&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+</section>
+<section id="key-features">
+<h4>Key features:<a class="headerlink" href="#key-features" title="Link to this heading">¶</a></h4>
+<ul class="simple">
+<li><p><strong>Pydantic Models (<code class="docutils literal notranslate"><span class="pre">InputVariables</span></code>, <code class="docutils literal notranslate"><span class="pre">OutputVariables</span></code>)</strong>: These models enforce strict typing and validation for variables exchanged with the BPMN engine, making your task more robust.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">get_variables()</span></code> and <code class="docutils literal notranslate"><span class="pre">set_variables()</span></code></strong>: Helper functions to easily retrieve input variables from the BPMN process and set output variables back to it.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">main()</span></code> Function</strong>: Encapsulates the core logic of your task. It retrieves variables, performs operations, and sets new variables.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">__name__</span> <span class="pre">==</span> <span class="pre">&quot;__main__&quot;:</span></code> Block</strong>: This block enables the Python script to be executed directly as a Robot Framework task using <code class="docutils literal notranslate"><span class="pre">purjo</span></code>’s <code class="docutils literal notranslate"><span class="pre">PythonParser</span></code>. This means you can specify <code class="docutils literal notranslate"><span class="pre">tasks.main</span></code> as the Robot Framework task to be executed by your BPMN process, without needing a separate <code class="docutils literal notranslate"><span class="pre">.robot</span></code> file.</p></li>
+</ul>
+<p>This advanced approach is particularly useful for tasks that are primarily Python-based, requiring minimal or no Robot Framework specific syntax beyond what <code class="docutils literal notranslate"><span class="pre">purjo</span></code> provides for variable handling.</p>
+</section>
+</section>
+<section id="id1">
+<h3>Configuration<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<p>To map the BPMN topic to the Pure Python task, you need to configure <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>.</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[tool.purjo.topics.</span><span class="s2">&quot;My Topic in BPMN&quot;</span><span class="k">]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;tasks.main&quot;</span>
+<span class="n">on-fail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;FAIL&quot;</span>
+<span class="n">process-variables</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: The name of the Python function to execute, in the format <code class="docutils literal notranslate"><span class="pre">module.function</span></code>. In this example, <code class="docutils literal notranslate"><span class="pre">tasks.main</span></code> refers to the <code class="docutils literal notranslate"><span class="pre">main</span></code> function in <code class="docutils literal notranslate"><span class="pre">tasks.py</span></code>.</p></li>
+</ul>
+</section>
+</section>
+<section id="adding-dependencies">
+<h2>Adding dependencies<a class="headerlink" href="#adding-dependencies" title="Link to this heading">¶</a></h2>
+<p>When your tasks require external Python libraries (e.g., <code class="docutils literal notranslate"><span class="pre">requests</span></code>, <code class="docutils literal notranslate"><span class="pre">pandas</span></code>, <code class="docutils literal notranslate"><span class="pre">PyPDF2</span></code>), you need to add them to your project’s dependencies. <code class="docutils literal notranslate"><span class="pre">purjo</span></code> uses <code class="docutils literal notranslate"><span class="pre">uv</span></code> for dependency management.</p>
+<p>To add a dependency, use the <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">add</span></code> command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>uv<span class="w"> </span>add<span class="w"> </span>requests
+</pre></div>
+</div>
+<p>This command updates your <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> file and the <code class="docutils literal notranslate"><span class="pre">uv.lock</span></code> file, ensuring that the dependency is available when your tasks are executed.</p>
+</section>
+<section id="packaging">
+<h2>Packaging<a class="headerlink" href="#packaging" title="Link to this heading">¶</a></h2>
+<p>Once your tasks are ready, you can package them into a <code class="docutils literal notranslate"><span class="pre">robot.zip</span></code> file using the <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">wrap</span></code> command.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pur<span class="w"> </span>wrap
+</pre></div>
+</div>
+<p>This command creates a <code class="docutils literal notranslate"><span class="pre">robot.zip</span></code> file containing your project files, excluding those specified in <code class="docutils literal notranslate"><span class="pre">.wrapignore</span></code> (and default exclusions like <code class="docutils literal notranslate"><span class="pre">.git</span></code>, <code class="docutils literal notranslate"><span class="pre">__pycache__</span></code>, etc.). This zip file can be deployed to an external worker or used for distribution.</p>
+</section>
+<section id="creating-bpmn-resources">
+<h2>Creating BPMN resources<a class="headerlink" href="#creating-bpmn-resources" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">purjo</span></code> provides a convenient way to create new BPMN, DMN, and Form files using the <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">operaton</span> <span class="pre">create</span></code> command.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pur<span class="w"> </span>operaton<span class="w"> </span>create<span class="w"> </span>my-process.bpmn
+<span class="gp">$ </span>pur<span class="w"> </span>operaton<span class="w"> </span>create<span class="w"> </span>my-decision.dmn
+<span class="gp">$ </span>pur<span class="w"> </span>operaton<span class="w"> </span>create<span class="w"> </span>my-form.form
+</pre></div>
+</div>
+<p>This generates template files with unique IDs, ready for editing in any bpmn.io-compatible modeler.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">purjo documentation</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Creating tasks</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#basic-task-robot-framework">Basic task (Robot Framework)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#advanced-task-pure-python">Advanced task (Pure Python)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-dependencies">Adding dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#packaging">Packaging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#creating-bpmn-resources">Creating BPMN resources</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testing_tasks.html">Testing tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="handling_variables.html">Handling variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="managing_secrets.html">Managing secrets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_use_cases.html">Advanced use cases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_reference.html">CLI reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="getting_started.html" title="previous chapter">Getting started</a></li>
+      <li>Next: <a href="testing_tasks.html" title="next chapter">Testing tasks</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, datakurre.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/creating_tasks.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

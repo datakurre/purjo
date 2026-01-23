@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Development environment &#8212; purjo documentation 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section class="tex2jax_ignore mathjax_ignore" id="development-environment">
+<h1>Development environment<a class="headerlink" href="#development-environment" title="Link to this heading">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">purjo</span></code> utilizes <a class="reference external" href="https://devenv.sh/"><code class="docutils literal notranslate"><span class="pre">devenv</span></code></a> to provide a reproducible and feature-rich development environment. This setup includes not only the necessary Python tools but also a suite of services to simulate a production-like ecosystem.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://devenv.sh/getting-started/">Install <code class="docutils literal notranslate"><span class="pre">devenv</span></code></a></p></li>
+<li><p><a class="reference external" href="https://direnv.net/">Install <code class="docutils literal notranslate"><span class="pre">direnv</span></code></a> (optional, but recommended for automatic environment activation)</p></li>
+</ul>
+</section>
+<section id="services">
+<h2>Services<a class="headerlink" href="#services" title="Link to this heading">¶</a></h2>
+<p>When you run <code class="docutils literal notranslate"><span class="pre">devenv</span> <span class="pre">up</span></code>, the following services are started automatically:</p>
+<section id="operaton-bpm-engine">
+<h3>Operaton BPM Engine<a class="headerlink" href="#operaton-bpm-engine" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Port:</strong> <code class="docutils literal notranslate"><span class="pre">8080</span></code></p></li>
+<li><p><strong>URL:</strong> <code class="docutils literal notranslate"><span class="pre">http://localhost:8080/operaton</span></code></p></li>
+<li><p><strong>Description:</strong> A lightweight, open-source BPM engine. It serves as the orchestration core for your <code class="docutils literal notranslate"><span class="pre">purjo</span></code> tasks.</p></li>
+</ul>
+</section>
+<section id="hashicorp-vault">
+<h3>HashiCorp Vault<a class="headerlink" href="#hashicorp-vault" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Port:</strong> <code class="docutils literal notranslate"><span class="pre">8200</span></code></p></li>
+<li><p><strong>UI:</strong> <code class="docutils literal notranslate"><span class="pre">http://localhost:8200/ui</span></code></p></li>
+<li><p><strong>Description:</strong> A secrets management service.</p></li>
+<li><p><strong>Configuration:</strong> The environment automatically initializes Vault and enables the <code class="docutils literal notranslate"><span class="pre">secret/</span></code> Key-Value (v2) engine. This allows you to test <code class="docutils literal notranslate"><span class="pre">purjo</span></code>’s Vault integration out of the box.</p></li>
+</ul>
+</section>
+<section id="mockoon">
+<h3>Mockoon<a class="headerlink" href="#mockoon" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>Port:</strong> <code class="docutils literal notranslate"><span class="pre">3080</span></code></p></li>
+<li><p><strong>Description:</strong> A mock API server.</p></li>
+<li><p><strong>Data:</strong> Configured with <code class="docutils literal notranslate"><span class="pre">./fixture/mockoon/data.json</span></code>.</p></li>
+<li><p><strong>Usage:</strong> Useful for simulating external APIs that your Robot Framework tasks might need to interact with during development.</p></li>
+</ul>
+</section>
+</section>
+<section id="dev-containers">
+<h2>Dev containers<a class="headerlink" href="#dev-containers" title="Link to this heading">¶</a></h2>
+<p>The project is configured to support <a class="reference external" href="https://code.visualstudio.com/docs/devcontainers/containers">VS Code Dev Containers</a>. This allows you to open the project in a fully configured container environment without installing dependencies on your host machine.</p>
+<section id="recommended-extensions">
+<h3>Recommended extensions<a class="headerlink" href="#recommended-extensions" title="Link to this heading">¶</a></h3>
+<p>When working with <code class="docutils literal notranslate"><span class="pre">purjo</span></code> in VS Code, the following extensions are recommended:</p>
+<ul class="simple">
+<li><p><strong>Robot Code</strong> (<code class="docutils literal notranslate"><span class="pre">d-biehl.robotcode</span></code>): For Robot Framework syntax highlighting and language server features.</p></li>
+<li><p><strong>BPMN Editor</strong> (<code class="docutils literal notranslate"><span class="pre">miragon-gmbh.vs-code-bpmn-modeler</span></code>): For visual editing of <code class="docutils literal notranslate"><span class="pre">.bpmn</span></code> files.</p></li>
+<li><p><strong>Ruff</strong> (<code class="docutils literal notranslate"><span class="pre">charliermarsh.ruff</span></code>): For Python linting and formatting.</p></li>
+<li><p><strong>Nix IDE</strong> (<code class="docutils literal notranslate"><span class="pre">bbenoist.Nix</span></code>): If you are editing <code class="docutils literal notranslate"><span class="pre">devenv.nix</span></code> files.</p></li>
+</ul>
+</section>
+</section>
+<section id="running-tests">
+<h2>Running tests<a class="headerlink" href="#running-tests" title="Link to this heading">¶</a></h2>
+<p>The development environment includes a test suite that verifies the integration between <code class="docutils literal notranslate"><span class="pre">purjo</span></code> and the services.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>devenv<span class="w"> </span><span class="nb">test</span>
+</pre></div>
+</div>
+<p>This command waits for the services (Operaton, Vault) to be ready and then runs the project’s test suite.</p>
+</section>
+<section id="testing-strategies">
+<h2>Testing strategies<a class="headerlink" href="#testing-strategies" title="Link to this heading">¶</a></h2>
+<section id="unit-testing-tasks">
+<h3>Unit testing tasks<a class="headerlink" href="#unit-testing-tasks" title="Link to this heading">¶</a></h3>
+<p>You can test your <code class="docutils literal notranslate"><span class="pre">purjo</span></code> tasks in isolation using the <code class="docutils literal notranslate"><span class="pre">purjo</span></code> Robot Framework library. This allows you to verify task logic without running the full BPM engine.</p>
+<p>See <a class="reference internal" href="library_reference.html"><span class="std std-doc">Library Reference</span></a> for details on the <code class="docutils literal notranslate"><span class="pre">Get</span> <span class="pre">Output</span> <span class="pre">Variables</span></code> keyword.</p>
+</section>
+<section id="end-to-end-testing">
+<h3>End-to-end testing<a class="headerlink" href="#end-to-end-testing" title="Link to this heading">¶</a></h3>
+<p>For full end-to-end testing, you can:</p>
+<ol class="arabic simple">
+<li><p>Start the services with <code class="docutils literal notranslate"><span class="pre">devenv</span> <span class="pre">up</span></code>.</p></li>
+<li><p>Deploy your process using <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">run</span></code> or <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">operaton</span> <span class="pre">deploy</span></code>.</p></li>
+<li><p>Start a process instance.</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">serve</span></code> to execute the tasks.</p></li>
+<li><p>Verify the results in the Operaton Cockpit or by querying the engine API.</p></li>
+</ol>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">purjo documentation</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating_tasks.html">Creating tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing_tasks.html">Testing tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="handling_variables.html">Handling variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="managing_secrets.html">Managing secrets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_use_cases.html">Advanced use cases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_reference.html">CLI reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, datakurre.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/development_environment.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

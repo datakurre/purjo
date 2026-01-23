@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Handling variables &#8212; purjo documentation 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Managing secrets" href="managing_secrets.html" />
+    <link rel="prev" title="Testing tasks" href="testing_tasks.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section class="tex2jax_ignore mathjax_ignore" id="handling-variables">
+<h1>Handling variables<a class="headerlink" href="#handling-variables" title="Link to this heading">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">purjo</span></code> provides flexible mechanisms for passing data (variables) between your BPMN processes and your Robot Framework or Python tasks. This guide details how to manage these variables.</p>
+<section id="passing-variables-from-bpmn-to-tasks">
+<h2>Passing variables from BPMN to tasks<a class="headerlink" href="#passing-variables-from-bpmn-to-tasks" title="Link to this heading">¶</a></h2>
+<p>Variables defined in your BPMN process can be directly accessed within your <code class="docutils literal notranslate"><span class="pre">purjo</span></code> tasks.</p>
+<section id="different-data-types">
+<h3>Different data types<a class="headerlink" href="#different-data-types" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">purjo</span></code> automatically converts common BPMN variable types to their corresponding Python/Robot Framework types.</p>
+<p>Consider the following Robot Framework task file:</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="gh">*** Settings ***</span>
+<span class="kn">Library</span><span class="p">     </span><span class="nn">DateTime</span>
+<span class="kn">Library</span><span class="p">     </span><span class="nn">String</span>
+
+
+<span class="gh">*** Variables ***</span>
+<span class="p">${</span><span class="nv">BPMN:TASK</span><span class="p">}        </span><span class="s">local</span>
+
+<span class="p">${</span><span class="nv">String Input</span><span class="p">}     ${</span><span class="nv">None</span><span class="p">}</span>
+<span class="p">${</span><span class="nv">Number Input</span><span class="p">}     ${</span><span class="nv">None</span><span class="p">}</span>
+<span class="p">${</span><span class="nv">Boolean Input</span><span class="p">}    ${</span><span class="nv">None</span><span class="p">}</span>
+<span class="p">${</span><span class="nv">Date Input</span><span class="p">}       ${</span><span class="nv">None</span><span class="p">}</span>
+<span class="p">@{</span><span class="nv">List Input</span><span class="p">}       ${</span><span class="nv">None</span><span class="p">}</span>
+<span class="p">&amp;{</span><span class="nv">Dict Input</span><span class="p">}       &amp;{</span><span class="nv">EMPTY</span><span class="p">}</span>
+
+
+<span class="gh">*** Tasks ***</span>
+<span class="gu">Test Variable Tpyes</span>
+<span class="p">    ${</span><span class="nv">Date Input</span><span class="p">}=    </span><span class="nf">Convert Date</span><span class="p">    ${</span><span class="nv">Date Input</span><span class="p">}</span>
+<span class="p">    </span><span class="nf">Log Variables</span>
+<span class="p">    </span><span class="nf">VAR</span><span class="p">    ${</span><span class="nv">String Output</span><span class="p">}    ${</span><span class="nv">String Input</span><span class="p">}    </span><span class="s">scope=</span><span class="p">${</span><span class="nv">BPMN:TASK</span><span class="p">}</span>
+<span class="p">    </span><span class="nf">VAR</span><span class="p">    ${</span><span class="nv">Number Output</span><span class="p">}    ${</span><span class="nv">Number Input</span><span class="p">}    </span><span class="s">scope=</span><span class="p">${</span><span class="nv">BPMN:TASK</span><span class="p">}</span>
+<span class="p">    </span><span class="nf">VAR</span><span class="p">    ${</span><span class="nv">Boolean Output</span><span class="p">}    ${</span><span class="nv">Boolean Input</span><span class="p">}    </span><span class="s">scope=</span><span class="p">${</span><span class="nv">BPMN:TASK</span><span class="p">}</span>
+<span class="p">    </span><span class="nf">VAR</span><span class="p">    ${</span><span class="nv">Date Output</span><span class="p">}    ${</span><span class="nv">Date Input</span><span class="p">}    </span><span class="s">scope=</span><span class="p">${</span><span class="nv">BPMN:TASK</span><span class="p">}</span>
+<span class="p">    </span><span class="nf">VAR</span><span class="p">    ${</span><span class="nv">List Output</span><span class="p">}    ${</span><span class="nv">List Input</span><span class="p">}    </span><span class="s">scope=</span><span class="p">${</span><span class="nv">BPMN:TASK</span><span class="p">}</span>
+<span class="p">    </span><span class="nf">VAR</span><span class="p">    ${</span><span class="nv">Dict Output</span><span class="p">}    ${</span><span class="nv">Dict Input</span><span class="p">}    </span><span class="s">scope=</span><span class="p">${</span><span class="nv">BPMN:TASK</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>In this example, variables like <code class="docutils literal notranslate"><span class="pre">${String</span> <span class="pre">Input}</span></code>, <code class="docutils literal notranslate"><span class="pre">${Number</span> <span class="pre">Input}</span></code>, <code class="docutils literal notranslate"><span class="pre">${Boolean</span> <span class="pre">Input}</span></code>, <code class="docutils literal notranslate"><span class="pre">${Date</span> <span class="pre">Input}</span></code>, <code class="docutils literal notranslate"><span class="pre">&#64;{List</span> <span class="pre">Input}</span></code>, and <code class="docutils literal notranslate"><span class="pre">&amp;{Dict</span> <span class="pre">Input}</span></code> are expected to be set by the BPMN process. <code class="docutils literal notranslate"><span class="pre">purjo</span></code> ensures these are available to the Robot Framework task in the appropriate format.</p>
+</section>
+</section>
+<section id="setting-variables-from-tasks-to-bpmn">
+<h2>Setting variables from tasks to BPMN<a class="headerlink" href="#setting-variables-from-tasks-to-bpmn" title="Link to this heading">¶</a></h2>
+<p>You can also set variables within your tasks to be passed back to the BPMN process. <code class="docutils literal notranslate"><span class="pre">purjo</span></code> supports setting variables with specific scopes: task-local or process-global.</p>
+<section id="using-the-var-keyword-robot-framework">
+<h3>Using the <code class="docutils literal notranslate"><span class="pre">VAR</span></code> keyword (Robot Framework)<a class="headerlink" href="#using-the-var-keyword-robot-framework" title="Link to this heading">¶</a></h3>
+<p>In Robot Framework tasks, you can use the built-in <code class="docutils literal notranslate"><span class="pre">VAR</span></code> keyword to set variables and specify their scope.</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="p">    </span><span class="c">VAR</span><span class="p">    </span><span class="c">${VariableName}</span><span class="p">    </span><span class="c">${Value}</span><span class="p">    </span><span class="c">scope=${BPMN:TASK}</span>
+<span class="p">    </span><span class="c">VAR</span><span class="p">    </span><span class="c">${AnotherVariable}</span><span class="p">    </span><span class="c">${AnotherValue}</span><span class="p">    </span><span class="c">scope=${BPMN:PROCESS}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">scope=${BPMN:TASK}</span></code>: Sets a variable that is local to the current external task instance.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scope=${BPMN:PROCESS}</span></code>: Sets a variable that is available throughout the entire BPMN process instance.</p></li>
+</ul>
+</section>
+<section id="getting-and-setting-variables-from-python">
+<h3>Getting and setting variables from Python<a class="headerlink" href="#getting-and-setting-variables-from-python" title="Link to this heading">¶</a></h3>
+<p>For Python-based tasks, <code class="docutils literal notranslate"><span class="pre">purjo</span></code> provides utilities to interact with BPMN variables.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+<span class="kn">from</span> <span class="nn">robot.api</span> <span class="kn">import</span> <span class="n">logger</span>
+<span class="kn">from</span> <span class="nn">robot.libraries</span> <span class="kn">import</span> <span class="n">BuiltIn</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Literal</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+
+<span class="n">VariableScope</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;BPMN:TASK&quot;</span><span class="p">,</span> <span class="s2">&quot;BPMN:PROCESS&quot;</span><span class="p">]</span>
+
+
+<span class="k">class</span> <span class="nc">InputVariables</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;John Doe&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">OutputVariables</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">message</span><span class="p">:</span> <span class="nb">str</span>
+
+
+<span class="k">def</span> <span class="nf">get_variables</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">InputVariables</span><span class="p">:</span>
+    <span class="n">library</span> <span class="o">=</span> <span class="n">BuiltIn</span><span class="o">.</span><span class="n">BuiltIn</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">InputVariables</span><span class="p">(</span><span class="o">**</span><span class="n">library</span><span class="o">.</span><span class="n">get_variables</span><span class="p">(</span><span class="n">no_decoration</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">set_variables</span><span class="p">(</span>
+    <span class="n">variables</span><span class="p">:</span> <span class="n">OutputVariables</span><span class="p">,</span> <span class="n">scope</span><span class="p">:</span> <span class="n">VariableScope</span> <span class="o">=</span> <span class="s2">&quot;BPMN:PROCESS&quot;</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">library</span> <span class="o">=</span> <span class="n">BuiltIn</span><span class="o">.</span><span class="n">BuiltIn</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">scope</span> <span class="o">==</span> <span class="s2">&quot;BPMN:TASK&quot;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">variables</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<span class="p">{</span><span class="o">%</span> <span class="n">raw</span> <span class="o">%</span><span class="p">}</span>
+                <span class="n">library</span><span class="o">.</span><span class="n">_variables</span><span class="o">.</span><span class="n">set_bpmn_task</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;$</span><span class="se">{{</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="se">}}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">variables</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">library</span><span class="o">.</span><span class="n">_variables</span><span class="o">.</span><span class="n">set_bpmn_process</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;$</span><span class="se">{{</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="se">}}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+<span class="p">{</span><span class="o">%</span> <span class="n">endraw</span> <span class="o">%</span><span class="p">}</span>
+    <span class="k">except</span> <span class="ne">AssertionError</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">variables</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(),</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">get_variables()</span></code></strong>: This function retrieves all variables passed from the BPMN process and validates them against an <code class="docutils literal notranslate"><span class="pre">InputVariables</span></code> Pydantic model.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">set_variables()</span></code></strong>: This function allows you to set output variables, which will be passed back to the BPMN engine. You can specify the <code class="docutils literal notranslate"><span class="pre">scope</span></code> (<code class="docutils literal notranslate"><span class="pre">&quot;BPMN:TASK&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;BPMN:PROCESS&quot;</span></code>) to control the visibility of these variables.</p></li>
+</ul>
+<p>Using Pydantic models (like <code class="docutils literal notranslate"><span class="pre">InputVariables</span></code> and <code class="docutils literal notranslate"><span class="pre">OutputVariables</span></code>) is highly recommended for Python tasks as it provides strong typing and validation for your variable payloads, ensuring data integrity.</p>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">purjo documentation</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating_tasks.html">Creating tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing_tasks.html">Testing tasks</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Handling variables</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#passing-variables-from-bpmn-to-tasks">Passing variables from BPMN to tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#setting-variables-from-tasks-to-bpmn">Setting variables from tasks to BPMN</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="managing_secrets.html">Managing secrets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_use_cases.html">Advanced use cases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_reference.html">CLI reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="testing_tasks.html" title="previous chapter">Testing tasks</a></li>
+      <li>Next: <a href="managing_secrets.html" title="next chapter">Managing secrets</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, datakurre.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/handling_variables.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
