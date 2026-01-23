@@ -8,7 +8,6 @@ from purjo.utils import get_wrap_pathspec
 from purjo.utils import json_serializer
 from pydantic import DirectoryPath
 from pydantic import FilePath
-from robot.api import logger as robot_logger
 from tempfile import TemporaryDirectory
 from typing import Any
 from typing import Dict
@@ -34,6 +33,8 @@ def _get_output_variables(
     """
     Test a specific topic in a robot package with input for expected output.
     """
+    from robot.api import logger as robot_logger
+
     logger.setLevel(os.environ.get("LOG_LEVEL") or log_level)
     set_log_level(os.environ.get("LOG_LEVEL") or log_level)
 
@@ -102,7 +103,9 @@ def _get_output_variables(
             robot_logger.debug(
                 f"Purjo inputs:\n{json.dumps(variables, default=json_serializer, indent=2)}"
             )
-            robot_logger.debug(f"Purjo secrets:\n{list(secrets.keys())}")
+            robot_logger.debug(
+                f"Purjo secrets:\n{list(secrets.keys()) if secrets else []}"
+            )
         else:
             if log_html_path.exists():
                 robot_logger.info(
@@ -112,17 +115,19 @@ def _get_output_variables(
             robot_logger.info(
                 f"Purjo inputs:\n{json.dumps(variables, default=json_serializer, indent=2)}"
             )
-            robot_logger.info(f"Purjo secrets:\n{list(secrets.keys())}")
+            robot_logger.info(
+                f"Purjo secrets:\n{list(secrets.keys()) if secrets else []}"
+            )
         variables = json.loads(task_variables_file.read_text())
         if return_code == 0:
-            robot_logger.debug(f"Purjo stdout:\n{stdout}")
-            robot_logger.debug(f"Purjo stderr:\n{stderr}")
+            robot_logger.debug(f"Purjo stdout:\n{stdout.decode('utf-8')}")
+            robot_logger.debug(f"Purjo stderr:\n{stderr.decode('utf-8')}")
             robot_logger.debug(
                 f"Purjo outputs:\n{json.dumps(variables, default=json_serializer, indent=2)}"
             )
         else:
-            robot_logger.info(f"Purjo stdout:\n{stdout}")
-            robot_logger.info(f"Purjo stderr:\n{stderr}")
+            robot_logger.info(f"Purjo stdout:\n{stdout.decode('utf-8')}")
+            robot_logger.info(f"Purjo stderr:\n{stderr.decode('utf-8')}")
             robot_logger.info(
                 f"Purjo outputs:\n{json.dumps(variables, default=json_serializer, indent=2)}"
             )
