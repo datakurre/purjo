@@ -1,3 +1,9 @@
+## 1.0b8 (unreleased)
+
+
+- Nothing changed yet.
+
+
 ## 1.0b7 (2026-01-23)
 
 - Add support for pythonpath configuration in robot_toml topics
