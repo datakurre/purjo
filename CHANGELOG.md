@@ -1,8 +1,7 @@
-## 1.0b7 (unreleased)
+## 1.0b7 (2026-01-23)
 
-
-- Nothing changed yet.
-
+- Add support for pythonpath configuration in robot_toml topics
+- Fix unnecessary dependency on robotframework
 
 ## 1.0b6 (2025-12-11)
 
