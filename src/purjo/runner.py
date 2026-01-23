@@ -91,6 +91,7 @@ class Task(BaseModel):
     exclude: Optional[str] = None
     on_fail: Optional[OnFail] = Field(default=None, alias="on-fail")
     process_variables: bool = Field(default=False, alias="process-variables")
+    pythonpath: Optional[List[str]] = None
 
 
 def is_python_fqfn(value: str) -> bool:
@@ -150,6 +151,11 @@ def build_run(
                 config.exclude,
             ]
             if config.exclude
+            else []
+        )
+        + (
+            [arg for path in config.pythonpath for arg in ["--pythonpath", path]]
+            if config.pythonpath
             else []
         )
         + [

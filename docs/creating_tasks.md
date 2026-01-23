@@ -58,12 +58,14 @@ To map the BPMN topic to the Robot Framework task, you need to configure `pyproj
 name = "My Task in Robot"
 on-fail = "ERROR"
 process-variables = true
+pythonpath = ["./libs", "./modules"]
 ```
 
 *   `[tool.purjo.topics."<Topic Name>"]`: Defines the configuration for a specific BPMN topic.
 *   `name`: The name of the Robot Framework task (or Python function) to execute.
 *   `on-fail`: Determines the behavior when the task fails (e.g., "ERROR", "FAIL").
 *   `process-variables`: If `true`, process variables are passed to the task. If `false`, only task scope variables are passed to the task.
+*   `pythonpath`: (Optional) A list of additional paths to add to Robot Framework's `--pythonpath`. This allows importing custom libraries and modules from specified directories.
 
 ## Advanced task (Pure Python)
 
