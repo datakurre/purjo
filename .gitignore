@@ -1,26 +1,47 @@
+# Python Build Artifacts
 *.egg-info
-*.pem
 *.pyc
+__pycache__/
+
+# Python Environments
+.venv/
+env/
+
+# Testing & Coverage
+coverage.json
 .coverage
+.pytest_cache/
+htmlcov/
+
+# Development Tools
 .devenv*
 .env
+.vscode/
 .idea/
-.devcontainer.json
 .mypy_cache/
 .pre-commit-config.yaml
-.pytest_cache/
-__pycache__/
-_build/
 devenv.local.nix
-env
-fixture/target/
-htmlcov/
+
+# Container Config
+.devcontainer.json
+
+# Documentation Build
+_build/
+docs/_site
+
+# Robot Framework Output
 log.html
-output/
 output.xml
 report.html
+output/
+
+# Secrets & Certificates
+*.pem
+.env
+
+# Project-Specific
 result
 src/operaton/__init__.py
-TODO.md
+fixture/target/
+TODO*
 examples/
-docs/_site

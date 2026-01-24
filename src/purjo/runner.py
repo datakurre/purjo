@@ -96,7 +96,16 @@ class Task(BaseModel):
 
 def is_python_fqfn(value: str) -> bool:
     """Check if a string looks like a fully qualified function name (fqfn)."""
-    return bool(re.match(r"^[a-zA-Z_][\w\.]*\.[a-zA-Z_][\w]*$", value))
+    # Check basic pattern and ensure no double dots, no leading/trailing dots
+    if not re.match(r"^[a-zA-Z_][\w\.]*\.[a-zA-Z_][\w]*$", value):
+        return False
+    # Check for double dots
+    if ".." in value:
+        return False
+    # Check for leading or trailing dots
+    if value.startswith(".") or value.endswith("."):
+        return False
+    return True
 
 
 def build_run(
