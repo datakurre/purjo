@@ -42,6 +42,7 @@ dev = [
     "mypy>=1.13.0",
     "myst-parser>=3.0.1",
     "pytest>=8.3.4",
+    "pytest-asyncio~=0.24.0",
     "pytest-cov>=6.0.0",
     "robotframework>=7.4b2",
     "robotframework-tidy>=4.16.0",
@@ -62,3 +63,19 @@ no_sections = true
 
 [tool.mypy]
 exclude = "src/purjo/data"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--cov=src/purjo",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=json",
+    "--cov-fail-under=77",
+    "-v",
+]
