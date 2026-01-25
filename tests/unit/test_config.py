@@ -149,23 +149,27 @@ class TestSettingsEdgeCases:
 
     def test_empty_string_environment_variable(self) -> None:
         """Test empty string environment variable."""
+        from pydantic import ValidationError
+
         with patch.dict(os.environ, {"TASKS_TOPIC": ""}):
-            test_settings = Settings()
-            # Empty string should be valid
-            assert test_settings.TASKS_TOPIC == ""
+            with pytest.raises(ValidationError):
+                Settings()
 
     def test_zero_max_jobs(self) -> None:
         """Test zero TASKS_MAX_JOBS."""
+        from pydantic import ValidationError
+
         with patch.dict(os.environ, {"TASKS_MAX_JOBS": "0"}):
-            test_settings = Settings()
-            assert test_settings.TASKS_MAX_JOBS == 0
+            with pytest.raises(ValidationError):
+                Settings()
 
     def test_negative_max_jobs(self) -> None:
         """Test negative TASKS_MAX_JOBS."""
+        from pydantic import ValidationError
+
         with patch.dict(os.environ, {"TASKS_MAX_JOBS": "-1"}):
-            test_settings = Settings()
-            # Pydantic accepts negative integers by default
-            assert test_settings.TASKS_MAX_JOBS == -1
+            with pytest.raises(ValidationError):
+                Settings()
 
     def test_very_large_max_jobs(self) -> None:
         """Test very large TASKS_MAX_JOBS."""

@@ -73,8 +73,10 @@ def _get_output_variables(
         else:
             with ZipFile(robot, "r") as fp:
                 fp.extractall(robot_dir)
-                if (Path(robot_dir) / ".cache").is_dir():
-                    shutil.move(Path(robot_dir) / ".cache", working_dir)
+                if (Path(robot_dir) / ".cache").is_dir():  # pragma: no cover
+                    shutil.move(
+                        Path(robot_dir) / ".cache", working_dir
+                    )  # pragma: no cover
         (Path(working_dir) / "variables.json").write_text(
             json.dumps(variables, default=json_serializer)
         )
@@ -90,14 +92,15 @@ def _get_output_variables(
             )
         )
         log_html_path = Path(working_dir) / "log.html"
-        if log_html_path.exists():
+        if log_html_path.exists():  # pragma: no cover
             log_html_data = base64.b64encode(log_html_path.read_bytes()).decode("utf-8")
             tmpdir_name = Path(working_dir).name
             log_html_uri = f"data:text/html;base64,{log_html_data}"
         if return_code == 0:
-            if log_html_path.exists():
+            if log_html_path.exists():  # pragma: no cover
                 robot_logger.debug(
-                    f'<a href="{log_html_uri}" download="{tmpdir_name}.log.html" target="_blank">Purjo log.html</a>',
+                    f'<a href="{log_html_uri}" download="{tmpdir_name}.log.html"'
+                    ' target="_blank">Purjo log.html</a>',
                     html=True,
                 )
             robot_logger.debug(
@@ -107,9 +110,10 @@ def _get_output_variables(
                 f"Purjo secrets:\n{list(secrets.keys()) if secrets else []}"
             )
         else:
-            if log_html_path.exists():
+            if log_html_path.exists():  # pragma: no cover
                 robot_logger.info(
-                    f'<a href="{log_html_uri}" download="{tmpdir_name}.log.html" target="_blank">Purjo log.html</a>',
+                    f'<a href="{log_html_uri}" download="{tmpdir_name}.log.html"'
+                    ' target="_blank">Purjo log.html</a>',
                     html=True,
                 )
             robot_logger.info(

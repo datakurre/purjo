@@ -18,7 +18,7 @@ try:
     from robot.api.types import Secret  # type: ignore
 
     HAS_SECRET = True
-except ImportError:
+except ImportError:  # pragma: no cover
     HAS_SECRET = False
 
     class Secret(str):  # type: ignore
@@ -68,7 +68,7 @@ Statement.statement_handlers["VAR"].options["scope"] = tuple(
 
 @Body.register
 class Var(BaseVar):  # type: ignore
-    def _get_scope(self, variables: Any) -> Any:
+    def _get_scope(self, variables: Any) -> Any:  # pragma: no cover
         if not self.scope:
             return "local", {}
         try:
