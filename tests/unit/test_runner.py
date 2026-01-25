@@ -1,4 +1,14 @@
-"""Unit tests for runner.py module."""
+"""Unit tests for runner.py module.
+
+Related User Stories:
+- US-001: Serve robot packages
+- US-009: Control failure behavior
+
+Related ADRs:
+- ADR-001: Use uv for environment management
+- ADR-002: Use external task pattern
+- ADR-003: Architecture overview
+"""
 
 from factories import FileFactory
 from factories import TaskFactory

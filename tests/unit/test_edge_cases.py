@@ -1,4 +1,8 @@
-"""Edge cases and error handling tests for purjo."""
+"""Edge cases and error handling tests for purjo.
+
+Related ADRs:
+- ADR-003: Architecture overview
+"""
 
 from operaton.tasks.types import VariableValueDto
 from pathlib import Path

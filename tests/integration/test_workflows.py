@@ -1,4 +1,15 @@
-"""Integration tests for purjo end-to-end workflows."""
+"""Integration tests for purjo end-to-end workflows.
+
+Related User Stories:
+- US-001: Serve robot packages
+- US-004: Configure secrets
+- US-012: Wrap robot.zip
+
+Related ADRs:
+- ADR-001: Use uv for environment management
+- ADR-002: Use external task pattern
+- ADR-003: Architecture overview
+"""
 
 from pathlib import Path
 from purjo.main import cli_wrap

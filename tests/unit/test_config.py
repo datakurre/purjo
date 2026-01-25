@@ -1,4 +1,16 @@
-"""Unit tests for config.py module."""
+"""Unit tests for config.py module.
+
+Related User Stories:
+- US-002: Configure engine URL
+- US-005: Configure polling timeout
+- US-006: Set lock TTL
+- US-007: Control max jobs
+- US-008: Set worker ID
+- US-009: Control failure behavior
+
+Related ADRs:
+- ADR-003: Architecture overview
+"""
 
 from purjo.config import OnFail
 from purjo.config import Settings
@@ -9,7 +21,10 @@ import pytest
 
 
 class TestOnFail:
-    """Tests for OnFail enum."""
+    """Tests for OnFail enum.
+
+    Related: US-009
+    """
 
     def test_enum_values(self) -> None:
         """Test OnFail enum values."""
@@ -31,7 +46,10 @@ class TestOnFail:
 
 
 class TestSettings:
-    """Tests for Settings class."""
+    """Tests for Settings class.
+
+    Related: US-005, US-006, US-007, US-008
+    """
 
     def test_default_values(self) -> None:
         """Test default values."""

@@ -1,4 +1,13 @@
-"""Unit tests for Purjo.py library module."""
+"""Unit tests for Purjo.py library module.
+
+Related User Stories:
+- US-001: Serve robot packages
+- US-004: Configure secrets
+
+Related ADRs:
+- ADR-001: Use uv for environment management
+- ADR-003: Architecture overview
+"""
 
 from factories import TaskFactory
 from pathlib import Path

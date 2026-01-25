@@ -1,4 +1,8 @@
-"""Unit tests for exceptions.py module."""
+"""Unit tests for exceptions.py module.
+
+Related ADRs:
+- ADR-003: Architecture overview
+"""
 
 from purjo.exceptions import ConfigurationError
 from purjo.exceptions import DeploymentError

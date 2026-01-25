@@ -1,4 +1,8 @@
-"""Unit tests for utils.py module."""
+"""Unit tests for utils.py module.
+
+Related ADRs:
+- ADR-003: Architecture overview
+"""
 
 from javaobj.v2.beans import JavaString  # type: ignore[import-untyped]  # type: ignore[import-untyped]
 from javaobj.v2.transformers import JavaBool  # type: ignore[import-untyped]  # type: ignore[import-untyped]
