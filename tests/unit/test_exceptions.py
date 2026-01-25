@@ -1,4 +1,12 @@
-"""Unit tests for exceptions.py module."""
+"""Unit tests for exceptions.py module.
+
+Related User Stories:
+- US-001: Serve robot packages (RobotExecutionError)
+- US-009: Control failure behavior (error types)
+
+Related ADRs:
+- ADR-003: Architecture overview
+"""
 
 from purjo.exceptions import ConfigurationError
 from purjo.exceptions import DeploymentError

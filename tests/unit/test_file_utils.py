@@ -1,4 +1,12 @@
-"""Unit tests for file_utils.py module."""
+"""Unit tests for file_utils.py module.
+
+Related User Stories:
+- US-012: Wrap robot.zip
+- US-013: Include offline dependencies
+
+Related ADRs:
+- ADR-003: Architecture overview
+"""
 
 from operaton.tasks.types import LockedExternalTaskDto
 from operaton.tasks.types import VariableValueDto

@@ -1,4 +1,12 @@
-"""Unit tests for data/RobotParser.py module."""
+"""Unit tests for data/RobotParser.py module.
+
+Related User Stories:
+- US-001: Serve robot packages
+
+Related ADRs:
+- ADR-001: Use uv for environment management
+- ADR-003: Architecture overview
+"""
 
 from pathlib import Path
 from purjo.data.RobotParser import BPMN_PROCESS_SCOPE

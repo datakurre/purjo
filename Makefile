@@ -36,6 +36,7 @@ check:  ## Run static analysis checks
 	isort -c src tests
 	flake8 src
 	MYPYPATH=$(PWD)/stubs mypy --show-error-codes --strict src tests
+	python scripts/check-links.py
 
 clean:  ## Remove build artifacts and temporary files
 	$(DEVENV) $(DEVENV_OPTIONS) gc

@@ -2,6 +2,17 @@
 
 These tests cover the refactored async functions that were extracted
 for better testability.
+
+Related User Stories:
+- US-014: Deploy and start
+- US-015: Provide variables
+- US-016: Migrate instances
+- US-017: Force deployment
+- US-019: Deploy resources
+- US-020: Start process
+
+Related ADRs:
+- ADR-003: Architecture overview
 """
 
 from contextlib import asynccontextmanager
@@ -26,7 +37,10 @@ async def mock_session_context(
 
 
 class TestDeployResources:
-    """Tests for deploy_resources async function."""
+    """Tests for deploy_resources async function.
+
+    Related: US-017, US-019
+    """
 
     @pytest.mark.asyncio
     @patch("purjo.main.operaton_session")
@@ -158,7 +172,10 @@ class TestDeployResources:
 
 
 class TestStartProcess:
-    """Tests for start_process async function."""
+    """Tests for start_process async function.
+
+    Related: US-015, US-020
+    """
 
     @pytest.mark.asyncio
     @patch("purjo.main.operaton_session")
@@ -246,7 +263,10 @@ class TestStartProcess:
 
 
 class TestDeployAndStart:
-    """Tests for deploy_and_start async function."""
+    """Tests for deploy_and_start async function.
+
+    Related: US-014, US-015, US-016, US-017
+    """
 
     @pytest.mark.asyncio
     @patch("purjo.main.migrate_all")

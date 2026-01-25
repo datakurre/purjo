@@ -1,4 +1,12 @@
-"""Unit tests for deployment.py module."""
+"""Unit tests for deployment.py module.
+
+Related User Stories:
+- US-017: Force deployment
+- US-019: Deploy resources
+
+Related ADRs:
+- ADR-003: Architecture overview
+"""
 
 from pathlib import Path
 from tempfile import TemporaryDirectory

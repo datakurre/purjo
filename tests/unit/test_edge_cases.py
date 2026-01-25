@@ -1,4 +1,13 @@
-"""Edge cases and error handling tests for purjo."""
+"""Edge cases and error handling tests for purjo.
+
+Related User Stories:
+- US-001: Serve robot packages
+- US-009: Control failure behavior
+- US-012: Wrap robot.zip
+
+Related ADRs:
+- ADR-003: Architecture overview
+"""
 
 from operaton.tasks.types import VariableValueDto
 from pathlib import Path
