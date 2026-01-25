@@ -1,4 +1,14 @@
-"""Unit tests for CLI commands in main.py."""
+"""Unit tests for CLI commands in main.py.
+
+Related User Stories:
+- US-012: Wrap project into robot.zip
+- US-013: Include cached dependencies offline
+- US-018: Create BPMN/DMN/Form files with unique IDs
+
+Related ADRs:
+- ADR-001: Use uv for environment management
+- ADR-003: Architecture overview
+"""
 
 from pathlib import Path
 from purjo.main import cli_wrap
@@ -14,7 +24,10 @@ import pytest
 
 
 class TestCliWrap:
-    """Tests for cli_wrap command."""
+    """Tests for cli_wrap command.
+
+    Related: US-012, US-013
+    """
 
     def test_wrap_creates_zip_file(self, temp_dir: Path, monkeypatch: Any) -> None:
         """Test that cli_wrap creates a robot.zip file."""
@@ -108,7 +121,10 @@ name = "Test"
 
 
 class TestOperatonCreate:
-    """Tests for operaton_create command."""
+    """Tests for operaton_create command.
+
+    Related: US-018
+    """
 
     def test_create_bpmn_file(self, temp_dir: Path) -> None:
         """Test creating a new BPMN file."""

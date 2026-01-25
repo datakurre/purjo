@@ -1,4 +1,11 @@
-"""Unit tests for secrets.py module."""
+"""Unit tests for secrets.py module.
+
+Related User Stories:
+- US-004: Configure secrets
+
+Related ADRs:
+- ADR-003: Architecture overview
+"""
 
 from pathlib import Path
 from purjo.secrets import FileProviderConfig

@@ -1,4 +1,8 @@
-"""Test project successful import."""
+"""Test project successful import.
+
+Related ADRs:
+- ADR-003: Architecture overview
+"""
 
 
 def test_import() -> None:

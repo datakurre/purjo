@@ -1,4 +1,11 @@
-"""Unit tests for migration.py module."""
+"""Unit tests for migration.py module.
+
+Related User Stories:
+- US-016: Migrate instances
+
+Related ADRs:
+- ADR-003: Architecture overview
+"""
 
 from datetime import datetime
 from operaton.tasks.types import ProcessDefinitionDto

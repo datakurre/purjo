@@ -1,4 +1,29 @@
-"""Advanced unit tests for CLI commands in main.py."""
+"""Advanced unit tests for CLI commands in main.py.
+
+Related User Stories:
+- US-001: Serve robot packages
+- US-002: Configure engine URL
+- US-003: Provide authorization
+- US-004: Configure secrets
+- US-005: Configure polling timeout
+- US-006: Set lock TTL
+- US-007: Control max jobs
+- US-008: Set worker ID
+- US-009: Control failure behavior
+- US-010: Init robot package
+- US-011: Init Python template
+- US-014: Deploy and start
+- US-015: Provide variables
+- US-016: Migrate instances
+- US-017: Force deployment
+- US-019: Deploy resources
+- US-020: Start process
+
+Related ADRs:
+- ADR-001: Use uv for environment management
+- ADR-002: Use external task pattern
+- ADR-003: Architecture overview
+"""
 
 from pathlib import Path
 from purjo.config import OnFail
@@ -20,7 +45,10 @@ import pytest
 
 
 class TestCliServe:
-    """Tests for cli_serve command."""
+    """Tests for cli_serve command.
+
+    Related: US-001, US-002, US-003, US-004, US-005, US-006, US-007, US-008, US-009, ADR-002
+    """
 
     @patch("purjo.main.shutil.which")
     def test_serve_missing_uv_error(self, mock_which: Any) -> None:
@@ -220,7 +248,10 @@ name = "Test Task"
 
 
 class TestCliInit:
-    """Tests for cli_init command."""
+    """Tests for cli_init command.
+
+    Related: US-010, US-011
+    """
 
     @patch("purjo.main.shutil.which")
     def test_init_missing_uv_error(
@@ -321,7 +352,10 @@ class TestCliInit:
 
 
 class TestOperatonDeploy:
-    """Tests for operaton_deploy command."""
+    """Tests for operaton_deploy command.
+
+    Related: US-017, US-019
+    """
 
     def test_deploy_successful(self, temp_dir: Any) -> None:
         """Test successful deployment."""
@@ -393,7 +427,10 @@ class TestOperatonDeploy:
 
 
 class TestOperatonStart:
-    """Tests for operaton_start command."""
+    """Tests for operaton_start command.
+
+    Related: US-015, US-020
+    """
 
     @patch("purjo.main.asyncio.run")
     @patch("purjo.main.operaton_session")
@@ -503,7 +540,10 @@ class TestOperatonStart:
 
 
 class TestCliRun:
-    """Tests for cli_run command."""
+    """Tests for cli_run command.
+
+    Related: US-014, US-015, US-016, US-017
+    """
 
     @patch("purjo.main.asyncio.run")
     @patch("purjo.main.operaton_session")
