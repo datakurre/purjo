@@ -291,7 +291,7 @@ class TestDeserialize:
         assert isinstance(result, dict)
         assert result["key"] == "value"
 
-    @patch("purjo.utils.javaobj.load")
+    @patch("purjo.serialization.javaobj.load")
     def test_java_serialized_object(self, mock_javaobj_load: Any) -> None:
         """Test Java serialized object deserialization."""
         # Mock JavaString objects
@@ -539,3 +539,82 @@ class TestDataUri:
         base64_part = result.split(",")[1]
         decoded = base64.b64decode(base64_part)
         assert decoded == data
+
+
+class TestDeserializeEdgeCases:
+    """Edge case tests for deserialize function."""
+
+    def test_unknown_serialization_format(self) -> None:
+        """Test unknown serialization format raises NotImplementedError."""
+        info = ValueInfo(serializationDataFormat="application/unknown")
+
+        with pytest.raises(NotImplementedError):
+            deserialize("value", VariableValueType.String, info)
+
+    def test_none_serialization_format_with_info(self) -> None:
+        """Test with info object but None serializationDataFormat."""
+        info = ValueInfo(serializationDataFormat=None)
+        result = deserialize("test", VariableValueType.String, info)
+
+        assert result == "test"
+
+
+class TestOperatonValueFromPyEdgeCases:
+    """Edge case tests for operaton_value_from_py function."""
+
+    def test_fallback_to_string(self) -> None:
+        """Test fallback conversion for unsupported types."""
+
+        # Create a custom class to trigger fallback
+        class CustomObject:
+            def __str__(self) -> str:
+                return "custom_string"
+
+        result = operaton_value_from_py(CustomObject())
+
+        assert result.type == VariableValueType.String
+        assert result.value == "custom_string"
+
+    def test_file_resolution_in_sandbox(self, temp_dir: Path) -> None:
+        """Test file resolution with sandbox directories."""
+        # Create a test file
+        test_file = temp_dir / "test.txt"
+        test_file.write_text("test content")
+
+        # Use relative path with sandbox
+        result = operaton_value_from_py("test.txt", [temp_dir])
+
+        assert result.type == VariableValueType.File
+        assert result.valueInfo is not None
+        assert result.valueInfo.get("filename") == "test.txt"
+
+    def test_file_resolution_absolute_path(self, temp_dir: Path) -> None:
+        """Test file resolution with absolute path in sandbox."""
+        # Create a test file
+        test_file = temp_dir / "absolute.txt"
+        test_file.write_text("absolute content")
+
+        # Use absolute path with sandbox
+        result = operaton_value_from_py(str(test_file), [temp_dir])
+
+        assert result.type == VariableValueType.File
+        assert result.valueInfo is not None
+        assert result.valueInfo.get("filename") == "absolute.txt"
+
+    def test_file_outside_sandbox(self, temp_dir: Path) -> None:
+        """Test file outside sandbox is not resolved."""
+        # Create a file in a sibling directory
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as f:
+            f.write(b"content")
+            outside_file = Path(f.name)
+
+        try:
+            # File exists but is outside sandbox
+            result = operaton_value_from_py(str(outside_file), [temp_dir])
+
+            # Should be treated as string, not file
+            assert result.type == VariableValueType.String
+        finally:
+            outside_file.unlink()

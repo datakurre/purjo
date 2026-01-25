@@ -376,3 +376,531 @@ class TestTaskFactory:
 
         # TaskFactory creates Task objects with these attributes
         assert isinstance(task, Task)
+
+
+class TestPrepareWorkingDirectories:
+    """Tests for prepare_working_directories function."""
+
+    def test_prepare_from_directory(self, temp_dir: Path) -> None:
+        """Test preparing directories from a robot directory."""
+        from purjo.runner import prepare_working_directories
+
+        # Setup source directory
+        robot_source = temp_dir / "robot_source"
+        robot_source.mkdir()
+        (robot_source / "test.robot").write_text(
+            "*** Test Cases ***\nTest\n    Log    Hello"
+        )
+        (robot_source / "pyproject.toml").write_text("[project]\nname = 'test'")
+
+        robot_dir = temp_dir / "robot_dir"
+        robot_dir.mkdir()
+        working_dir = temp_dir / "working_dir"
+        working_dir.mkdir()
+
+        prepare_working_directories(robot_source, working_dir, robot_dir)
+
+        assert (robot_dir / "test.robot").exists()
+        assert (robot_dir / "pyproject.toml").exists()
+
+    def test_prepare_from_zip(self, temp_dir: Path) -> None:
+        """Test preparing directories from a zip file."""
+        from purjo.runner import prepare_working_directories
+
+        # Create a zip file
+        zip_path = temp_dir / "robot.zip"
+        with ZipFile(zip_path, "w") as zf:
+            zf.writestr("test.robot", "*** Test Cases ***\nTest\n    Log    Hello")
+            zf.writestr("pyproject.toml", "[project]\nname = 'test'")
+
+        robot_dir = temp_dir / "robot_dir"
+        robot_dir.mkdir()
+        working_dir = temp_dir / "working_dir"
+        working_dir.mkdir()
+
+        prepare_working_directories(zip_path, working_dir, robot_dir)
+
+        assert (robot_dir / "test.robot").exists()
+        assert (robot_dir / "pyproject.toml").exists()
+
+    def test_prepare_from_zip_with_cache(self, temp_dir: Path) -> None:
+        """Test preparing directories from zip with cache directory."""
+        from purjo.runner import prepare_working_directories
+
+        # Create a zip file with .cache directory
+        zip_path = temp_dir / "robot.zip"
+        with ZipFile(zip_path, "w") as zf:
+            zf.writestr("test.robot", "*** Test Cases ***")
+            zf.writestr(".cache/some_cache", "cached data")
+
+        robot_dir = temp_dir / "robot_dir"
+        robot_dir.mkdir()
+        working_dir = temp_dir / "working_dir"
+        working_dir.mkdir()
+
+        prepare_working_directories(zip_path, working_dir, robot_dir)
+
+        # Cache should be moved to working_dir
+        assert (working_dir / ".cache").exists()
+        assert not (robot_dir / ".cache").exists()
+
+
+class TestPrepareVariablesFiles:
+    """Tests for prepare_variables_files function."""
+
+    def test_prepare_with_no_secrets(self, temp_dir: Path) -> None:
+        """Test preparing variable files without secrets."""
+        from purjo.runner import prepare_variables_files
+
+        variables = {"key": "value", "count": 42}
+        working_dir = temp_dir / "working"
+        working_dir.mkdir()
+
+        task_file, process_file = prepare_variables_files(
+            variables, None, working_dir, "# RobotParser content"
+        )
+
+        assert (working_dir / "variables.json").exists()
+        assert (working_dir / "secrets.json").exists()
+        assert (working_dir / "RobotParser.py").exists()
+        assert task_file.exists()
+        assert process_file.exists()
+
+        # Verify variables content
+        vars_content = json.loads((working_dir / "variables.json").read_text())
+        assert vars_content["key"] == "value"
+        assert vars_content["count"] == 42
+
+        # Secrets should be empty
+        secrets_content = json.loads((working_dir / "secrets.json").read_text())
+        assert secrets_content == {}
+
+    def test_prepare_with_secrets_provider(self, temp_dir: Path) -> None:
+        """Test preparing variable files with secrets provider."""
+        from purjo.runner import prepare_variables_files
+        from unittest.mock import MagicMock
+
+        mock_provider = MagicMock()
+        mock_provider.read.return_value = {"secret_key": "secret_value"}
+
+        variables = {"key": "value"}
+        working_dir = temp_dir / "working"
+        working_dir.mkdir()
+
+        prepare_variables_files(variables, mock_provider, working_dir, "# RobotParser")
+
+        secrets_content = json.loads((working_dir / "secrets.json").read_text())
+        assert secrets_content["secret_key"] == "secret_value"
+
+
+class TestBuildFileAttachment:
+    """Tests for build_file_attachment function."""
+
+    def test_build_html_attachment(self, temp_dir: Path) -> None:
+        """Test building HTML file attachment."""
+        from operaton.tasks.types import VariableValueType
+        from purjo.runner import build_file_attachment
+
+        html_file = temp_dir / "log.html"
+        html_file.write_text("<html><body>Test</body></html>")
+
+        result = build_file_attachment(html_file, "log.html", "text/html")
+
+        assert result.type == VariableValueType.File
+        assert result.valueInfo is not None
+        assert result.valueInfo["filename"] == "log.html"
+        assert result.valueInfo["mimetype"] == "text/html"
+
+    def test_build_xml_attachment(self, temp_dir: Path) -> None:
+        """Test building XML file attachment."""
+        from operaton.tasks.types import VariableValueType
+        from purjo.runner import build_file_attachment
+
+        xml_file = temp_dir / "output.xml"
+        xml_file.write_text("<robot><test/></robot>")
+
+        result = build_file_attachment(xml_file, "output.xml", "text/xml")
+
+        assert result.type == VariableValueType.File
+        assert result.valueInfo is not None
+        assert result.valueInfo["filename"] == "output.xml"
+
+
+class TestBuildErrorVariables:
+    """Tests for build_error_variables function."""
+
+    def test_single_line_error(self) -> None:
+        """Test building error variables from single line."""
+        from purjo.runner import build_error_variables
+
+        result = build_error_variables("Simple error message")
+
+        assert result["errorCode"].value == "Simple error message"
+        assert result["errorMessage"].value == "Simple error message"
+
+    def test_multiline_error(self) -> None:
+        """Test building error variables from multiline text."""
+        from purjo.runner import build_error_variables
+
+        result = build_error_variables("Error code\nDetailed error message")
+
+        assert result["errorCode"].value == "Error code"
+        assert result["errorMessage"].value == "Detailed error message"
+
+    def test_empty_error(self) -> None:
+        """Test building error variables from empty string."""
+        from purjo.runner import build_error_variables
+
+        result = build_error_variables("")
+
+        assert result["errorCode"].value == ""
+        assert result["errorMessage"].value == ""
+
+
+class TestHandleSuccessResult:
+    """Tests for handle_success_result function."""
+
+    @pytest.mark.asyncio
+    async def test_success_with_return_code_zero(self, temp_dir: Path) -> None:
+        """Test handling successful result with return code 0."""
+        from operaton.tasks.types import ExternalTaskComplete
+        from operaton.tasks.types import LockedExternalTaskDto
+        from purjo.runner import handle_success_result
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+        )
+
+        result = await handle_success_result(
+            task=task,
+            task_variables={},
+            process_variables={},
+            return_code=0,
+            output_xml_path=temp_dir / "output.xml",
+            on_fail=OnFail.FAIL,
+        )
+
+        assert isinstance(result, ExternalTaskComplete)
+        assert result.response.workerId == "worker-1"
+
+    @pytest.mark.asyncio
+    async def test_success_with_on_fail_complete(self, temp_dir: Path) -> None:
+        """Test handling result with on_fail=COMPLETE adds null error fields."""
+        from operaton.tasks.types import CompleteExternalTaskDto
+        from operaton.tasks.types import LockedExternalTaskDto
+        from operaton.tasks.types import VariableValueType
+        from purjo.runner import handle_success_result
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+        )
+
+        result = await handle_success_result(
+            task=task,
+            task_variables={},
+            process_variables={},
+            return_code=0,
+            output_xml_path=temp_dir / "output.xml",
+            on_fail=OnFail.COMPLETE,
+        )
+
+        assert isinstance(result.response, CompleteExternalTaskDto)
+        assert result.response.localVariables is not None
+        assert "errorCode" in result.response.localVariables
+        assert (
+            result.response.localVariables["errorCode"].type == VariableValueType.Null
+        )
+
+    @pytest.mark.asyncio
+    async def test_nonzero_return_code_adds_error_vars(self, temp_dir: Path) -> None:
+        """Test that non-zero return code adds error variables."""
+        from operaton.tasks.types import CompleteExternalTaskDto
+        from operaton.tasks.types import LockedExternalTaskDto
+        from purjo.runner import handle_success_result
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+        )
+
+        # Create output.xml with failure
+        output_xml = temp_dir / "output.xml"
+        output_xml.write_text(
+            '<robot><status status="FAIL">Test failed</status></robot>'
+        )
+
+        result = await handle_success_result(
+            task=task,
+            task_variables={},
+            process_variables={},
+            return_code=1,
+            output_xml_path=output_xml,
+            on_fail=OnFail.COMPLETE,  # Complete mode still processes
+        )
+
+        assert isinstance(result.response, CompleteExternalTaskDto)
+        assert result.response.localVariables is not None
+        assert "errorCode" in result.response.localVariables
+
+
+class TestHandleFailureResult:
+    """Tests for handle_failure_result function."""
+
+    @pytest.mark.asyncio
+    async def test_failure_with_on_fail_error(self, temp_dir: Path) -> None:
+        """Test failure handling with on_fail=ERROR returns BPMN error."""
+        from operaton.tasks.types import ExternalTaskComplete
+        from operaton.tasks.types import LockedExternalTaskDto
+        from operaton.tasks.types import VariableValueDto
+        from operaton.tasks.types import VariableValueType
+        from purjo.runner import handle_failure_result
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+        )
+
+        output_xml = temp_dir / "output.xml"
+        output_xml.write_text(
+            '<robot><status status="FAIL">Test failed</status></robot>'
+        )
+
+        log_html = VariableValueDto(value=b"html", type=VariableValueType.File)
+        output_var = VariableValueDto(value=b"xml", type=VariableValueType.File)
+
+        with patch("purjo.runner.operaton_session") as mock_session:
+            session = AsyncMock()
+            mock_response = AsyncMock()
+            mock_response.raise_for_status = MagicMock()
+            session.post = AsyncMock(return_value=mock_response)
+            mock_session.return_value.__aenter__ = AsyncMock(return_value=session)
+            mock_session.return_value.__aexit__ = AsyncMock(return_value=None)
+
+            result = await handle_failure_result(
+                task=task,
+                on_fail=OnFail.ERROR,
+                output_xml_path=output_xml,
+                stdout=b"stdout",
+                stderr=b"stderr",
+                task_variables={"log.html": log_html, "output.xml": output_var},
+                process_variables={},
+            )
+
+        assert isinstance(result, ExternalTaskComplete)
+
+    @pytest.mark.asyncio
+    async def test_failure_with_on_fail_fail(self, temp_dir: Path) -> None:
+        """Test failure handling with on_fail=FAIL returns failure response."""
+        from operaton.tasks.types import ExternalTaskFailure
+        from operaton.tasks.types import LockedExternalTaskDto
+        from operaton.tasks.types import VariableValueDto
+        from operaton.tasks.types import VariableValueType
+        from purjo.runner import handle_failure_result
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+        )
+
+        output_xml = temp_dir / "output.xml"
+        output_xml.write_text(
+            '<robot><status status="FAIL">Test failed</status></robot>'
+        )
+
+        log_html = VariableValueDto(value=b"html", type=VariableValueType.File)
+        output_var = VariableValueDto(value=b"xml", type=VariableValueType.File)
+
+        with patch("purjo.runner.operaton_session") as mock_session:
+            session = AsyncMock()
+            mock_response = AsyncMock()
+            mock_response.raise_for_status = MagicMock()
+            session.post = AsyncMock(return_value=mock_response)
+            mock_session.return_value.__aenter__ = AsyncMock(return_value=session)
+            mock_session.return_value.__aexit__ = AsyncMock(return_value=None)
+
+            result = await handle_failure_result(
+                task=task,
+                on_fail=OnFail.FAIL,
+                output_xml_path=output_xml,
+                stdout=b"stdout output",
+                stderr=b"stderr output",
+                task_variables={"log.html": log_html, "output.xml": output_var},
+                process_variables={},
+            )
+
+        assert isinstance(result, ExternalTaskFailure)
+        assert result.response.retries == 0
+
+
+@pytest.fixture
+def temp_dir() -> Any:
+    """Provide a temporary directory."""
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as tmpdir:
+        yield Path(tmpdir)
+
+
+@pytest.fixture
+def sample_robot_failed_xml(temp_dir: Path) -> Path:
+    """Create a sample failed robot output.xml."""
+    xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+<robot>
+  <test name="Test Case" id="s1-t1">
+    <status status="FAIL">Test failed
+Expected value did not match</status>
+  </test>
+</robot>"""
+    xml_file = temp_dir / "output.xml"
+    xml_file.write_text(xml_content)
+    return xml_file
+
+
+class TestGetDefaultRobotParserContent:
+    """Tests for _get_default_robot_parser_content function."""
+
+    def test_returns_robot_parser_content(self) -> None:
+        """Test that the function returns RobotParser content."""
+        from purjo.runner import _get_default_robot_parser_content
+
+        content = _get_default_robot_parser_content()
+
+        assert isinstance(content, str)
+        assert len(content) > 0
+        # The RobotParser.py should contain class definitions
+        assert "class" in content or "def" in content
+
+
+class TestCreateTask:
+    """Tests for create_task function."""
+
+    @pytest.mark.asyncio
+    async def test_create_task_returns_callable(self, temp_dir: Path) -> None:
+        """Test that create_task returns a callable."""
+        from purjo.runner import create_task
+
+        robot_dir = temp_dir / "robot"
+        robot_dir.mkdir()
+        (robot_dir / "pyproject.toml").write_text("[project]\nname='test'")
+        (robot_dir / "test.robot").write_text(
+            "*** Test Cases ***\nTest\n    Log    Hello"
+        )
+
+        config = Task()
+        semaphore = asyncio.Semaphore(1)
+
+        task_handler = create_task(
+            config=config,
+            robot=robot_dir,
+            on_fail=OnFail.FAIL,
+            semaphore=semaphore,
+            secrets_provider=None,
+            robot_parser_content="# Mock RobotParser",
+        )
+
+        # Verify it returns a callable
+        assert callable(task_handler)
+
+    @pytest.mark.asyncio
+    async def test_create_task_execution_success(self, temp_dir: Path) -> None:
+        """Test task execution with success."""
+        from operaton.tasks.types import ExternalTaskComplete
+        from operaton.tasks.types import LockedExternalTaskDto
+        from purjo.runner import create_task
+
+        robot_dir = temp_dir / "robot"
+        robot_dir.mkdir()
+        (robot_dir / "pyproject.toml").write_text("[project]\nname='test'")
+        (robot_dir / "test.robot").write_text(
+            "*** Test Cases ***\nTest\n    Log    Hello"
+        )
+
+        config = Task()
+        semaphore = asyncio.Semaphore(1)
+
+        task_handler = create_task(
+            config=config,
+            robot=robot_dir,
+            on_fail=OnFail.COMPLETE,
+            semaphore=semaphore,
+            secrets_provider=None,
+            robot_parser_content="# Mock RobotParser",
+        )
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+            variables={},
+        )
+
+        # Create a coroutine that returns the expected tuple
+        async def mock_build_run_coro(*args: Any, **kwargs: Any) -> Any:
+            return (0, b"success", b"")
+
+        with (
+            patch("purjo.runner.build_run", side_effect=mock_build_run_coro),
+            patch("purjo.runner.py_from_operaton") as mock_py_from,
+        ):
+            mock_py_from.return_value = {}
+
+            result = await task_handler(task)
+
+            # On success, should return ExternalTaskComplete
+            assert isinstance(result, ExternalTaskComplete)
+
+    @pytest.mark.asyncio
+    async def test_create_task_from_zip(self, temp_dir: Path) -> None:
+        """Test task creation from zip file."""
+        from purjo.runner import create_task
+
+        # Create a zip file
+        zip_path = temp_dir / "robot.zip"
+        with ZipFile(zip_path, "w") as zf:
+            zf.writestr("pyproject.toml", "[project]\nname='test'")
+            zf.writestr("test.robot", "*** Test Cases ***\nTest\n    Log    Hello")
+
+        config = Task()
+        semaphore = asyncio.Semaphore(1)
+
+        task_handler = create_task(
+            config=config,
+            robot=zip_path,
+            on_fail=OnFail.FAIL,
+            semaphore=semaphore,
+            secrets_provider=None,
+            robot_parser_content="# Mock RobotParser",
+        )
+
+        assert callable(task_handler)
