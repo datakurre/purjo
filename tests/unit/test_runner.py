@@ -768,6 +768,85 @@ class TestHandleFailureResult:
         assert isinstance(result, ExternalTaskFailure)
         assert result.response.retries == 0
 
+    @pytest.mark.asyncio
+    async def test_failure_without_output_files(self, temp_dir: Path) -> None:
+        """Test failure handling when log.html and output.xml were never produced.
+
+        This happens when the robot process fails before running (e.g., Python
+        interpreter not found). The function must not crash on missing keys and
+        should still report the failure with stderr as the error message.
+        """
+        from operaton.tasks.types import ExternalTaskFailure
+        from operaton.tasks.types import LockedExternalTaskDto
+        from purjo.runner import handle_failure_result
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+        )
+
+        output_xml = temp_dir / "output.xml"  # does not exist
+
+        # No mock session needed — modifications dict is empty so no POST is made
+        result = await handle_failure_result(
+            task=task,
+            on_fail=OnFail.FAIL,
+            output_xml_path=output_xml,
+            stdout=b"",
+            stderr=b"error: No interpreter found for Python 3.12",
+            task_variables={},  # no log.html or output.xml
+            process_variables={},
+        )
+
+        assert isinstance(result, ExternalTaskFailure)
+        assert result.response.retries == 0
+        error_message = result.response.errorMessage
+        assert error_message is not None
+        assert "No interpreter found" in error_message
+
+    @pytest.mark.asyncio
+    async def test_failure_without_output_files_on_fail_error(
+        self, temp_dir: Path
+    ) -> None:
+        """Test BPMN error handling when output files were never produced."""
+        from operaton.tasks.types import ExternalTaskBpmnError
+        from operaton.tasks.types import ExternalTaskComplete
+        from operaton.tasks.types import LockedExternalTaskDto
+        from purjo.runner import handle_failure_result
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+        )
+
+        output_xml = temp_dir / "output.xml"  # does not exist
+
+        result = await handle_failure_result(
+            task=task,
+            on_fail=OnFail.ERROR,
+            output_xml_path=output_xml,
+            stdout=b"",
+            stderr=b"error: No interpreter found for Python 3.12",
+            task_variables={},
+            process_variables={},
+        )
+
+        assert isinstance(result, ExternalTaskComplete)
+        assert isinstance(result.response, ExternalTaskBpmnError)
+        error_code = result.response.errorCode
+        assert error_code is not None
+        assert "No interpreter found" in error_code
+
 
 @pytest.fixture
 def temp_dir() -> Any:
