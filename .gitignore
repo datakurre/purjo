@@ -42,7 +42,7 @@ output/
 
 # Project-Specific
 result
-src/operaton/__init__.py
 fixture/target/
 TODO*
 examples/
+results/
