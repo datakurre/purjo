@@ -352,19 +352,28 @@ async def handle_failure_result(
     process_variables: Dict[str, VariableValueDto],
 ) -> Union[ExternalTaskComplete, ExternalTaskFailure]:
     """Handle failed task execution and build the appropriate response."""
-    async with operaton_session() as session:
-        resp = await session.post(
-            f"{operaton_settings.ENGINE_REST_BASE_URL}/execution/{task.executionId}/localVariables",
-            data=PatchVariablesDto(
-                modifications={
-                    "log.html": task_variables["log.html"],
-                    "output.xml": task_variables["output.xml"],
-                }
-            ).model_dump_json(),
-        )
-        resp.raise_for_status()
+    # Only post output file attachments if they were actually produced
+    modifications: Dict[str, VariableValueDto] = {}
+    if "log.html" in task_variables:
+        modifications["log.html"] = task_variables["log.html"]
+    if "output.xml" in task_variables:
+        modifications["output.xml"] = task_variables["output.xml"]
+
+    if modifications:
+        async with operaton_session() as session:
+            resp = await session.post(
+                f"{operaton_settings.ENGINE_REST_BASE_URL}/execution/{task.executionId}/localVariables",
+                data=PatchVariablesDto(
+                    modifications=modifications,
+                ).model_dump_json(),
+            )
+            resp.raise_for_status()
 
     fail_reason_ = fail_reason(output_xml_path) if output_xml_path.exists() else ""
+    if not fail_reason_:
+        fail_reason_ = (stderr or stdout or b"Unknown execution error").decode(
+            "utf-8", errors="replace"
+        )
 
     if on_fail == OnFail.ERROR:
         return ExternalTaskComplete(
