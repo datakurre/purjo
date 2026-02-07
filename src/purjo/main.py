@@ -381,7 +381,11 @@ async def initialize_robot_package(cwd_path: Path, python: bool = False) -> None
                 "VIRTUAL_ENV": "",
             },
         )
-    for fixture_py in [cwd_path / "hello.py", cwd_path / "main.py"]:
+    for fixture_py in [
+        cwd_path / "hello.py",
+        cwd_path / "main.py",
+        cwd_path / ".python-version",
+    ]:
         if fixture_py.exists():  # pragma: no cover
             fixture_py.unlink()  # pragma: no cover
     (cwd_path / "pyproject.toml").write_text(
