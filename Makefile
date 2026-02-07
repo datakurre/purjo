@@ -97,8 +97,8 @@ htmlcov: .coverage
 
 define _env_script
 cat << EOF > .env
-ENGINE_REST_BASE_URL="http://localhost:8080/engine-rest"
-ENGINE_REST_AUTHORIZATION="Basic ZGVtbzpkZW1v"
+ENGINE_REST_BASE_URL=http://localhost:8080/engine-rest
+ENGINE_REST_AUTHORIZATION=Basic ZGVtbzpkZW1v
 EOF
 endef
 export env_script = $(value _env_script)

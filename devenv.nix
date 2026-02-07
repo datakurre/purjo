@@ -117,6 +117,7 @@ let
           pkgs.git
           pkgs.gnumake
           pkgs.openssl
+          pkgs.vim
           pkgs.zip
           pkgs.curl
           pkgs.jq
