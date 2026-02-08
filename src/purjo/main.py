@@ -345,6 +345,8 @@ async def initialize_robot_package(cwd_path: Path, python: bool = False) -> None
         cwd_path,
         {
             "UV_NO_SYNC": "0",
+            "UV_NO_CONFIG": "1",
+            "UV_NO_WORKSPACE": "1",
             "VIRTUAL_ENV": "",
         },
     )
@@ -361,6 +363,8 @@ async def initialize_robot_package(cwd_path: Path, python: bool = False) -> None
         cwd_path,
         {
             "UV_NO_SYNC": "0",
+            "UV_NO_CONFIG": "1",
+            "UV_NO_WORKSPACE": "1",
             "VIRTUAL_ENV": "",
         },
     )
@@ -378,6 +382,8 @@ async def initialize_robot_package(cwd_path: Path, python: bool = False) -> None
             cwd_path,
             {
                 "UV_NO_SYNC": "0",
+                "UV_NO_CONFIG": "1",
+                "UV_NO_WORKSPACE": "1",
                 "VIRTUAL_ENV": "",
             },
         )
