@@ -27,6 +27,7 @@ DEFAULT_WRAP_EXCLUDES = [
     "/output.xml",
     "__pycache__/",
     "/report.html",
+    "/.robocop_cache",
     "/robot.zip",
     "/.venv/",
     "/.wrapignore",
