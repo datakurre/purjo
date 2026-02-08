@@ -96,6 +96,31 @@ def fail_reason(path: Path) -> str:
     return reason
 
 
+def is_explicit_robot_fail(path: Path) -> bool:
+    """Check if the failure was caused by Robot Framework's Fail keyword.
+
+    When a robot task uses the built-in ``Fail`` keyword, the output.xml will
+    contain a ``<kw name="Fail" owner="BuiltIn">`` element with
+    ``status="FAIL"``.  This function detects that pattern so the caller can
+    treat an explicit Fail as a BPMN error rather than a technical failure.
+
+    Args:
+        path: Path to the output.xml file.
+
+    Returns:
+        True if the failure originated from an explicit Fail keyword.
+    """
+    xml = path.read_text()
+    # Match <kw name="Fail" owner="BuiltIn"> ... status="FAIL"
+    return bool(
+        re.search(
+            r'<kw\s+name="Fail"\s+owner="BuiltIn"[^>]*>.*?status="FAIL"',
+            xml,
+            re.S,
+        )
+    )
+
+
 def _get_default_robot_parser_content() -> str:
     """Get the default RobotParser.py content from package resources."""
     return (importlib.resources.files("purjo.data") / "RobotParser.py").read_text()
@@ -350,8 +375,34 @@ async def handle_failure_result(
     stderr: bytes,
     task_variables: Dict[str, VariableValueDto],
     process_variables: Dict[str, VariableValueDto],
+    explicit_fail: bool = False,
 ) -> Union[ExternalTaskComplete, ExternalTaskFailure]:
-    """Handle failed task execution and build the appropriate response."""
+    """Handle failed task execution and build the appropriate response.
+
+    The response type depends on the ``on_fail`` mode:
+
+    * ``OnFail.ERROR`` – always returns a BPMN error
+      (``ExternalTaskBpmnError``).
+    * ``OnFail.FAIL`` – returns a technical failure
+      (``ExternalTaskFailure``) **unless** the failure was caused by
+      Robot Framework's explicit ``Fail`` keyword, in which case it
+      returns a BPMN error instead.  This allows robot tasks to
+      intentionally raise catchable BPMN errors while still treating
+      unexpected failures as technical errors.
+    * ``OnFail.COMPLETE`` – never reaches this function (handled
+      earlier by ``handle_success_result``).
+
+    Args:
+        task: The locked external task from Operaton.
+        on_fail: Failure handling strategy.
+        output_xml_path: Path to the Robot Framework output.xml.
+        stdout: Captured stdout from the robot process.
+        stderr: Captured stderr from the robot process.
+        task_variables: Task-scoped variables (may include file attachments).
+        process_variables: Process-scoped variables.
+        explicit_fail: Whether the failure was caused by Robot Framework's
+            built-in ``Fail`` keyword (detected from output.xml).
+    """
     # Only post output file attachments if they were actually produced
     modifications: Dict[str, VariableValueDto] = {}
     if "log.html" in task_variables:
@@ -375,7 +426,9 @@ async def handle_failure_result(
             "utf-8", errors="replace"
         )
 
-    if on_fail == OnFail.ERROR:
+    # BPMN error: on_fail=ERROR always, or on_fail=FAIL when the robot task
+    # used the explicit Fail keyword (intentional BPMN error signal).
+    if on_fail == OnFail.ERROR or (on_fail == OnFail.FAIL and explicit_fail):
         return ExternalTaskComplete(
             task=task,
             response=ExternalTaskBpmnError(
@@ -385,7 +438,8 @@ async def handle_failure_result(
                 variables=process_variables,
             ),
         )
-    else:
+    elif on_fail == OnFail.FAIL:
+        # Technical failure: unexpected error, not from explicit Fail keyword.
         return ExternalTaskFailure(
             task=task,
             response=ExternalTaskFailureDto(
@@ -395,6 +449,13 @@ async def handle_failure_result(
                 retries=0,
                 retryTimeout=0,
             ),
+        )
+    else:  # pragma: no cover
+        # Defensive: unreachable because OnFail.COMPLETE is routed to
+        # handle_success_result before this function is called.  Kept
+        # as a safeguard against future OnFail variants.
+        raise ValueError(
+            f"Unexpected on_fail value in handle_failure_result: {on_fail}"
         )
 
 
@@ -500,6 +561,13 @@ def create_task(
                         output_xml_path, "output.xml", "text/xml"
                     )  # pragma: no cover
 
+                # Detect if failure was caused by explicit Fail keyword
+                explicit_fail = (
+                    return_code != 0
+                    and output_xml_path.exists()
+                    and is_explicit_robot_fail(output_xml_path)
+                )
+
                 # Handle success or failure
                 if return_code == 0 or on_fail == OnFail.COMPLETE:
                     return await handle_success_result(
@@ -519,6 +587,7 @@ def create_task(
                         stderr,
                         task_variables,
                         process_variables,
+                        explicit_fail=explicit_fail,
                     )
 
     return execute_task
