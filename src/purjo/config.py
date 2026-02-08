@@ -15,9 +15,9 @@ import enum
 class OnFail(str, enum.Enum):
     """Enum defining how to handle task failures.
 
-    FAIL: Mark the external task as failed with a BPMN error.
+    FAIL: Mark the external task as having a technical error.
     COMPLETE: Complete the external task despite failure.
-    ERROR: Mark the external task as having a technical error.
+    ERROR: Mark the external task as failed with a BPMN error.
     """
 
     FAIL = "FAIL"

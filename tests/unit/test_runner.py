@@ -847,6 +847,189 @@ class TestHandleFailureResult:
         assert error_code is not None
         assert "No interpreter found" in error_code
 
+    @pytest.mark.asyncio
+    async def test_failure_with_on_fail_fail_and_explicit_fail(
+        self, temp_dir: Path
+    ) -> None:
+        """Test that on_fail=FAIL with explicit Fail keyword returns BPMN error.
+
+        When the robot task uses the built-in ``Fail`` keyword intentionally,
+        even with on_fail=FAIL the result should be a BPMN error (not a
+        technical failure) so the BPMN process can catch it.
+        """
+        from operaton.tasks.types import ExternalTaskBpmnError
+        from operaton.tasks.types import ExternalTaskComplete
+        from operaton.tasks.types import LockedExternalTaskDto
+        from operaton.tasks.types import VariableValueDto
+        from operaton.tasks.types import VariableValueType
+        from purjo.runner import handle_failure_result
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+        )
+
+        output_xml = temp_dir / "output.xml"
+        output_xml.write_text(
+            '<robot><test id="s1-t1" name="Test">'
+            '<kw name="Fail" owner="BuiltIn">'
+            '<status status="FAIL">My BPMN error\nDetailed message</status>'
+            "</kw>"
+            '<status status="FAIL">My BPMN error\nDetailed message</status>'
+            "</test></robot>"
+        )
+
+        log_html = VariableValueDto(value=b"html", type=VariableValueType.File)
+        output_var = VariableValueDto(value=b"xml", type=VariableValueType.File)
+
+        with patch("purjo.runner.operaton_session") as mock_session:
+            session = AsyncMock()
+            mock_response = AsyncMock()
+            mock_response.raise_for_status = MagicMock()
+            session.post = AsyncMock(return_value=mock_response)
+            mock_session.return_value.__aenter__ = AsyncMock(return_value=session)
+            mock_session.return_value.__aexit__ = AsyncMock(return_value=None)
+
+            result = await handle_failure_result(
+                task=task,
+                on_fail=OnFail.FAIL,
+                output_xml_path=output_xml,
+                stdout=b"",
+                stderr=b"",
+                task_variables={"log.html": log_html, "output.xml": output_var},
+                process_variables={},
+                explicit_fail=True,
+            )
+
+        assert isinstance(result, ExternalTaskComplete)
+        assert isinstance(result.response, ExternalTaskBpmnError)
+        assert result.response.errorCode == "My BPMN error"
+        assert result.response.errorMessage == "Detailed message"
+
+    @pytest.mark.asyncio
+    async def test_failure_with_on_fail_fail_no_explicit_fail(
+        self, temp_dir: Path
+    ) -> None:
+        """Test that on_fail=FAIL without explicit Fail keyword returns technical failure.
+
+        When the failure is NOT from the Fail keyword (e.g. assertion error),
+        on_fail=FAIL should still produce a technical ExternalTaskFailure.
+        """
+        from operaton.tasks.types import ExternalTaskFailure
+        from operaton.tasks.types import LockedExternalTaskDto
+        from purjo.runner import handle_failure_result
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+        )
+
+        output_xml = temp_dir / "output.xml"
+        output_xml.write_text(
+            '<robot><test id="s1-t1" name="Test">'
+            '<kw name="Should Be Equal" owner="BuiltIn">'
+            '<status status="FAIL">foo != bar</status>'
+            "</kw>"
+            '<status status="FAIL">foo != bar</status>'
+            "</test></robot>"
+        )
+
+        result = await handle_failure_result(
+            task=task,
+            on_fail=OnFail.FAIL,
+            output_xml_path=output_xml,
+            stdout=b"stdout",
+            stderr=b"stderr",
+            task_variables={},
+            process_variables={},
+            explicit_fail=False,
+        )
+
+        assert isinstance(result, ExternalTaskFailure)
+        assert result.response.retries == 0
+
+
+class TestIsExplicitRobotFail:
+    """Tests for is_explicit_robot_fail function."""
+
+    def test_explicit_fail_keyword(self, temp_dir: Path) -> None:
+        """Test detection of explicit Fail keyword in output.xml."""
+        from purjo.runner import is_explicit_robot_fail
+
+        xml_file = temp_dir / "output.xml"
+        xml_file.write_text(
+            '<robot><test id="s1-t1" name="Test">'
+            '<kw name="Fail" owner="BuiltIn">'
+            '<msg time="2026-01-01T00:00:00" level="FAIL">Error message</msg>'
+            '<status status="FAIL">Error message</status>'
+            "</kw>"
+            '<status status="FAIL">Error message</status>'
+            "</test></robot>"
+        )
+
+        assert is_explicit_robot_fail(xml_file) is True
+
+    def test_assertion_failure_not_explicit(self, temp_dir: Path) -> None:
+        """Test that assertion failures are not detected as explicit Fail."""
+        from purjo.runner import is_explicit_robot_fail
+
+        xml_file = temp_dir / "output.xml"
+        xml_file.write_text(
+            '<robot><test id="s1-t1" name="Test">'
+            '<kw name="Should Be Equal" owner="BuiltIn">'
+            '<status status="FAIL">foo != bar</status>'
+            "</kw>"
+            '<status status="FAIL">foo != bar</status>'
+            "</test></robot>"
+        )
+
+        assert is_explicit_robot_fail(xml_file) is False
+
+    def test_passing_test_not_explicit(self, temp_dir: Path) -> None:
+        """Test that passing tests are not detected as explicit Fail."""
+        from purjo.runner import is_explicit_robot_fail
+
+        xml_file = temp_dir / "output.xml"
+        xml_file.write_text(
+            '<robot><test id="s1-t1" name="Test">'
+            '<kw name="Log" owner="BuiltIn">'
+            '<status status="PASS"/>'
+            "</kw>"
+            '<status status="PASS"/>'
+            "</test></robot>"
+        )
+
+        assert is_explicit_robot_fail(xml_file) is False
+
+    def test_fail_keyword_with_multiline_message(self, temp_dir: Path) -> None:
+        """Test detection with multiline failure message."""
+        from purjo.runner import is_explicit_robot_fail
+
+        xml_file = temp_dir / "output.xml"
+        xml_file.write_text(
+            '<robot><test id="s1-t1" name="Test">\n'
+            '<kw name="Fail" owner="BuiltIn">\n'
+            '<msg time="2026-01-01T00:00:00" level="FAIL">Error code\n'
+            "Detailed error message</msg>\n"
+            '<status status="FAIL" start="2026-01-01T00:00:00" elapsed="0.001">'
+            "Error code\nDetailed error message</status>\n"
+            "</kw>\n"
+            '<status status="FAIL">Error code\nDetailed error message</status>\n'
+            "</test></robot>"
+        )
+
+        assert is_explicit_robot_fail(xml_file) is True
+
 
 @pytest.fixture
 def temp_dir() -> Any:

@@ -139,6 +139,13 @@ def _get_output_variables(
             fail_reason_ = (
                 fail_reason(output_xml_path) if output_xml_path.exists() else ""
             )
+            # NOTE: This test helper intentionally simplifies error handling
+            # compared to the runner.  It always adds errorCode/errorMessage
+            # as plain dict values on failure, regardless of on_fail mode,
+            # because its purpose is to let outer Robot Framework tests
+            # inspect the output – not to communicate with the BPM engine.
+            # The runner (handle_failure_result / handle_success_result) is
+            # the source of truth for how errors are reported to Operaton.
             variables.update(
                 {
                     "errorCode": fail_reason_.split("\n", 1)[0].strip(),
