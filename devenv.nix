@@ -133,6 +133,8 @@ let
         if [ -f "${config.env.DEVENV_STATE}/env_file" ]; then
           source ${config.env.DEVENV_STATE}/env_file
         fi
+        export UV_NO_CONFIG=1
+        export UV_NO_WORKSPACE=1
       '';
 
       enterTest = ''
