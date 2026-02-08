@@ -368,25 +368,24 @@ async def initialize_robot_package(cwd_path: Path, python: bool = False) -> None
             "VIRTUAL_ENV": "",
         },
     )
-    if python:
-        await run(
-            "uv",
-            [
-                "add",
-                "--dev",
-                "purjo",
-            ]
-            + [
-                "--no-sources",
-            ],
-            cwd_path,
-            {
-                "UV_NO_SYNC": "0",
-                "UV_NO_CONFIG": "1",
-                "UV_NO_WORKSPACE": "1",
-                "VIRTUAL_ENV": "",
-            },
-        )
+    await run(
+        "uv",
+        [
+            "add",
+            "--dev",
+        ]
+        + (["purjo"] if python else ["robotframework-robotlibrary>=1.0a3"])
+        + [
+            "--no-sources",
+        ],
+        cwd_path,
+        {
+            "UV_NO_SYNC": "0",
+            "UV_NO_CONFIG": "1",
+            "UV_NO_WORKSPACE": "1",
+            "VIRTUAL_ENV": "",
+        },
+    )
     for fixture_py in [
         cwd_path / "hello.py",
         cwd_path / "main.py",
@@ -405,6 +404,9 @@ process-variables = true
     (cwd_path / "hello.bpmn").write_text(
         (importlib.resources.files("purjo.data") / "hello.bpmn").read_text()
     )
+    (cwd_path / "Makefile").write_text(
+        (importlib.resources.files("purjo.data") / "Makefile").read_text()
+    )
     if python:
         (cwd_path / "tasks.py").write_text(
             (importlib.resources.files("purjo.data") / "tasks.py").read_text()
@@ -415,6 +417,9 @@ process-variables = true
         )
         (cwd_path / "Hello.py").write_text(
             (importlib.resources.files("purjo.data") / "Hello.py").read_text()
+        )
+        (cwd_path / "test_hello.robot").write_text(
+            (importlib.resources.files("purjo.data") / "test_hello.robot").read_text()
         )
     (cwd_path / ".wrapignore").write_text("")
     cli_wrap()
