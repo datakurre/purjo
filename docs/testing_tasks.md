@@ -5,7 +5,122 @@ title: Testing Tasks
 
 # Testing tasks
 
-`purjo` includes a Robot Framework library, also named `purjo`, which facilitates testing your tasks in isolation without needing a running BPM engine.
+You can test `purjo` Robot Framework tasks without running Operaton (or any BPM engine) using two complementary approaches:
+
+- **Integration testing**: Use `robotframework-robotlibrary` to run a task/test from another `.robot` file and verify variable behavior in-process.
+- **Functional testing**: Use the `purjo` Robot Framework library to execute a configured topic and get output variables back as a dictionary.
+
+Both approaches are fast and local. Pick integration tests for “does this Robot suite behave as expected when called with variables?”, and functional tests for “does my `pyproject.toml` topic config + `purjo` execution produce the right BPMN-style outputs?”
+
+## Integration testing (RobotLibrary)
+
+`RobotLibrary` is a Robot Framework library for meta-testing: it lets you write Robot Framework tests that execute tests/tasks from another `.robot` file.
+
+This style is especially useful with `purjo` packages because:
+
+- your task inputs are already expressed as suite variables (e.g. `${name}`), and
+- you can override those variables as keyword arguments when calling `Run Robot Test` / `Run Robot Task`.
+
+### Installing
+
+Add `robotframework-robotlibrary` as a development dependency in your robot package:
+
+```console
+uv add --dev robotframework-robotlibrary>=1.0a3
+```
+
+If you created your package using `pur init`, this dependency and a ready-made example test (`test_hello.robot`) are already included.
+
+### How input variables are mapped
+
+`RobotLibrary` provides these keywords:
+
+```robotframework
+Run Robot Test    suite_path    test_name    **variables
+Run Robot Task    suite_path    task_name    **variables
+```
+
+The `**variables` part is passed as `NAME=value` pairs. Each pair overrides the corresponding suite variable in the target suite.
+
+In other words, a call like:
+
+```robotframework
+Run Robot Test    ${CURDIR}/hello.robot    My Test in Robot
+...    name=John Doe
+...    answer=42
+```
+
+overrides `${name}` and `${answer}` inside `hello.robot` for that run.
+
+If you have inputs as a dictionary, you can expand it into keyword arguments:
+
+```robotframework
+&{inputs}=    Create Dictionary    name=John Doe    answer=42
+Run Robot Test    ${CURDIR}/hello.robot    My Test in Robot
+...    &{inputs}
+```
+
+### Making output variables assertable (BPMN:PROCESS=global)
+
+The default `purjo` task fixtures typically set:
+
+```robotframework
+${BPMN:PROCESS}     local
+```
+
+and then emit output variables using Robot Framework’s built-in `VAR` keyword:
+
+```robotframework
+VAR    ${message}    ${message}    scope=${BPMN:PROCESS}
+```
+
+When you run the target suite via `RobotLibrary`, output variables written with `VAR ... scope=${BPMN:PROCESS}` are easiest to assert from the calling (meta) test when the scope is set to **global process scope**. In the default fixture, you enable that by overriding `${BPMN:PROCESS}`:
+
+```robotframework
+Run Robot Test    ${CURDIR}/hello.robot    My Test in Robot
+...    BPMN:PROCESS=global
+...    name=${name}
+Should Be Equal    ${message}    Hello ${name}!
+```
+
+That `BPMN:PROCESS=global` is just another variable override: it sets `${BPMN:PROCESS}` inside the called suite so that `VAR ... scope=${BPMN:PROCESS}` writes variables to a scope that the meta-test can assert afterwards.
+
+### Example (from the init fixture)
+
+The default `pur init` Robot template includes an integration test like this:
+
+```robotframework
+*** Settings ***
+Library             RobotLibrary
+
+Test Template       Test Hello
+
+
+*** Test Cases ***    NAME
+Hello John      John Doe
+Hello Jane      Jane Doe
+
+
+*** Keywords ***
+Test Hello
+    [Arguments]    ${name}
+    Run Robot Test    ${CURDIR}/hello.robot
+    ...    My Test in Robot
+    ...    BPMN:PROCESS=global
+    ...    name=${name}
+    Should Be Equal    ${message}    Hello ${name}!
+```
+
+## Functional testing (purjo library)
+
+`purjo` includes a Robot Framework library, also named `purjo`, which executes a configured topic from a robot package and returns the resulting output variables.
+
+Use this when you want to validate:
+
+- topic configuration in `pyproject.toml` (`[tool.purjo.topics."..."]`),
+- variable mapping in/out as the engine would do it,
+- error handling behavior (`on-fail`), and
+- secrets handling.
 
 ## The `purjo` Library
 
