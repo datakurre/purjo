@@ -68,6 +68,12 @@ Adding uv.lock
 Adding hello.bpmn
 ```
 
+Or init with Robot Framework task template (uses `*** Tasks ***` instead of `*** Test Cases ***`):
+
+```console
+$ uv run --with=purjo -- pur init --task
+```
+
 Deploy and start an example process:
 
 ```console

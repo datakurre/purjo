@@ -19,6 +19,12 @@ DEVENV := devenv
 endif
 DEVENV_OPTIONS ?= --nix-option extra-sandbox-paths $(NETRC)
 
+develop: devenv.local.nix ## Launch opinionated IDE
+	devenv shell --profile devcontainer -- code .
+
+devenv.local.nix:
+	cp devenv.local.nix.example devenv.local.nix
+
 build:  ## Build application
 	$(DEVENV) $(DEVENV_OPTIONS) build outputs.python.app
 
@@ -36,6 +42,7 @@ check:  ## Run static analysis checks
 	isort -c src tests
 	flake8 src
 	MYPYPATH=$(PWD)/stubs mypy --show-error-codes --strict src tests
+	python scripts/check-links.py
 
 clean:  ## Remove build artifacts and temporary files
 	$(DEVENV) $(DEVENV_OPTIONS) gc
@@ -90,8 +97,8 @@ htmlcov: .coverage
 
 define _env_script
 cat << EOF > .env
-ENGINE_REST_BASE_URL="http://localhost:8080/engine-rest"
-ENGINE_REST_AUTHORIZATION="Basic ZGVtbzpkZW1v"
+ENGINE_REST_BASE_URL=http://localhost:8080/engine-rest
+ENGINE_REST_AUTHORIZATION=Basic ZGVtbzpkZW1v
 EOF
 endef
 export env_script = $(value _env_script)

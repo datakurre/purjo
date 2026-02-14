@@ -58,11 +58,14 @@ This command waits for the services (Operaton, Vault) to be ready and then runs 
 
 ## Testing strategies
 
-### Unit testing tasks
+### Integration and functional testing
 
-You can test your `purjo` tasks in isolation using the `purjo` Robot Framework library. This allows you to verify task logic without running the full BPM engine.
+You can test your Robot Framework tasks locally without running a BPM engine using either:
 
-See [Library Reference](library_reference.md) for details on the `Get Output Variables` keyword.
+1. **Integration tests** with `robotframework-robotlibrary` (`Run Robot Test` / `Run Robot Task`) to execute a task/test from another `.robot` file and assert results via variable overrides.
+2. **Functional tests** with the `purjo` Robot Framework library (`Get Output Variables`) to execute a configured topic and validate the returned output variable dictionary.
+
+See [Testing Tasks](testing_tasks.md) for the full guide and examples.
 
 ### End-to-end testing
 
