@@ -1,14 +1,14 @@
 *** Settings ***
 Library             RobotLibrary
 
-Test Template       Test Hello
+Task Template       Test Hello
 
 
 *** Variables ***
 ${message}      Hello World
 
 
-*** Test Cases ***    NAME
+*** Tasks ***    NAME
 Hello John    John Doe
 Hello Jane    Jane Doe
 Hello Zoe    Zoe Doe
@@ -17,8 +17,8 @@ Hello Zoe    Zoe Doe
 *** Keywords ***
 Test Hello
     [Arguments]    ${name}
-    Run Robot Test    ${CURDIR}/hello.robot
-    ...    My Test in Robot
+    Run Robot Task    ${CURDIR}/hello.robot
+    ...    My Task in Robot
     ...    BPMN:PROCESS=global
     ...    name=${name}
     Should be equal    ${message}    Hello ${name}!
