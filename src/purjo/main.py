@@ -323,7 +323,9 @@ def cli_serve(
     start_worker()
 
 
-async def initialize_robot_package(cwd_path: Path, python: bool = False) -> None:
+async def initialize_robot_package(
+    cwd_path: Path, python: bool = False, task: bool = False
+) -> None:
     """Initialize a new robot package in the specified directory.
 
     This function creates a new robot package with all necessary files:
@@ -335,6 +337,7 @@ async def initialize_robot_package(cwd_path: Path, python: bool = False) -> None
     Args:
         cwd_path: The directory to initialize the package in.
         python: If True, create a Python template instead of a Robot template.
+        task: If True, create a Robot task template instead of a test template.
     """
     await run(
         "uv",
@@ -396,7 +399,7 @@ async def initialize_robot_package(cwd_path: Path, python: bool = False) -> None
     (cwd_path / "pyproject.toml").write_text(
         (cwd_path / "pyproject.toml").read_text() + f"""
 [tool.purjo.topics."My Topic in BPMN"]
-name = "{'tasks.main' if python else 'My Test in Robot'}"
+name = "{'tasks.main' if python else 'My Task in Robot' if task else 'My Test in Robot'}"
 on-fail = "{'FAIL' if python else 'ERROR'}"
 process-variables = true
 """
@@ -412,18 +415,22 @@ process-variables = true
             (importlib.resources.files("purjo.data") / "tasks.py").read_text()
         )
     else:
+        hello_robot_file = "hello_task.robot" if task else "hello.robot"
+        test_hello_robot_file = "test_hello_task.robot" if task else "test_hello.robot"
         (cwd_path / "hello.robot").write_text(
-            (importlib.resources.files("purjo.data") / "hello.robot").read_text()
+            (importlib.resources.files("purjo.data") / hello_robot_file).read_text()
         )
         (cwd_path / "Hello.py").write_text(
             (importlib.resources.files("purjo.data") / "Hello.py").read_text()
         )
         (cwd_path / "test_hello.robot").write_text(
-            (importlib.resources.files("purjo.data") / "test_hello.robot").read_text()
+            (
+                importlib.resources.files("purjo.data") / test_hello_robot_file
+            ).read_text()
         )
     (cwd_path / ".wrapignore").write_text("")
     cli_wrap()
-    (cwd_path / "robot.zip").unlink()
+    (cwd_path / "robot.zip").unlink(missing_ok=True)
     if (cwd_path / ".venv").exists():  # pragma: no cover
         shutil.rmtree(cwd_path / ".venv")  # pragma: no cover
 
@@ -434,6 +441,12 @@ def cli_init(
         bool,
         typer.Option(
             "--python", help="Create a Python template instead of a Robot template"
+        ),
+    ] = False,
+    task: Annotated[
+        bool,
+        typer.Option(
+            "--task", help="Create a Robot task template instead of a test template"
         ),
     ] = False,
     log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "INFO",
@@ -448,7 +461,7 @@ def cli_init(
     if not shutil.which("uv"):
         raise FileNotFoundError("The 'uv' executable is not found in the system PATH.")
 
-    asyncio.run(initialize_robot_package(cwd_path, python))
+    asyncio.run(initialize_robot_package(cwd_path, python, task))
 
 
 @cli.command(name="wrap")

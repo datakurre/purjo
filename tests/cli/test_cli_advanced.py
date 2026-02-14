@@ -344,6 +344,44 @@ class TestCliInit:
         with pytest.raises(AssertionError):
             cli_init(log_level="INFO")
 
+    @patch("purjo.main.cli_wrap")
+    @patch("purjo.main.run")
+    @patch("purjo.main.shutil.which")
+    def test_init_task_template(
+        self,
+        mock_which: Any,
+        mock_run: Any,
+        mock_wrap: Any,
+        temp_dir: Any,
+        monkeypatch: Any,
+    ) -> None:
+        """Test cli_init with Robot Framework task template."""
+        mock_which.return_value = "/usr/bin/uv"
+        monkeypatch.chdir(temp_dir)
+
+        # Mock the async run function
+        async def mock_run_async(*args: Any, **kwargs: Any) -> None:
+            # Create a minimal pyproject.toml so init doesn't fail
+            if not (temp_dir / "pyproject.toml").exists():
+                (temp_dir / "pyproject.toml").write_text("[project]\nname='test'\n")
+
+        mock_run.side_effect = mock_run_async
+
+        # Mock cli_wrap to prevent it from failing on missing files
+        def mock_wrap_impl(*args: Any, **kwargs: Any) -> None:
+            # Create robot.zip so unlink doesn't fail
+            (temp_dir / "robot.zip").write_text("mock")
+
+        mock_wrap.side_effect = mock_wrap_impl
+
+        # Run cli_init with task flag
+        cli_init(python=False, task=True, log_level="INFO")
+
+        # Verify key files were created
+        assert (temp_dir / "pyproject.toml").exists()
+        # Verify cli_wrap was called
+        assert mock_wrap.called
+
 
 class TestOperatonDeploy:
     """Tests for operaton_deploy command.
