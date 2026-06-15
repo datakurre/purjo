@@ -22,6 +22,7 @@ htmlcov/
 .mypy_cache/
 .pre-commit-config.yaml
 devenv.local.nix
+devenv.local.yaml
 
 # Container Config
 .devcontainer.json

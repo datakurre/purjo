@@ -1,51 +1,25 @@
-# yaml-language-server: $schema=https://devenv.sh/devenv.schema.json
 inputs:
-  nixpkgs:
-    url: github:nixos/nixpkgs/nixos-25.11
-  mvn2nix:
-    url: gitlab:vasara-bpm/mvn2nix
-  devenv-module-mvn2nix:
-    url: gitlab:vasara-bpm/devenv-module-mvn2nix
-    flake: false
-  devenv-module-operaton:
-    url: gitlab:vasara-bpm/devenv-module-operaton
-    flake: false
-  devenv-module-image:
-    url: gitlab:vasara-bpm/devenv-module-image
-    flake: false
-  devenv-module-uv2nix:
-    url: gitlab:vasara-bpm/devenv-module-uv2nix
-    flake: false
   devenv-module-devcontainer:
     url: github:datakurre/devenv-module-devcontainer
     flake: false
-  # module dependencies, because devenv.yaml does not compose yet
-  pyproject-nix:
-    url: github:pyproject-nix/pyproject.nix
+  devenv-module-devcontainer-nixpkgs:
+    url: github:nixos/nixpkgs/nixos-unstable
+  devenv-module-operaton:
+    url: gitlab:vasara-bpm/devenv-module-operaton/oauth2
+  git-hooks:
+    url: github:cachix/git-hooks.nix
     inputs:
       nixpkgs:
         follows: nixpkgs
-  uv2nix:
-    url: github:pyproject-nix/uv2nix
+  nixpkgs:
+    url: github:nixos/nixpkgs/nixos-26.05
+  treefmt-nix:
+    url: github:numtide/treefmt-nix
     inputs:
       nixpkgs:
         follows: nixpkgs
-      pyproject-nix:
-        follows: pyproject-nix
-  pyproject-build-systems:
-    url: github:pyproject-nix/build-system-pkgs
-    inputs:
-      nixpkgs:
-        follows: nixpkgs
-      pyproject-nix:
-        follows: pyproject-nix
-      uv2nix:
-        follows: uv2nix
-allowUnfree: true
+allow_unfree: true
 imports:
-- devenv-module-mvn2nix
-- devenv-module-operaton
-- devenv-module-uv2nix
-- devenv-module-image
+- devenv-module-operaton/module.nix
 - devenv-module-devcontainer
 profile: shell

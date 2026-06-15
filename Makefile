@@ -7,7 +7,6 @@ INDEX_HOSTNAME ?= pypi.python.org
 export NETRC ?= $(HOME)/.netrc
 
 export PYTHONPATH=$(PWD)/src
-
 MODULE := purjo
 APP := pur
 
@@ -26,7 +25,7 @@ devenv.local.nix:
 	cp devenv.local.nix.example devenv.local.nix
 
 build:  ## Build application
-	$(DEVENV) $(DEVENV_OPTIONS) build outputs.python.app
+	uv build
 
 build-docs: ## Build the Sphinx documentation site
 	sphinx-build docs docs/_build/html
@@ -35,11 +34,10 @@ watch-docs: ## Serve the Sphinx documentation site locally
 	sphinx-autobuild docs docs/_build/html
 
 env:  ## Build and link the Python virtual environment
-	ln -s $(shell $(DEVENV) $(DEVENV_OPTIONS) build outputs.python.virtualenv) env
+	ln -s $(shell uv build outputs.python.virtualenv) env
 
 check:  ## Run static analysis checks
-	black --check src tests
-	isort -c src tests
+	treefmt --ci
 	flake8 src
 	MYPYPATH=$(PWD)/stubs mypy --show-error-codes --strict src tests
 	python scripts/check-links.py
