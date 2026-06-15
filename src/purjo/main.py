@@ -397,7 +397,8 @@ async def initialize_robot_package(
         if fixture_py.exists():  # pragma: no cover
             fixture_py.unlink()  # pragma: no cover
     (cwd_path / "pyproject.toml").write_text(
-        (cwd_path / "pyproject.toml").read_text() + f"""
+        (cwd_path / "pyproject.toml").read_text()
+        + f"""
 [tool.purjo.topics."My Topic in BPMN"]
 name = "{'tasks.main' if python else 'My Task in Robot' if task else 'My Test in Robot'}"
 on-fail = "{'FAIL' if python else 'ERROR'}"
