@@ -324,7 +324,7 @@ def cli_serve(
 
 
 async def initialize_robot_package(
-    cwd_path: Path, python: bool = False, task: bool = False
+    cwd_path: Path, python: bool = False, task: bool = False, agents: bool = False
 ) -> None:
     """Initialize a new robot package in the specified directory.
 
@@ -338,6 +338,7 @@ async def initialize_robot_package(
         cwd_path: The directory to initialize the package in.
         python: If True, create a Python template instead of a Robot template.
         task: If True, create a Robot task template instead of a test template.
+        agents: If True, also create an AGENTS.md guide for LLM coding agents.
     """
     await run(
         "uv",
@@ -428,7 +429,12 @@ process-variables = true
                 importlib.resources.files("purjo.data") / test_hello_robot_file
             ).read_text()
         )
-    (cwd_path / ".wrapignore").write_text("")
+        if agents:
+            agents_file = "AGENTS_task.template.md" if task else "AGENTS.template.md"
+            (cwd_path / "AGENTS.md").write_text(
+                (importlib.resources.files("purjo.data") / agents_file).read_text()
+            )
+    (cwd_path / ".wrapignore").write_text("AGENTS.md\n" if agents else "")
     cli_wrap()
     (cwd_path / "robot.zip").unlink(missing_ok=True)
     if (cwd_path / ".venv").exists():  # pragma: no cover
@@ -449,9 +455,24 @@ def cli_init(
             "--task", help="Create a Robot task template instead of a test template"
         ),
     ] = False,
+    agents: Annotated[
+        bool,
+        typer.Option(
+            "--agents",
+            help=(
+                "Create an AGENTS.md guide for LLM coding agents"
+                " (not supported with --python)"
+            ),
+        ),
+    ] = False,
     log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "INFO",
 ) -> None:
     """Initialize a new robot package into the current directory."""
+    if agents and python:
+        raise typer.BadParameter(
+            "--agents is not supported with --python, which is still experimental.",
+            param_hint="--agents",
+        )
     logger.setLevel(log_level)
     set_log_level(log_level)
     cwd_path = Path(os.getcwd())
@@ -461,7 +482,7 @@ def cli_init(
     if not shutil.which("uv"):
         raise FileNotFoundError("The 'uv' executable is not found in the system PATH.")
 
-    asyncio.run(initialize_robot_package(cwd_path, python, task))
+    asyncio.run(initialize_robot_package(cwd_path, python, task, agents))
 
 
 @cli.command(name="wrap")

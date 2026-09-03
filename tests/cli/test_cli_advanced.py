@@ -42,6 +42,7 @@ import asyncio
 import json
 import os
 import pytest
+import typer
 
 
 class TestCliServe:
@@ -343,6 +344,22 @@ class TestCliInit:
 
         with pytest.raises(AssertionError):
             cli_init(log_level="INFO")
+
+    def test_init_agents_with_python_rejected(
+        self, temp_dir: Any, monkeypatch: Any
+    ) -> None:
+        """Test that --agents is rejected with the experimental --python template.
+
+        Related: US-021
+        """
+        monkeypatch.chdir(temp_dir)
+
+        with pytest.raises(typer.BadParameter) as exc_info:
+            cli_init(python=True, agents=True, log_level="INFO")
+
+        assert "--agents" in str(exc_info.value)
+        # The guard runs before any side effect
+        assert not (temp_dir / "pyproject.toml").exists()
 
     @patch("purjo.main.cli_wrap")
     @patch("purjo.main.run")

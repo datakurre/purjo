@@ -74,6 +74,12 @@ Or init with Robot Framework task template (uses `*** Tasks ***` instead of `***
 $ uv run --with=purjo -- pur init --task
 ```
 
+Or add an `AGENTS.md` guide for LLM coding agents working on the package (not supported with `--python`):
+
+```console
+$ uv run --with=purjo -- pur init --agents
+```
+
 Deploy and start an example process:
 
 ```console
