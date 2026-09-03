@@ -68,6 +68,7 @@ Additional context, edge cases, or implementation hints.
 ### `pur init` Command
 - [US-010](./US-010-init-robot-package.md): Initialize new robot package
 - [US-011](./US-011-init-python-template.md): Create pure Python template
+- [US-021](./US-021-init-agents-guidance.md): Create AGENTS.md guidance for coding agents
 
 ### `pur wrap` Command
 - [US-012](./US-012-wrap-robot-zip.md): Wrap project into robot.zip
