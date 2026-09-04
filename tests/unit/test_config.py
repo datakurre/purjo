@@ -12,6 +12,7 @@ Related ADRs:
 - ADR-003: Architecture overview
 """
 
+from pathlib import Path
 from purjo.config import OnFail
 from purjo.config import Settings
 from purjo.config import settings
@@ -247,3 +248,34 @@ class TestAgentsTemplatesStayInSync:
             if a != b and normalise(a) != normalise(b)
         ]
         assert not mismatches, f"templates diverged beyond wording: {mismatches}"
+
+
+class TestPackageNameDerivation:
+    """Tests for deriving a valid package name from a directory name.
+
+    Related: US-010
+    """
+
+    def test_valid_name_is_unchanged(self) -> None:
+        """Test that an already valid name passes through lowercased."""
+        from purjo.main import _package_name_for
+
+        assert _package_name_for(Path("/tmp/my-robot")) == "my-robot"
+
+    def test_invalid_characters_are_replaced(self) -> None:
+        """Test that characters outside the package grammar become dashes."""
+        from purjo.main import _package_name_for
+
+        assert _package_name_for(Path("/tmp/My Robot!")) == "my-robot"
+
+    def test_leading_and_trailing_separators_are_stripped(self) -> None:
+        """Test that a name may not start or end with a separator."""
+        from purjo.main import _package_name_for
+
+        assert _package_name_for(Path("/tmp/2024.report_")) == "2024.report"
+
+    def test_empty_result_falls_back(self) -> None:
+        """Test that a directory of only separators still yields a name."""
+        from purjo.main import _package_name_for
+
+        assert _package_name_for(Path("/tmp/___")) == "robot-package"

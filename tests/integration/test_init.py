@@ -140,3 +140,45 @@ class TestInitIntegration:
         # Nothing was scaffolded before the guard tripped
         assert not (temp_dir / "AGENTS.md").exists()
         assert not (temp_dir / ".wrapignore").exists()
+
+    @pytest.mark.asyncio
+    async def test_init_reports_failing_uv_step(self, temp_dir: Path) -> None:
+        """Test that a failing uv command aborts init with a clear error.
+
+        `run` returns the exit code rather than raising, so without an
+        explicit check a failed `uv init` surfaced much later as a
+        FileNotFoundError on a pyproject.toml that was never written.
+        """
+        from purjo.exceptions import EnvironmentError as PurjoEnvironmentError
+
+        async def failing_run(*args: object, **kwargs: object) -> object:
+            return (1, b"", b"network unreachable")
+
+        with mock.patch("purjo.main.run", side_effect=failing_run):
+            with pytest.raises(PurjoEnvironmentError, match="uv init failed"):
+                await initialize_robot_package(temp_dir, python=False)
+
+        # Nothing was scaffolded after the failed step
+        assert not (temp_dir / "pyproject.toml").exists()
+
+    @pytest.mark.asyncio
+    async def test_init_works_in_directory_with_invalid_package_name(
+        self, temp_dir: Path
+    ) -> None:
+        """Test that init succeeds where the directory is not a package name.
+
+        `uv init` derives the package name from the directory and rejects
+        names like "2024.report_", so purjo passes an explicit sanitised
+        --name instead.
+        """
+        if not shutil.which("uv"):
+            pytest.skip("uv not available")
+
+        awkward = temp_dir / "2024.report_"
+        awkward.mkdir()
+
+        with mock.patch("purjo.main.cli_wrap"):
+            await initialize_robot_package(awkward, python=False)
+
+        assert (awkward / "pyproject.toml").exists()
+        assert (awkward / "hello.robot").exists()

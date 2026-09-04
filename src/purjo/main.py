@@ -30,6 +30,7 @@ from purjo.config import OnFail
 from purjo.deployment import build_cockpit_url
 from purjo.deployment import build_deployment_form
 from purjo.deployment import parse_variables_input
+from purjo.exceptions import EnvironmentError as PurjoEnvironmentError
 from purjo.file_utils import get_wrap_pathspec
 from purjo.migration import migrate as migrate_all
 from purjo.runner import create_task
@@ -51,6 +52,7 @@ import importlib.resources
 import json
 import os
 import random
+import re
 import shutil
 import string
 import tomllib
@@ -323,6 +325,43 @@ def cli_serve(
     start_worker()
 
 
+def _package_name_for(cwd_path: Path) -> str:
+    """Derive a valid PEP 508 package name from a directory name.
+
+    `uv init` derives the package name from the directory and fails when that
+    name is not a valid package name, so directories like "2024-report" or
+    "my.project_" cannot be initialised without an explicit --name.
+    """
+    name = re.sub(r"[^A-Za-z0-9._-]+", "-", cwd_path.name).strip("._-").lower()
+    return name or "robot-package"
+
+
+async def _run_uv(args: List[str], cwd_path: Path, step: str) -> None:
+    """Run a uv command, failing loudly when it does not succeed.
+
+    `run` reports the exit code but does not raise. Without this check a
+    failed `uv init` or `uv add` (a transient network error, for example)
+    would go unnoticed and surface later as a confusing FileNotFoundError
+    on the pyproject.toml that was never created.
+    """
+    return_code, _, stderr = await run(
+        "uv",
+        args,
+        cwd_path,
+        {
+            "UV_NO_SYNC": "0",
+            "UV_NO_CONFIG": "1",
+            "UV_NO_WORKSPACE": "1",
+            "VIRTUAL_ENV": "",
+        },
+    )
+    if return_code != 0:
+        raise PurjoEnvironmentError(
+            f"{step} failed with exit code {return_code}: "
+            f"{stderr.decode('utf-8', 'replace').strip()}"
+        )
+
+
 async def initialize_robot_package(
     cwd_path: Path, python: bool = False, task: bool = False, agents: bool = False
 ) -> None:
@@ -347,55 +386,22 @@ async def initialize_robot_package(
         raise ValueError(
             "agents is not supported with python, which is still experimental."
         )
-    await run(
-        "uv",
-        [
-            "init",
-            "--no-workspace",
-        ],
+    await _run_uv(
+        ["init", "--no-workspace", "--name", _package_name_for(cwd_path)],
         cwd_path,
-        {
-            "UV_NO_SYNC": "0",
-            "UV_NO_CONFIG": "1",
-            "UV_NO_WORKSPACE": "1",
-            "VIRTUAL_ENV": "",
-        },
+        "uv init",
     )
-    await run(
-        "uv",
-        [
-            "add",
-            "robotframework",
-        ]
-        + (["pydantic"] if python else [])
-        + [
-            "--no-sources",
-        ],
+    await _run_uv(
+        ["add", "robotframework"] + (["pydantic"] if python else []) + ["--no-sources"],
         cwd_path,
-        {
-            "UV_NO_SYNC": "0",
-            "UV_NO_CONFIG": "1",
-            "UV_NO_WORKSPACE": "1",
-            "VIRTUAL_ENV": "",
-        },
+        "uv add robotframework",
     )
-    await run(
-        "uv",
-        [
-            "add",
-            "--dev",
-        ]
+    await _run_uv(
+        ["add", "--dev"]
         + (["purjo"] if python else ["robotframework-robotlibrary>=1.0a3"])
-        + [
-            "--no-sources",
-        ],
+        + ["--no-sources"],
         cwd_path,
-        {
-            "UV_NO_SYNC": "0",
-            "UV_NO_CONFIG": "1",
-            "UV_NO_WORKSPACE": "1",
-            "VIRTUAL_ENV": "",
-        },
+        "uv add --dev",
     )
     for fixture_py in [
         cwd_path / "hello.py",
