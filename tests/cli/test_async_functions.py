@@ -16,7 +16,6 @@ Related ADRs:
 """
 
 from contextlib import asynccontextmanager
-from pathlib import Path
 from purjo.main import deploy_and_start
 from purjo.main import deploy_resources
 from purjo.main import start_process
@@ -579,3 +578,152 @@ class TestDeployAndStart:
             force=False,
             base_url="http://localhost:8080/engine-rest",
         )
+
+
+class TestEngineResponseValidationErrors:
+    """Tests for malformed engine responses.
+
+    The engine may answer 2xx with a payload that does not match the expected
+    DTO. Each of these paths prints the raw payload and returns instead of
+    raising, so the CLI degrades gracefully rather than tracebacking.
+
+    Related: US-014, US-019, US-020
+    """
+
+    @pytest.mark.asyncio
+    @patch("purjo.main.operaton_session")
+    async def test_deploy_resources_invalid_payload(
+        self, mock_session: Any, temp_dir: Any, capsys: Any
+    ) -> None:
+        """Test deploy_resources with a payload failing DTO validation."""
+        bpmn_file = temp_dir / "test.bpmn"
+        bpmn_file.write_text("<bpmn>content</bpmn>")
+
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(
+            return_value={"id": 123, "deployedProcessDefinitions": "not-a-dict"}
+        )
+
+        mock_session_instance = MagicMock()
+        mock_session_instance.post = AsyncMock(return_value=mock_response)
+        mock_session.return_value = mock_session_context(mock_session_instance)
+
+        await deploy_resources(
+            resources=[bpmn_file],
+            name="Test Deployment",
+            force=False,
+            migrate=False,
+            base_url="http://localhost:8080/engine-rest",
+        )
+
+        # The raw payload is printed and no deployment result is reported
+        out = capsys.readouterr().out
+        assert "not-a-dict" in out
+        assert "Deployed:" not in out
+
+    @pytest.mark.asyncio
+    @patch("purjo.main.operaton_session")
+    async def test_start_process_invalid_payload(
+        self, mock_session: Any, capsys: Any
+    ) -> None:
+        """Test start_process with a payload failing DTO validation."""
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value={"id": 123, "links": "not-a-list"})
+
+        mock_session_instance = MagicMock()
+        mock_session_instance.post = AsyncMock(return_value=mock_response)
+        mock_session.return_value = mock_session_context(mock_session_instance)
+
+        await start_process(
+            key="process-key",
+            variables=None,
+            base_url="http://localhost:8080/engine-rest",
+        )
+
+        out = capsys.readouterr().out
+        assert "not-a-list" in out
+        assert "Started:" not in out
+
+    @pytest.mark.asyncio
+    @patch("purjo.main.operaton_session")
+    async def test_deploy_and_start_invalid_deployment_payload(
+        self, mock_session: Any, temp_dir: Any, capsys: Any
+    ) -> None:
+        """Test deploy_and_start with a deployment payload failing validation."""
+        bpmn_file = temp_dir / "test.bpmn"
+        bpmn_file.write_text("<bpmn>content</bpmn>")
+
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value={"id": 123, "links": "not-a-list"})
+
+        mock_session_instance = MagicMock()
+        mock_session_instance.post = AsyncMock(return_value=mock_response)
+        mock_session.return_value = mock_session_context(mock_session_instance)
+
+        await deploy_and_start(
+            resources=[bpmn_file],
+            name="Test",
+            variables=None,
+            migrate=False,
+            force=False,
+            base_url="http://localhost:8080/engine-rest",
+        )
+
+        out = capsys.readouterr().out
+        assert "not-a-list" in out
+        assert "Started:" not in out
+
+    @pytest.mark.asyncio
+    @patch("purjo.main.operaton_session")
+    async def test_deploy_and_start_invalid_instance_payload(
+        self, mock_session: Any, temp_dir: Any, capsys: Any
+    ) -> None:
+        """Test deploy_and_start with a start payload failing validation."""
+        bpmn_file = temp_dir / "test.bpmn"
+        bpmn_file.write_text("<bpmn>content</bpmn>")
+
+        mock_deploy_response = MagicMock()
+        mock_deploy_response.status = 200
+        mock_deploy_response.json = AsyncMock(return_value={"id": "deployment-123"})
+
+        mock_defs_response = MagicMock()
+        mock_defs_response.status = 200
+        mock_defs_response.json = AsyncMock(
+            return_value=[
+                {
+                    "id": "def-1",
+                    "key": "process-key",
+                    "version": 1,
+                    "deploymentId": "deployment-123",
+                }
+            ]
+        )
+
+        mock_start_response = MagicMock()
+        mock_start_response.status = 200
+        mock_start_response.json = AsyncMock(
+            return_value={"id": 123, "links": "not-a-list"}
+        )
+
+        mock_session_instance = MagicMock()
+        mock_session_instance.post = AsyncMock(
+            side_effect=[mock_deploy_response, mock_start_response]
+        )
+        mock_session_instance.get = AsyncMock(return_value=mock_defs_response)
+        mock_session.return_value = mock_session_context(mock_session_instance)
+
+        await deploy_and_start(
+            resources=[bpmn_file],
+            name="Test",
+            variables=None,
+            migrate=False,
+            force=False,
+            base_url="http://localhost:8080/engine-rest",
+        )
+
+        out = capsys.readouterr().out
+        assert "not-a-list" in out
+        assert "Started:" not in out

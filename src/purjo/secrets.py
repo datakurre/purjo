@@ -39,7 +39,7 @@ class SecretsAdapter(ABC):
     """Abstract base class for secrets adapters."""
 
     @abstractmethod
-    def read(self) -> Dict[str, Any]:  # pragma: no cover
+    def read(self) -> Dict[str, Any]:
         """Read secrets from the provider."""
         pass
 
@@ -115,7 +115,7 @@ class SecretsProvider(BaseModel):
             adapter = FileSecretsAdapter(self.config)
         elif isinstance(self.config, VaultProviderConfig):
             adapter = VaultSecretsAdapter(self.config)
-        else:  # pragma: no cover
+        else:
             raise SecretsConfigurationError(
                 f"Unknown secrets configuration type: {type(self.config)}"
             )

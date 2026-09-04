@@ -10,7 +10,6 @@ Related ADRs:
 - ADR-003: Architecture overview
 """
 
-from factories import FileFactory
 from factories import TaskFactory
 from pathlib import Path
 from purjo.config import OnFail
@@ -22,7 +21,6 @@ from purjo.runner import Task
 from typing import Any
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
-from unittest.mock import Mock
 from unittest.mock import patch
 from zipfile import ZipFile
 import asyncio
@@ -1176,3 +1174,135 @@ class TestCreateTask:
         )
 
         assert callable(task_handler)
+
+
+class TestCreateTaskResultProcessing:
+    """Tests for result processing after a robot run.
+
+    Covers preserving BPMN variable types across the round trip and attaching
+    log.html / output.xml produced by the run.
+
+    Related: US-001, US-009
+    """
+
+    @pytest.mark.asyncio
+    async def test_preserves_types_and_attaches_output_files(
+        self, temp_dir: Path
+    ) -> None:
+        """Test type preservation and output file attachment on success."""
+        from operaton.tasks.types import ExternalTaskComplete
+        from operaton.tasks.types import LockedExternalTaskDto
+        from operaton.tasks.types import VariableValueDto
+        from operaton.tasks.types import VariableValueType
+        from purjo.runner import create_task
+
+        robot_dir = temp_dir / "robot"
+        robot_dir.mkdir()
+        (robot_dir / "pyproject.toml").write_text("[project]\nname='test'")
+
+        task_handler = create_task(
+            config=Task(),
+            robot=robot_dir,
+            on_fail=OnFail.COMPLETE,
+            semaphore=asyncio.Semaphore(1),
+            secrets_provider=None,
+            robot_parser_content="# Mock RobotParser",
+        )
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+            variables={
+                # value None in the result -> type is restored from the task
+                "kept": VariableValueDto(value=None, type=VariableValueType.Json),
+                # present in process variables -> type is restored there too
+                "shared": VariableValueDto(value="x", type=VariableValueType.Json),
+            },
+        )
+
+        async def mock_build_run_coro(*args: Any, **kwargs: Any) -> Any:
+            working_dir = Path(args[2])
+            task_variables_file = args[3]
+            process_variables_file = args[4]
+            task_variables_file.write_text('{"kept": null}')
+            process_variables_file.write_text('{"shared": "x"}')
+            (working_dir / "log.html").write_text("<html><body>log</body></html>")
+            (working_dir / "output.xml").write_text(
+                '<?xml version="1.0" encoding="UTF-8"?><robot></robot>'
+            )
+            return (0, b"success", b"")
+
+        with (
+            patch("purjo.runner.build_run", side_effect=mock_build_run_coro),
+            patch("purjo.runner.py_from_operaton") as mock_py_from,
+        ):
+            mock_py_from.return_value = {}
+
+            result = await task_handler(task)
+
+        assert isinstance(result, ExternalTaskComplete)
+
+        from operaton.tasks.types import CompleteExternalTaskDto
+
+        response = result.response
+        assert isinstance(response, CompleteExternalTaskDto)
+        local_variables = response.localVariables or {}
+        process_variables = response.variables or {}
+        # Types were carried over from the locked task
+        assert local_variables["kept"].type == VariableValueType.Json
+        assert process_variables["shared"].type == VariableValueType.Json
+        # Output files were attached to the task-local variables
+        assert "log.html" in local_variables
+        assert "output.xml" in local_variables
+
+    @pytest.mark.asyncio
+    async def test_failing_run_is_routed_to_failure_handling(
+        self, temp_dir: Path
+    ) -> None:
+        """Test that a non-zero return code with on_fail=FAIL reports a failure."""
+        from operaton.tasks.types import ExternalTaskFailure
+        from operaton.tasks.types import LockedExternalTaskDto
+        from purjo.runner import create_task
+
+        robot_dir = temp_dir / "robot"
+        robot_dir.mkdir()
+        (robot_dir / "pyproject.toml").write_text("[project]\nname='test'")
+
+        task_handler = create_task(
+            config=Task(),
+            robot=robot_dir,
+            on_fail=OnFail.FAIL,
+            semaphore=asyncio.Semaphore(1),
+            secrets_provider=None,
+            robot_parser_content="# Mock RobotParser",
+        )
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+            variables={},
+        )
+
+        async def mock_build_run_coro(*args: Any, **kwargs: Any) -> Any:
+            return (1, b"", b"boom")
+
+        with (
+            patch("purjo.runner.build_run", side_effect=mock_build_run_coro),
+            patch("purjo.runner.py_from_operaton") as mock_py_from,
+        ):
+            mock_py_from.return_value = {}
+
+            result = await task_handler(task)
+
+        # on_fail=FAIL reports a BPMN failure rather than completing the task
+        assert isinstance(result, ExternalTaskFailure)

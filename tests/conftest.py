@@ -6,11 +6,9 @@ from operaton.tasks.types import VariableValueDto
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
-from typing import AsyncGenerator
 from typing import Dict
 from typing import Generator
 from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
 from unittest.mock import Mock
 import asyncio
 import json

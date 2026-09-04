@@ -18,9 +18,8 @@ from purjo.data.RobotParser import set_bpmn_process
 from purjo.data.RobotParser import set_bpmn_task
 from purjo.data.RobotParser import Variables
 from robot.running import TestDefaults  # type: ignore[import-untyped]  # type: ignore[import-untyped]
-from unittest.mock import MagicMock
+from typing import Any
 from unittest.mock import Mock
-from unittest.mock import patch
 import json
 import os
 import pytest
@@ -371,3 +370,75 @@ class TestVariables:
         assert "var1" in result
         assert "var2" in result
         assert "api_key" in result
+
+
+class TestVarScope:
+    """Tests for the VAR scope override that maps BPMN scopes.
+
+    `VAR ... scope=${BPMN:PROCESS}` must resolve to the purjo-specific scope
+    names, while every other scope falls through to Robot Framework.
+
+    Related: US-001, US-015
+    """
+
+    class _FakeVariables:
+        """Minimal stand-in for Robot Framework's variables object."""
+
+        def __init__(self, replacement: str | None = None) -> None:
+            self._replacement = replacement
+
+        def replace_string(self, value: str) -> str:
+            if self._replacement is not None:
+                return self._replacement
+            return value
+
+    def _make_var(self, scope: str | None) -> Any:
+        from purjo.data.RobotParser import Var
+
+        var = Var.__new__(Var)
+        var.scope = scope
+        return var
+
+    def test_no_scope_defaults_to_local(self) -> None:
+        """Test that a VAR without scope stays local."""
+        var = self._make_var(None)
+
+        assert var._get_scope(self._FakeVariables()) == ("local", {})
+
+    def test_bpmn_process_scope(self) -> None:
+        """Test that BPMN:PROCESS maps to the bpmn_process scope."""
+        var = self._make_var("BPMN:PROCESS")
+
+        assert var._get_scope(self._FakeVariables()) == ("bpmn_process", {})
+
+    def test_bpmn_task_scope(self) -> None:
+        """Test that BPMN:TASK maps to the bpmn_task scope."""
+        var = self._make_var("BPMN:TASK")
+
+        assert var._get_scope(self._FakeVariables()) == ("bpmn_task", {})
+
+    def test_bpmn_scope_is_case_insensitive(self) -> None:
+        """Test that a lower-case BPMN scope is recognised too."""
+        var = self._make_var("bpmn:process")
+
+        assert var._get_scope(self._FakeVariables()) == ("bpmn_process", {})
+
+    def test_invalid_scope_is_reported_as_data_error(self) -> None:
+        """Test that a scope failing variable replacement raises DataError."""
+        from robot.errors import DataError  # type: ignore[import-untyped]
+
+        var = self._make_var("${MISSING}")
+
+        class _FailingVariables:
+            def replace_string(self, value: str) -> str:
+                raise DataError("variable not found")
+
+        with pytest.raises(DataError, match="Invalid VAR scope"):
+            var._get_scope(_FailingVariables())
+
+    def test_unknown_scope_falls_through_to_robot(self) -> None:
+        """Test that a non-BPMN scope is delegated to Robot Framework."""
+        var = self._make_var("suite")
+
+        # Robot's own implementation resolves the standard scopes
+        assert var._get_scope(self._FakeVariables())[0] == "suite"

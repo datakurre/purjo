@@ -17,7 +17,6 @@ from purjo.Purjo import Purjo
 from typing import Any
 from unittest.mock import patch
 from zipfile import ZipFile
-import pytest
 
 
 class TestHelloExampleIntegration:

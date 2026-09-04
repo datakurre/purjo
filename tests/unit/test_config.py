@@ -194,3 +194,56 @@ class TestSettingsEdgeCases:
         with patch.dict(os.environ, {"TASKS_MAX_JOBS": "1000000"}):
             test_settings = Settings()
             assert test_settings.TASKS_MAX_JOBS == 1000000
+
+
+class TestAgentsTemplatesStayInSync:
+    """Guards the two AGENTS.md templates against drift.
+
+    The test and task templates are near-identical by design: they differ only
+    where Robot Framework's test vocabulary differs from its task vocabulary.
+    Editing one and forgetting the other is the likely failure, so assert the
+    shape stays parallel.
+
+    Related: US-021
+    """
+
+    @staticmethod
+    def _template(name: str) -> str:
+        import importlib.resources
+
+        return (importlib.resources.files("purjo.data") / name).read_text()
+
+    def test_templates_have_the_same_shape(self) -> None:
+        """Test that both templates keep the same line count and headings."""
+        test_lines = self._template("AGENTS.template.md").split("\n")
+        task_lines = self._template("AGENTS_task.template.md").split("\n")
+
+        assert len(test_lines) == len(task_lines)
+
+        test_headings = [ln for ln in test_lines if ln.startswith("#")]
+        task_headings = [ln for ln in task_lines if ln.startswith("#")]
+        assert test_headings == task_headings
+
+    def test_templates_differ_only_in_test_task_vocabulary(self) -> None:
+        """Test that every differing line differs only by test/task wording."""
+        test_lines = self._template("AGENTS.template.md").split("\n")
+        task_lines = self._template("AGENTS_task.template.md").split("\n")
+
+        def normalise(line: str) -> str:
+            for a, b in (
+                ("Test Cases", "Tasks"),
+                ("Test Template", "Task Template"),
+                ("Run Robot Test", "Run Robot Task"),
+                ("My Test in Robot", "My Task in Robot"),
+                ("test", "task"),
+                ("Test", "Task"),
+            ):
+                line = line.replace(a, b)
+            return line
+
+        mismatches = [
+            (a, b)
+            for a, b in zip(test_lines, task_lines)
+            if a != b and normalise(a) != normalise(b)
+        ]
+        assert not mismatches, f"templates diverged beyond wording: {mismatches}"

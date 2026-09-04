@@ -9,18 +9,13 @@ Related ADRs:
 - ADR-003: Architecture overview
 """
 
-from factories import TaskFactory
 from pathlib import Path
 from purjo.Purjo import _get_output_variables
 from purjo.Purjo import Purjo
-from tempfile import TemporaryDirectory
 from typing import Any
 from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import Mock
 from unittest.mock import patch
 from zipfile import ZipFile
-import json
 import pytest
 
 
@@ -311,7 +306,7 @@ name = "Test Suite"
             patch("purjo.Purjo.logger") as mock_logger,
         ):
 
-            result = _get_output_variables(
+            _get_output_variables(
                 robot=robot_dir,
                 topic="test-topic",
                 variables={},
@@ -421,7 +416,7 @@ name = "Test Suite"
 
             secrets = {"api_key": "secret123"}
 
-            result = purjo.get_output_variables(
+            purjo.get_output_variables(
                 path=str(robot_dir),
                 topic="test-topic",
                 variables={"input": "value"},
@@ -452,7 +447,7 @@ name = "Test Suite"
         with patch("purjo.Purjo._get_output_variables") as mock_get_output:
             mock_get_output.return_value = {"result": "success"}
 
-            result = purjo.get_output_variables(
+            purjo.get_output_variables(
                 path=str(robot_dir),
                 topic="test-topic",
                 variables={},

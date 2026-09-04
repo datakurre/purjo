@@ -12,21 +12,15 @@ Related ADRs:
 from operaton.tasks.types import VariableValueDto
 from pathlib import Path
 from purjo.config import OnFail
-from purjo.data.RobotParser import Variables
 from purjo.main import cli_init
 from purjo.main import cli_serve
-from purjo.main import cli_wrap
-from purjo.Purjo import Purjo
 from purjo.runner import create_task
 from purjo.runner import Task
 from typing import Any
-from unittest.mock import MagicMock
 from unittest.mock import Mock
 from unittest.mock import patch
-from zipfile import ZipFile
 import json
 import pytest
-import subprocess
 import tomllib
 
 
@@ -279,7 +273,7 @@ version = "0.1.0"
         with pytest.raises(KeyError):
             with open(pyproject, "rb") as f:
                 data = tomllib.load(f)
-                tool_purjo = data["tool"]["purjo"]
+                data["tool"]["purjo"]
 
     def test_empty_pyproject_toml(self, temp_dir: Any) -> None:
         """Test handling of empty pyproject.toml."""
@@ -293,7 +287,7 @@ version = "0.1.0"
             with open(pyproject, "rb") as f:
                 data = tomllib.load(f)
                 # Empty TOML is valid, so check for missing keys
-                tool = data["tool"]["purjo"]
+                data["tool"]["purjo"]
 
     def test_corrupted_robot_zip(self, temp_dir: Any) -> None:
         """Test handling of corrupted robot.zip file."""

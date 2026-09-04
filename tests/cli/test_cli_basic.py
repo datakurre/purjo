@@ -14,12 +14,9 @@ from pathlib import Path
 from purjo.main import cli_wrap
 from purjo.main import operaton_create
 from typing import Any
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
 from unittest.mock import Mock
 from unittest.mock import patch
 from zipfile import ZipFile
-import os
 import pytest
 
 

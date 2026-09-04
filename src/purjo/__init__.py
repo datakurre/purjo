@@ -21,6 +21,8 @@ def _import_parsers() -> Tuple[Optional[Type[Any]], Optional[Type[Any]]]:
         from purjo.data.RobotParser import RobotParser
 
         return PythonParser, RobotParser
+    # Only taken when Robot Framework is absent, which never happens in the
+    # test environment because robotframework is a development dependency.
     except ModuleNotFoundError:  # pragma: no cover
         # PythonParser depends on robot
         return None, None

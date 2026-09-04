@@ -79,14 +79,14 @@ async def deploy_resources(
             f"{base_url}/deployment/create",
             data=form,
         )
-        if response.status >= 400:  # pragma: no cover
-            print(json.dumps(await response.json(), indent=2))  # pragma: no cover
-            return  # pragma: no cover
+        if response.status >= 400:
+            print(json.dumps(await response.json(), indent=2))
+            return
         try:
             deployment = DeploymentWithDefinitionsDto(**await response.json())
-        except ValidationError:  # pragma: no cover
-            print(json.dumps(await response.json(), indent=2))  # pragma: no cover
-            return  # pragma: no cover
+        except ValidationError:
+            print(json.dumps(await response.json(), indent=2))
+            return
         url = build_cockpit_url(base_url, "/process-definition")
         for definition in (deployment.deployedProcessDefinitions or {}).values():
             if migrate:
@@ -112,14 +112,14 @@ async def start_process(
             ).model_dump(),
             headers={"Content-Type": "application/json"},
         )
-        if response.status >= 400:  # pragma: no cover
-            print(json.dumps(await response.json(), indent=2))  # pragma: no cover
-            return  # pragma: no cover
+        if response.status >= 400:
+            print(json.dumps(await response.json(), indent=2))
+            return
         try:
             instance = ProcessInstanceDto(**await response.json())
-        except ValidationError:  # pragma: no cover
-            print(json.dumps(await response.json(), indent=2))  # pragma: no cover
-            return  # pragma: no cover
+        except ValidationError:
+            print(json.dumps(await response.json(), indent=2))
+            return
         url = build_cockpit_url(base_url, "/process-instance")
         print(f"Started: {url}/{instance.id}/runtime")
 
@@ -139,27 +139,27 @@ async def deploy_and_start(
             f"{base_url}/deployment/create",
             data=form,
         )
-        if response.status >= 400:  # pragma: no cover
-            print(json.dumps(await response.json(), indent=2))  # pragma: no cover
-            return  # pragma: no cover
+        if response.status >= 400:
+            print(json.dumps(await response.json(), indent=2))
+            return
         try:
             deployment = DeploymentDto(**await response.json())
-        except ValidationError:  # pragma: no cover
-            print(json.dumps(await response.json(), indent=2))  # pragma: no cover
-            return  # pragma: no cover
+        except ValidationError:
+            print(json.dumps(await response.json(), indent=2))
+            return
         response = await session.get(
             f"{base_url}/process-definition?deploymentId={deployment.id}"
         )
-        if response.status >= 400:  # pragma: no cover
-            print(json.dumps(await response.json(), indent=2))  # pragma: no cover
-            return  # pragma: no cover
+        if response.status >= 400:
+            print(json.dumps(await response.json(), indent=2))
+            return
         try:
             definitions = [
                 ProcessDefinitionDto(**element) for element in await response.json()
             ]
-        except (TypeError, ValidationError):  # pragma: no cover
-            print(json.dumps(await response.json(), indent=2))  # pragma: no cover
-            return  # pragma: no cover
+        except (TypeError, ValidationError):
+            print(json.dumps(await response.json(), indent=2))
+            return
         for definition in definitions:
             if migrate:
                 await migrate_all(definition, settings.LOG_LEVEL == "DEBUG")
@@ -173,14 +173,14 @@ async def deploy_and_start(
                 ).model_dump(),
                 headers={"Content-Type": "application/json"},
             )
-            if response.status >= 400:  # pragma: no cover
-                print(json.dumps(await response.json(), indent=2))  # pragma: no cover
-                return  # pragma: no cover
+            if response.status >= 400:
+                print(json.dumps(await response.json(), indent=2))
+                return
             try:
                 instance = ProcessInstanceDto(**await response.json())
-            except ValidationError:  # pragma: no cover
-                print(json.dumps(await response.json(), indent=2))  # pragma: no cover
-                return  # pragma: no cover
+            except ValidationError:
+                print(json.dumps(await response.json(), indent=2))
+                return
             url = build_cockpit_url(base_url, "/process-instance")
             print(f"Started: {url}/{instance.id}/runtime")
 

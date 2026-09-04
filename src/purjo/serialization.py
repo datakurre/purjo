@@ -108,8 +108,6 @@ def deserialize(
         if type_ == VariableValueType.Date:
             return dt_from_operaton(value)
         return cast(DeserializedValue, value)
-    elif info.serializationDataFormat is None:  # pragma: no cover
-        return cast(DeserializedValue, value)
     elif info.serializationDataFormat == "application/json":
         result: DeserializedValue = json.loads(value)
         return result
@@ -163,13 +161,13 @@ def _convert_string(value: str, sandbox: Optional[List[Path]]) -> VariableValueD
     """Convert a string value to VariableValueDto, checking for datetime and file."""
     # Try parsing as datetime first
     datetime_result = _try_parse_datetime(value)
-    if datetime_result is not None:  # pragma: no cover
-        return datetime_result  # pragma: no cover
+    if datetime_result is not None:
+        return datetime_result
 
     # Try resolving as file
     file_result = _try_resolve_file(value, sandbox)
-    if file_result is not None:  # pragma: no cover
-        return file_result  # pragma: no cover
+    if file_result is not None:
+        return file_result
 
     # Default to string
     return VariableValueDto(value=value, type=VariableValueType.String)
