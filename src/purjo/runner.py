@@ -246,7 +246,7 @@ def prepare_working_directories(
     """Copy robot files to working directory."""
     if robot.is_dir():
         spec = get_wrap_pathspec(robot.absolute())
-        for file_path in spec.match_tree(robot, negate=True, follow_links=False):
+        for file_path in spec.match_tree_files(robot, negate=True, follow_links=False):
             src = robot / file_path
             dst = robot_dir / file_path
             dst.parent.mkdir(parents=True, exist_ok=True)
