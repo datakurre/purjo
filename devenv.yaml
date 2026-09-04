@@ -13,11 +13,14 @@ inputs:
         follows: nixpkgs
   nixpkgs:
     url: github:nixos/nixpkgs/nixos-25.11
+  # Deliberately does NOT follow our nixpkgs. nixpkgs-python's prebuilt
+  # interpreters on nixpkgs-python.cachix.org are built against its own pinned
+  # nixpkgs, so overriding that input changes every derivation hash and turns
+  # `languages.python.version = "3.13"` into a ~13 min CPython build from
+  # source on every cold CI runner. See `cachix.pull` in devenv.nix for the
+  # matching substituter.
   nixpkgs-python:
     url: github:cachix/nixpkgs-python
-    inputs:
-      nixpkgs:
-        follows: nixpkgs
 allow_unfree: true
 imports:
 - devenv-module-operaton/module.nix
