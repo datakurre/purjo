@@ -28,6 +28,7 @@ devenv.local.yaml
 
 # Container Config
 .devcontainer.json
+.devcontainer/
 
 # Documentation Build
 _build/

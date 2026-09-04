@@ -112,6 +112,7 @@ let
       '';
 
       enterTest = ''
+        wait_for_port 8080 60
         wait_for_port 8200 60
         source ${config.env.DEVENV_STATE}/env_file
         make test
@@ -121,9 +122,17 @@ let
 
       cachix.pull = [ "datakurre" ];
     };
+  devcontainer =
+    { ... }:
+    {
+      devcontainer.enable = true;
+    };
 in
 {
   profiles.shell.module = {
     imports = [ shell ];
+  };
+  profiles.devcontainer.module = {
+    imports = [ devcontainer ];
   };
 }

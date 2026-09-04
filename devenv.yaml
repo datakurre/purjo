@@ -2,6 +2,9 @@
 inputs:
   devenv-module-operaton:
     url: gitlab:vasara-bpm/devenv-module-operaton
+  devenv-module-devcontainer:
+    url: github:datakurre/devenv-module-devcontainer
+    flake: false
   git-hooks:
     url: github:cachix/git-hooks.nix
     inputs:
@@ -17,4 +20,5 @@ inputs:
 allow_unfree: true
 imports:
 - devenv-module-operaton/module.nix
+- devenv-module-devcontainer
 profile: shell

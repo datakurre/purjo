@@ -17,6 +17,22 @@
         "type": "github"
       }
     },
+    "devenv-module-devcontainer": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784659822,
+        "narHash": "sha256-sDjzZoqUjwVVzIGtUULqT8tN8eiOGtCOUXyF0bEe5Wg=",
+        "owner": "datakurre",
+        "repo": "devenv-module-devcontainer",
+        "rev": "d18345b498b06999e66a22f485cd2ae7bc973fc3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "datakurre",
+        "repo": "devenv-module-devcontainer",
+        "type": "github"
+      }
+    },
     "devenv-module-operaton": {
       "flake": false,
       "locked": {
@@ -126,6 +142,7 @@
     "root": {
       "inputs": {
         "devenv": "devenv",
+        "devenv-module-devcontainer": "devenv-module-devcontainer",
         "devenv-module-operaton": "devenv-module-operaton",
         "git-hooks": "git-hooks",
         "nixpkgs": "nixpkgs",
