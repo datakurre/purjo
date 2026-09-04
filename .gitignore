@@ -12,16 +12,18 @@ coverage.json
 .coverage
 .pytest_cache/
 htmlcov/
+results/
 
 # Development Tools
 .devenv*
-.vscode/
 .env
-.vscode/
 .idea/
 .mypy_cache/
 .pre-commit-config.yaml
+.robocop_cache/
+.vscode/
 devenv.local.nix
+devenv.local.yaml
 
 # Container Config
 .devcontainer.json
@@ -38,11 +40,13 @@ output/
 
 # Secrets & Certificates
 *.pem
-.env
 
 # Project-Specific
 result
+dist/
 fixture/target/
-TODO*
-examples/
-results/
+TODO.md
+
+# Local example scratch, but keep the committed example project
+examples/*
+!examples/pdf/
