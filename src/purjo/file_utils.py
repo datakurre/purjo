@@ -5,6 +5,7 @@ from operaton.tasks import settings as operaton_settings
 from operaton.tasks.types import LockedExternalTaskDto
 from operaton.tasks.types import VariableValueDto
 from operaton.tasks.types import VariableValueType
+from operaton.tasks.utils import request_with_auth_retry
 from pathlib import Path
 from purjo.serialization import deserialize
 from purjo.serialization import ValueInfo
@@ -52,7 +53,9 @@ async def fetch(
     async with operaton_session(
         headers={"Content-Type": None, "Accept": "application/octet-stream"}
     ) as session:
-        resp = await session.get(
+        resp = await request_with_auth_retry(
+            session,
+            "GET",
             f"{operaton_settings.ENGINE_REST_BASE_URL}/execution/{task.executionId}/localVariables/{name}/data",
         )
         resp.raise_for_status()

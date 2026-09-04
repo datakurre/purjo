@@ -6,6 +6,7 @@ from operaton.tasks.types import MigrationExecutionDto
 from operaton.tasks.types import MigrationPlanGenerationDto
 from operaton.tasks.types import ProcessDefinitionDto
 from operaton.tasks.types import ProcessInstanceDto
+from operaton.tasks.utils import request_with_auth_retry
 from typing import Any
 from typing import Dict
 from typing import List
@@ -20,7 +21,9 @@ async def migrate(target: ProcessDefinitionDto, verbose: bool) -> None:
         instances = [
             ProcessInstanceDto(**row)
             for row in await (
-                await session.get(
+                await request_with_auth_retry(
+                    session,
+                    "GET",
                     f"{operaton_settings.ENGINE_REST_BASE_URL}/process-instance",
                     params={"processDefinitionKey": target.key},
                 )
@@ -34,7 +37,9 @@ async def migrate(target: ProcessDefinitionDto, verbose: bool) -> None:
         plans: Dict[str, Any] = {}
         for definition in ids_by_definitions:
             plans[definition] = await (
-                await session.post(
+                await request_with_auth_retry(
+                    session,
+                    "POST",
                     f"{operaton_settings.ENGINE_REST_BASE_URL}/migration/generate",
                     json=MigrationPlanGenerationDto(
                         sourceProcessDefinitionId=definition,
@@ -46,7 +51,9 @@ async def migrate(target: ProcessDefinitionDto, verbose: bool) -> None:
         results = (
             await asyncio.gather(
                 *[
-                    session.post(
+                    request_with_auth_retry(
+                        session,
+                        "POST",
                         f"{operaton_settings.ENGINE_REST_BASE_URL}/migration/execute",
                         json=MigrationExecutionDto(
                             migrationPlan=plans[definition],

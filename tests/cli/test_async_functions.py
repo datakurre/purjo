@@ -35,6 +35,20 @@ async def mock_session_context(
     yield mock_session_instance
 
 
+async def _delegate_to_session(
+    http: Any, method: str, url: str, authorization: Any = None, **kwargs: Any
+) -> Any:
+    """Stand in for request_with_auth_retry, delegating to the mocked session.
+
+    request_with_auth_retry moved authorization from session construction to
+    a per-request middleware in operaton-tasks>=1.0b3, so purjo's code now
+    calls it instead of session.post/get directly. Tests still mock
+    session.post/get for readability; this delegate bridges the two so those
+    mocks keep working without duplicating response wiring per test.
+    """
+    return await getattr(http, method.lower())(url, **kwargs)
+
+
 class TestDeployResources:
     """Tests for deploy_resources async function.
 
@@ -42,6 +56,9 @@ class TestDeployResources:
     """
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_deploy_successful(self, mock_session: Any, temp_dir: Any) -> None:
         """Test successful deployment."""
@@ -79,6 +96,9 @@ class TestDeployResources:
         )
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_deploy_error_status(self, mock_session: Any, temp_dir: Any) -> None:
         """Test deployment with error response status."""
@@ -102,6 +122,9 @@ class TestDeployResources:
         )
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_deploy_validation_error(
         self, mock_session: Any, temp_dir: Any
@@ -127,6 +150,9 @@ class TestDeployResources:
         )
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.migrate_all")
     @patch("purjo.main.operaton_session")
     async def test_deploy_with_migration(
@@ -177,6 +203,9 @@ class TestStartProcess:
     """
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_start_successful(self, mock_session: Any) -> None:
         """Test successful process start."""
@@ -201,6 +230,9 @@ class TestStartProcess:
         )
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_start_with_variables(self, mock_session: Any) -> None:
         """Test process start with inline JSON variables."""
@@ -225,6 +257,9 @@ class TestStartProcess:
         )
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_start_error_status(self, mock_session: Any) -> None:
         """Test process start with error response."""
@@ -243,6 +278,9 @@ class TestStartProcess:
         )
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_start_validation_error(self, mock_session: Any) -> None:
         """Test process start with invalid response that causes validation error."""
@@ -268,6 +306,9 @@ class TestDeployAndStart:
     """
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.migrate_all")
     @patch("purjo.main.operaton_session")
     async def test_deploy_and_start_successful(
@@ -326,6 +367,9 @@ class TestDeployAndStart:
         )
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_deploy_and_start_deployment_error(
         self, mock_session: Any, temp_dir: Any
@@ -352,6 +396,9 @@ class TestDeployAndStart:
         )
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_deploy_and_start_definitions_error(
         self, mock_session: Any, temp_dir: Any
@@ -385,6 +432,9 @@ class TestDeployAndStart:
         )
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_deploy_and_start_definitions_validation_error(
         self, mock_session: Any, temp_dir: Any
@@ -418,6 +468,9 @@ class TestDeployAndStart:
         )
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.migrate_all")
     @patch("purjo.main.operaton_session")
     async def test_deploy_and_start_start_error(
@@ -470,6 +523,9 @@ class TestDeployAndStart:
         )
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.migrate_all")
     @patch("purjo.main.operaton_session")
     async def test_deploy_and_start_start_validation_error(
@@ -522,6 +578,9 @@ class TestDeployAndStart:
         )
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.migrate_all")
     @patch("purjo.main.operaton_session")
     async def test_deploy_and_start_with_variables(
@@ -591,6 +650,9 @@ class TestEngineResponseValidationErrors:
     """
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_deploy_resources_invalid_payload(
         self, mock_session: Any, temp_dir: Any, capsys: Any
@@ -623,6 +685,9 @@ class TestEngineResponseValidationErrors:
         assert "Deployed:" not in out
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_start_process_invalid_payload(
         self, mock_session: Any, capsys: Any
@@ -647,6 +712,9 @@ class TestEngineResponseValidationErrors:
         assert "Started:" not in out
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_deploy_and_start_invalid_deployment_payload(
         self, mock_session: Any, temp_dir: Any, capsys: Any
@@ -677,6 +745,9 @@ class TestEngineResponseValidationErrors:
         assert "Started:" not in out
 
     @pytest.mark.asyncio
+    @patch(  # type: ignore[untyped-decorator]
+        "purjo.main.request_with_auth_retry", new=_delegate_to_session
+    )
     @patch("purjo.main.operaton_session")
     async def test_deploy_and_start_invalid_instance_payload(
         self, mock_session: Any, temp_dir: Any, capsys: Any

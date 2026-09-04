@@ -7,7 +7,6 @@ INDEX_HOSTNAME ?= pypi.python.org
 export NETRC ?= $(HOME)/.netrc
 
 export PYTHONPATH=$(PWD)/src
-
 MODULE := purjo
 APP := pur
 

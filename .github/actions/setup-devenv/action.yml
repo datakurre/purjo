@@ -1,0 +1,24 @@
+name: Setup devenv
+description: Install Nix, devenv, and configure cachix
+inputs:
+  cachix-auth-token:
+    description: Cachix authentication token for caching Nix derivations
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install Nix
+      uses: cachix/install-nix-action@v30
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+
+    - name: Configure Cachix
+      uses: cachix/cachix-action@v15
+      with:
+        name: datakurre
+        authToken: ${{ inputs.cachix-auth-token }}
+
+    - name: Install devenv
+      run: nix profile install --accept-flake-config github:cachix/devenv/latest
+      shell: bash

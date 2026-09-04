@@ -20,6 +20,7 @@ from operaton.tasks.types import LockedExternalTaskDto
 from operaton.tasks.types import PatchVariablesDto
 from operaton.tasks.types import VariableValueDto
 from operaton.tasks.types import VariableValueType
+from operaton.tasks.utils import request_with_auth_retry
 from pathlib import Path
 from purjo.config import OnFail
 from purjo.config import settings
@@ -409,7 +410,9 @@ async def handle_failure_result(
 
     if modifications:
         async with operaton_session() as session:
-            resp = await session.post(
+            resp = await request_with_auth_retry(
+                session,
+                "POST",
                 f"{operaton_settings.ENGINE_REST_BASE_URL}/execution/{task.executionId}/localVariables",
                 data=PatchVariablesDto(
                     modifications=modifications,
