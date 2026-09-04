@@ -2,6 +2,7 @@ let
   shell =
     {
       pkgs,
+      lib,
       config,
       devenv-module-operaton,
       ...
@@ -67,6 +68,17 @@ let
         stages = [ "manual" ];
         settings.formatters = [ pkgs.nixfmt-rfc-style ];
       };
+      # devenv's own `devenv:git-hooks:run` task (run by `devenv test`) always
+      # does a plain `prek run -a`, which filters to the `pre-commit` stage
+      # regardless of the hooks' configured stage. Since every hook here is
+      # `manual`-only (see above), that leaves nothing to run and `devenv
+      # test` fails outright with "No hooks found for stage `pre-commit`".
+      # Override it to run the `manual` stage instead, mirroring what
+      # git-hooks.nix's own check derivation does for this same setup.
+      tasks."devenv:git-hooks:run".exec = lib.mkForce ''
+        export PATH="${config.env.UV_PROJECT_ENVIRONMENT}/bin:$PATH"
+        ${lib.getExe config.git-hooks.package} run -c ${config.git-hooks.configPath} --hook-stage manual --all-files
+      '';
 
       packages =
         let
@@ -100,9 +112,9 @@ let
       '';
 
       enterTest = ''
-        wait_for_port 8080 60
         wait_for_port 8200 60
         source ${config.env.DEVENV_STATE}/env_file
+        make test
       '';
 
       processes.mockoon.exec = "mockoon-cli start --data ./fixture/mockoon/data.json --port 3080 --hostname 0.0.0.0 --log-transaction";
