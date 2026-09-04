@@ -1,5 +1,5 @@
 *** Variables ***
-${api_key}          n/a
+${api_key}      n/a
 
 
 *** Test Cases ***

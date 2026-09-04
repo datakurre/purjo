@@ -13,8 +13,8 @@ My Test in Robot
     # Unconditional, so the BPMN error boundary event is always taken.
     # Everything after it is reported as NOT RUN, which is also what
     # `is_explicit_robot_fail` has to look past.
-    Fail  Error
-    ...   Details about the error
+    Fail    Error
+    ...    Details about the error
     ${dice}=    Randint    ${1}    ${6}
     IF    ${dice} < 3
         ${errorCodeAndMessage}=    Catenate    SEPARATOR=\n
