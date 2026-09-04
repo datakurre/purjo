@@ -525,7 +525,9 @@ def cli_wrap(
     spec = get_wrap_pathspec(cwd_path)
     zip_path = cwd_path / "robot.zip"
     with ZipFile(zip_path, "w") as zipf:
-        for file_path in spec.match_tree(cwd_path, negate=True, follow_links=False):
+        for file_path in spec.match_tree_files(
+            cwd_path, negate=True, follow_links=False
+        ):
             print(f"Adding {file_path}")
             zipf.write(file_path)
         if offline:
