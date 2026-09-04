@@ -42,17 +42,38 @@ let
           configureScript = pkgs.writeShellScriptBin "configure-vault-kv" ''
             set -euo pipefail
 
+            # Both waits below are bounded. `devenv test` does not run
+            # enterTest until every process is ready, so an unbounded wait
+            # here does not just stall this one process, it hangs the entire
+            # run: CI sat for 26 minutes with this script's `sleep` as the
+            # only thing still moving, and would have burned the full 6 hour
+            # job timeout. Failing loudly names the missing precondition
+            # instead.
+            timeout_seconds=120
+
             # Wait for the vault server to start up
             response=""
+            deadline=$((SECONDS + timeout_seconds))
             while [ -z "$response" ]; do
+              if [ "$SECONDS" -ge "$deadline" ]; then
+                echo "configure-vault-kv: vault did not respond at ${config.env.VAULT_API_ADDR} within $timeout_seconds seconds" >&2
+                exit 1
+              fi
               response=$(${pkgs.curl}/bin/curl -s --max-time 5 "${config.env.VAULT_API_ADDR}/v1/sys/init" | ${pkgs.jq}/bin/jq '.initialized' || true)
               if [ -z "$response" ]; then
                 echo "Waiting for vault server to respond..."
                 sleep 1
               fi
             done
+
+            # Wait for vault-configure to write the root token
+            deadline=$((SECONDS + timeout_seconds))
             while [ ! -f "${config.env.DEVENV_STATE}/env_file" ]; do
-                sleep 1s
+              if [ "$SECONDS" -ge "$deadline" ]; then
+                echo "configure-vault-kv: vault-configure did not write ${config.env.DEVENV_STATE}/env_file within $timeout_seconds seconds" >&2
+                exit 1
+              fi
+              sleep 1
             done
 
             # Export VAULT_TOKEN
@@ -65,6 +86,23 @@ let
           '';
         in
         "${configureScript}/bin/configure-vault-kv";
+
+      # devenv's own `vault-configure` deliberately never exits -- its script
+      # ends in `while true; do sleep 1; done` after unsealing -- and it ships
+      # no readiness probe, so it sits in Running/not-ready forever. devenv's
+      # own shell-side waiter skips such processes explicitly ("Filter
+      # not_ready processes that have readiness probes"), but `devenv test`
+      # waited on it: CI reached this point and then produced no further
+      # output for 26 minutes, with `configure-vault` and its `sleep` still
+      # alive at cancellation and no make/pytest process ever spawned.
+      #
+      # Give it the probe it lacks: env_file is what it writes once vault is
+      # initialised, and what enterTest sources straight afterwards.
+      processes.vault-configure.ready = {
+        exec = "test -f ${config.env.DEVENV_STATE}/env_file";
+        initial_delay = 1;
+        period = 1;
+      };
 
       languages.python.enable = true;
       languages.python.version = "3.13";

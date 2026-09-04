@@ -17,6 +17,8 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Without this a hung process takes GitHub's 6 hour default with it.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
 
@@ -31,7 +33,11 @@ jobs:
       - name: Run tests with coverage
         run: devenv shell -- python -m pytest --cov-report=xml
 
+      # `devenv test` waits for every process to become ready before it
+      # runs enterTest, so a service that never signals ready stalls here
+      # with no output rather than failing.
       - name: Run e2e tests against live services
+        timeout-minutes: 15
         run: devenv shell -- devenv test --no-tui
 
       - name: Report coverage in job summary
