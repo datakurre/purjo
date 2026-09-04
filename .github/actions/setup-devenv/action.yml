@@ -18,6 +18,15 @@ runs:
     # the cache empty, so every run rebuilds the whole shell from source. With
     # the token set it uploads the paths the job realised, and the next run
     # substitutes them instead.
+    #
+    # Known cost, measured on run #8: populating the cache also makes nix fetch
+    # big closures from here rather than cache.nixos.org, and one of them is
+    # very slow -- keycloak-26.6.3 took 2431s (~100 KB/s) for a single NAR,
+    # which was the whole of that run's 42 min "static analysis" step (only 18
+    # paths were actually built). That is why the job cap is 60 min. It may be
+    # a cold-storage first fetch that warms up; if it persists, the fix is a
+    # pushFilter here so large upstream-available closures are not served from
+    # this cache at all.
     - name: Configure Cachix
       uses: cachix/cachix-action@v16
       with:

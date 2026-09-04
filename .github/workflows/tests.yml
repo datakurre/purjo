@@ -20,7 +20,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     # Without this a hung process takes GitHub's 6 hour default with it.
-    timeout-minutes: 45
+    # 60 rather than 45 because a cold runner currently spends up to ~40 min
+    # in a single slow NAR fetch (see the cachix note below), which left no
+    # room for the e2e step underneath a 45 min cap.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
 
