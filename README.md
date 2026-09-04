@@ -10,12 +10,12 @@
  pur(jo) is a tool for managing and serving robot packages.
 
 ╭─ Commands ───────────────────────────────────────────────────────────────╮
-│ serve   Serve robot.zip packages (or directories) as BPMN service tasks. │
-│ init    Initialize a new robot package into the current directory.       │
-│ wrap    Wrap the current directory into a robot.zip package.             │
-│ run     Deploy process resources to BPM engine and start a new instance. │
-│ bpm     BPM engine operations as distinct sub commands.                  │
-╰──────────────────────────────────────────────────────────────────────────╯
+│ serve     Serve robot.zip packages (or directories) as BPMN service tasks. │
+│ init      Initialize a new robot package into the current directory.       │
+│ wrap      Wrap the current directory into a robot.zip package.             │
+│ run       Deploy process resources to BPM engine and start a new instance. │
+│ operaton  BPM engine operations as distinct sub commands (also as "bpm").  │
+╰────────────────────────────────────────────────────────────────────────────╯
 ```
 
 ```
@@ -27,8 +27,10 @@ Usage: pur serve [OPTIONS] ROBOTS...
 │ *    robots      ROBOTS...  [default: None] [required]                         │
 ╰────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Options ──────────────────────────────────────────────────────────────────────╮
-│ --base-url             TEXT        default: http://localhost:8080/engine-rest] │
+│ --base-url             TEXT                   [default:                        │
+│                                               http://localhost:8080/engine-re… │
 │ --authorization        TEXT                   [default: None]                  │
+│ --secrets              TEXT                   [default: None]                  │
 │ --timeout              INTEGER                [default: 20]                    │
 │ --poll-ttl             INTEGER                [default: 10]                    │
 │ --lock-ttl             INTEGER                [default: 30]                    │
@@ -59,14 +61,18 @@ Init project:
 
 ```console
 $ uv run --with=purjo -- pur init
-Adding .python-version
 Adding pyproject.toml
 Adding README.md
 Adding Hello.py
 Adding hello.robot
 Adding uv.lock
+Adding Makefile
 Adding hello.bpmn
+Adding test_hello.robot
+Adding src/myproject/__init__.py
 ```
+
+The generated `Makefile` wraps the common commands; run `make help` to list them.
 
 Or init with Robot Framework task template (uses `*** Tasks ***` instead of `*** Test Cases ***`):
 
@@ -83,7 +89,7 @@ $ uv run --with=purjo -- pur init --agents
 Deploy and start an example process:
 
 ```console
-$ uv run --with=purjo -- run hello.bpmn
+$ uv run --with=purjo -- pur run hello.bpmn
 Started: http://localhost:8080/operaton/app/cockpit/default/#/process-instance/36228e79-e97e-11ef-a0ec-52f4bfd829ae/runtime
 ```
 
