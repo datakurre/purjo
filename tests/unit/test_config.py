@@ -197,57 +197,78 @@ class TestSettingsEdgeCases:
             assert test_settings.TASKS_MAX_JOBS == 1000000
 
 
-class TestAgentsTemplatesStayInSync:
-    """Guards the two AGENTS.md templates against drift.
+class TestAgentsTemplateRendering:
+    """Tests for deriving the task-flavoured AGENTS.md from one template.
 
-    The test and task templates are near-identical by design: they differ only
-    where Robot Framework's test vocabulary differs from its task vocabulary.
-    Editing one and forgetting the other is the likely failure, so assert the
-    shape stays parallel.
+    The two flavours differ only in Robot Framework's test/task vocabulary, so
+    the task one is rendered by substitution. The risk of that approach is a
+    phrase being reworded so a substitution silently stops applying, which the
+    first test here rules out.
 
     Related: US-021
     """
 
     @staticmethod
-    def _template(name: str) -> str:
+    def _template() -> str:
         import importlib.resources
 
-        return (importlib.resources.files("purjo.data") / name).read_text()
+        return (
+            importlib.resources.files("purjo.data") / "AGENTS.template.md"
+        ).read_text()
 
-    def test_templates_have_the_same_shape(self) -> None:
-        """Test that both templates keep the same line count and headings."""
-        test_lines = self._template("AGENTS.template.md").split("\n")
-        task_lines = self._template("AGENTS_task.template.md").split("\n")
+    def test_every_substitution_still_matches_the_template(self) -> None:
+        """Test that no substitution has been orphaned by a reworded phrase."""
+        from purjo.main import _AGENTS_TASK_SUBSTITUTIONS
 
-        assert len(test_lines) == len(task_lines)
-
-        test_headings = [ln for ln in test_lines if ln.startswith("#")]
-        task_headings = [ln for ln in task_lines if ln.startswith("#")]
-        assert test_headings == task_headings
-
-    def test_templates_differ_only_in_test_task_vocabulary(self) -> None:
-        """Test that every differing line differs only by test/task wording."""
-        test_lines = self._template("AGENTS.template.md").split("\n")
-        task_lines = self._template("AGENTS_task.template.md").split("\n")
-
-        def normalise(line: str) -> str:
-            for a, b in (
-                ("Test Cases", "Tasks"),
-                ("Test Template", "Task Template"),
-                ("Run Robot Test", "Run Robot Task"),
-                ("My Test in Robot", "My Task in Robot"),
-                ("test", "task"),
-                ("Test", "Task"),
-            ):
-                line = line.replace(a, b)
-            return line
-
-        mismatches = [
-            (a, b)
-            for a, b in zip(test_lines, task_lines)
-            if a != b and normalise(a) != normalise(b)
+        template = self._template()
+        orphaned = [
+            pattern
+            for pattern, _ in _AGENTS_TASK_SUBSTITUTIONS
+            if pattern not in template
         ]
-        assert not mismatches, f"templates diverged beyond wording: {mismatches}"
+        assert not orphaned, f"substitutions no longer match the template: {orphaned}"
+
+    def test_test_flavour_is_the_template_verbatim(self) -> None:
+        """Test that the default flavour is passed through untouched."""
+        from purjo.main import render_agents_template
+
+        assert render_agents_template(task=False) == self._template()
+
+    def test_task_flavour_uses_task_vocabulary(self) -> None:
+        """Test that the task flavour speaks about tasks."""
+        from purjo.main import render_agents_template
+
+        rendered = render_agents_template(task=True)
+
+        assert "*** Tasks ***" in rendered
+        assert "Run Robot Task" in rendered
+        assert "My Task in Robot" in rendered
+        assert "Task Template" in rendered
+
+    def test_task_flavour_leaves_no_robot_test_syntax(self) -> None:
+        """Test that no test-only Robot syntax leaks into the task flavour."""
+        from purjo.main import render_agents_template
+
+        rendered = render_agents_template(task=True)
+
+        for leaked in (
+            "*** Test Cases ***",
+            "Run Robot Test",
+            "My Test in Robot",
+            "Test Template",
+        ):
+            assert leaked not in rendered, f"{leaked!r} leaked into the task flavour"
+
+    def test_task_flavour_keeps_wording_that_is_correct_for_both(self) -> None:
+        """Test that Robot's own test wording is not blanket-renamed."""
+        from purjo.main import render_agents_template
+
+        rendered = render_agents_template(task=True)
+
+        # The keyword and the file are named this way in both flavours
+        assert "Test Hello" in rendered
+        assert "test_hello.robot" in rendered
+        assert "make test" in rendered
 
 
 class TestPackageNameDerivation:

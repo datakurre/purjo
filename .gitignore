@@ -9,6 +9,7 @@ env/
 
 # Testing & Coverage
 coverage.json
+coverage.xml
 .coverage
 .pytest_cache/
 htmlcov/

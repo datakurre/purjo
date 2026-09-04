@@ -325,6 +325,37 @@ def cli_serve(
     start_worker()
 
 
+# The task-flavoured AGENTS.md differs from the test-flavoured one only in
+# Robot Framework's test/task vocabulary, so it is derived rather than kept as
+# a second near-identical copy. Robot's own `test` wording is left alone where
+# it is correct in both flavours, which is why these are explicit phrases and
+# not a blanket test -> task rename. A test asserts every phrase below still
+# matches the template, so rewording one cannot silently stop substituting.
+_AGENTS_TASK_SUBSTITUTIONS = (
+    ("*** Test Cases ***", "*** Tasks ***"),
+    ("Test Template ", "Task Template "),
+    ("Run Robot Test", "Run Robot Task"),
+    ("My Test in Robot", "My Task in Robot"),
+    ("the mapped Robot test", "the mapped Robot task"),
+    ("the test name under", "the task name under"),
+    ("the Robot test name to execute", "the Robot task name to execute"),
+    ("a failing test does", "a failing task does"),
+    ("runs a test from another", "runs a task from another"),
+)
+
+
+def render_agents_template(task: bool) -> str:
+    """Render the AGENTS.md guide for the test or the task flavour."""
+    content = (
+        importlib.resources.files("purjo.data") / "AGENTS.template.md"
+    ).read_text()
+    if not task:
+        return content
+    for pattern, replacement in _AGENTS_TASK_SUBSTITUTIONS:
+        content = content.replace(pattern, replacement)
+    return content
+
+
 def _package_name_for(cwd_path: Path) -> str:
     """Derive a valid PEP 508 package name from a directory name.
 
@@ -444,10 +475,7 @@ process-variables = true
             ).read_text()
         )
         if agents:
-            agents_file = "AGENTS_task.template.md" if task else "AGENTS.template.md"
-            (cwd_path / "AGENTS.md").write_text(
-                (importlib.resources.files("purjo.data") / agents_file).read_text()
-            )
+            (cwd_path / "AGENTS.md").write_text(render_agents_template(task))
     (cwd_path / ".wrapignore").write_text("AGENTS.md\n" if agents else "")
     cli_wrap()
     (cwd_path / "robot.zip").unlink(missing_ok=True)
