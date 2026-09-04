@@ -9,15 +9,22 @@ runs:
   using: composite
   steps:
     - name: Install Nix
-      uses: cachix/install-nix-action@v30
+      uses: cachix/install-nix-action@v31
       with:
         nix_path: nixpkgs=channel:nixos-unstable
 
+    # An empty authToken leaves this action in its read-only mode, which logs
+    # "Cachix: push -- Pushing is disabled" in the post step and silently keeps
+    # the cache empty, so every run rebuilds the whole shell from source. With
+    # the token set it uploads the paths the job realised, and the next run
+    # substitutes them instead. extraPullNames adds the upstream cache holding
+    # the prebuilt CPython for languages.python.version (see devenv.yaml).
     - name: Configure Cachix
-      uses: cachix/cachix-action@v15
+      uses: cachix/cachix-action@v16
       with:
         name: datakurre
         authToken: ${{ inputs.cachix-auth-token }}
+        extraPullNames: nixpkgs-python
 
     - name: Install devenv
       run: nix profile install --accept-flake-config github:cachix/devenv/latest

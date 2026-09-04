@@ -18,7 +18,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # `make container-dist` derives CONTAINER_TAG from `git describe
           # --tags`, which finds no names in a depth-1 checkout.
@@ -30,8 +30,13 @@ jobs:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       - name: Set up container registry credentials
+        env:
+          REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          podman login -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} ${{ env.REGISTRY }}
+          # Via stdin, not -p: an argv password is readable from /proc by any
+          # other process on the runner for as long as the login runs.
+          printenv REGISTRY_PASSWORD \
+            | podman login -u "${{ github.actor }}" --password-stdin "${{ env.REGISTRY }}"
 
       - name: Determine container tags
         id: meta
