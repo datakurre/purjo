@@ -3,9 +3,11 @@ on:
   push:
     branches:
       - main
+  # Deliberately unfiltered. `pull_request` filters on the *base* branch, so
+  # `branches: [main]` gave zero CI to any PR targeting a feature branch --
+  # silently, with no skipped check to notice. A PR stacked on another branch
+  # is exactly where the tests are wanted.
   pull_request:
-    branches:
-      - main
 permissions:
   contents: read
 
