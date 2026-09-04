@@ -13,4 +13,6 @@ handling_variables
 managing_secrets
 advanced_use_cases
 cli_reference
+library_reference
+development_environment
 ```
