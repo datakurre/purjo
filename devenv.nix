@@ -1,4 +1,3 @@
-{ ... }:
 let
   shell =
     {
@@ -56,6 +55,19 @@ let
 
       outputs.python.app = config.languages.python.import ./. { };
 
+      # https://devenv.sh/pre-commit-hooks/
+      # Keeps `treefmt` runnable as a plain command (via `make format` /
+      # `devenv test`) without installing it as an actual git hook: the
+      # installer only skips installing a hook type when every hook enabled
+      # for it has stages = [ "manual" ], so it must be set on the hook
+      # itself and not only as default_stages, which does not affect that
+      # decision.
+      git-hooks.hooks.treefmt = {
+        enable = true;
+        stages = [ "manual" ];
+        settings.formatters = [ pkgs.nixfmt-rfc-style ];
+      };
+
       packages =
         let
           mockoon-cli = pkgs.callPackage ./fixture/mockoon { };
@@ -97,17 +109,9 @@ let
 
       cachix.pull = [ "datakurre" ];
     };
-  devcontainer =
-    { ... }:
-    {
-      devcontainer.enable = true;
-    };
 in
 {
   profiles.shell.module = {
     imports = [ shell ];
-  };
-  profiles.devcontainer.module = {
-    imports = [ devcontainer ];
   };
 }
