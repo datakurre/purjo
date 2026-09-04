@@ -408,8 +408,9 @@ process-variables = true
     (cwd_path / "hello.bpmn").write_text(
         (importlib.resources.files("purjo.data") / "hello.bpmn").read_text()
     )
+    makefile_template = "Makefile_python" if python else "Makefile"
     (cwd_path / "Makefile").write_text(
-        (importlib.resources.files("purjo.data") / "Makefile").read_text()
+        (importlib.resources.files("purjo.data") / makefile_template).read_text()
     )
     if python:
         (cwd_path / "tasks.py").write_text(

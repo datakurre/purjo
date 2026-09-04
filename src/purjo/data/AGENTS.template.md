@@ -111,7 +111,7 @@ of the failure message is the **error code**, the remaining lines are the
 ```robotframework
 ${errorCodeAndMessage}=    Catenate    SEPARATOR=\n
 ...    Bad luck
-...    You rolled ${dice}, which is less than 3.
+...    You rolled ${dice}, which is less than ${threshold}.
 Fail    ${errorCodeAndMessage}
 ```
 
