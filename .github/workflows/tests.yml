@@ -38,12 +38,20 @@ jobs:
       - name: Run tests with coverage
         run: devenv shell -- python -m pytest --cov-report=xml
 
-      # `devenv test` waits for every process to become ready before it
-      # runs enterTest, so a service that never signals ready stalls here
-      # with no output rather than failing.
+      # Deliberately not `devenv test`. It does not run enterTest until every
+      # process reports ready, and mockoon and keycloak-realm-export-all ship
+      # no readiness probe, so that wait never finishes: three runs sat here
+      # for 15-26 min with every probed service up and no make/pytest ever
+      # spawned. Start the services directly and let `make test-e2e-ci` do its
+      # own bounded waiting -- which also fails loudly on a service that never
+      # appears, instead of letting require_live_services skip the suite green.
+      # This duplicates nothing: enterTest's `make test` is already covered by
+      # the two steps above.
       - name: Run e2e tests against live services
         timeout-minutes: 15
-        run: devenv shell -- devenv test --no-tui
+        run: |
+          devenv shell -- devenv processes up -d
+          devenv shell -- make test-e2e-ci
 
       - name: Report coverage in job summary
         if: always()

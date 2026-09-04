@@ -69,6 +69,23 @@ test-pytest:  ## Run unit tests with pytest
 test-e2e:  ## Run e2e tests against live devenv services (Operaton, Vault, Keycloak)
 	pytest -o addopts="" -m e2e tests/e2e
 
+E2E_WAIT_SECONDS ?= 180
+
+test-e2e-ci:  ## Wait for already-started devenv services, then run e2e (used by CI)
+# Waits itself rather than relying on `devenv test`, which does not run
+# enterTest until every process reports ready -- and mockoon and
+# keycloak-realm-export-all ship no readiness probe, so that wait never
+# finishes. Fails loudly on a missing service: require_live_services in
+# tests/e2e/conftest.py *skips* the suite when a port is closed, so without
+# this a dead service would be a green run.
+	@for port in 8080 8200 8081; do \
+	  echo "waiting for localhost:$$port"; \
+	  timeout $(E2E_WAIT_SECONDS) bash -c \
+	    "until (echo > /dev/tcp/localhost/$$port) 2>/dev/null; do sleep 1; done" \
+	    || { echo "ERROR: nothing listening on port $$port after $(E2E_WAIT_SECONDS)s"; exit 1; }; \
+	done
+	@set -a; . "$$DEVENV_STATE/env_file"; set +a; $(MAKE) test-e2e
+
 watch: .env  ## Start the application in watch mode
 	$(APP) -- --reload
 
