@@ -13,14 +13,20 @@ inputs:
         follows: nixpkgs
   nixpkgs:
     url: github:nixos/nixpkgs/nixos-25.11
-  # Deliberately does NOT follow our nixpkgs. nixpkgs-python's prebuilt
-  # interpreters on nixpkgs-python.cachix.org are built against its own pinned
-  # nixpkgs, so overriding that input changes every derivation hash and turns
-  # `languages.python.version = "3.13"` into a ~13 min CPython build from
-  # source on every cold CI runner. See `cachix.pull` in devenv.nix for the
-  # matching substituter.
+  # Note: following our nixpkgs costs the prebuilt interpreter on
+  # nixpkgs-python.cachix.org (it is built against nixpkgs-python's own pinned
+  # nixpkgs), so `languages.python.version` below is a CPython build from
+  # source on a cold runner. Dropping this `follows` is the real fix, but ONLY
+  # together with a regenerated devenv.lock: without one, devenv finds
+  # devenv.yaml and the lock inconsistent and re-resolves on every single
+  # invocation, downloading a second full nixpkgs closure each time. That took
+  # `make check` from 12 min to 44 min and hung even `coverage report`.
+  # To do it properly: `devenv update nixpkgs-python` and commit the lock.
   nixpkgs-python:
     url: github:cachix/nixpkgs-python
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
 allow_unfree: true
 imports:
 - devenv-module-operaton/module.nix

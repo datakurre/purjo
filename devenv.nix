@@ -178,14 +178,7 @@ let
 
       processes.mockoon.exec = "mockoon-cli start --data ./fixture/mockoon/data.json --port 3080 --hostname 0.0.0.0 --log-transaction";
 
-      # "nixpkgs-python" serves the prebuilt interpreter for
-      # `languages.python.version` above; without it that is a source build.
-      # It only resolves as long as devenv.yaml leaves the nixpkgs-python
-      # input's own nixpkgs pin alone -- see the comment there.
-      cachix.pull = [
-        "datakurre"
-        "nixpkgs-python"
-      ];
+      cachix.pull = [ "datakurre" ];
     };
   devcontainer =
     { ... }:
