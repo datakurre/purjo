@@ -378,3 +378,17 @@ class TestSecretsAdapterErrorPaths:
 
             with pytest.raises(SecretsProviderError, match="Failed to read secrets"):
                 adapter.read()
+
+
+class TestSecretsProviderUnknownConfig:
+    """Tests for the defensive branch guarding unknown provider configs.
+
+    Related: US-004
+    """
+
+    def test_read_raises_on_unknown_config_type(self) -> None:
+        """Test that an unrecognised config type is rejected explicitly."""
+        provider = SecretsProvider.model_construct(config="not-a-provider-config")
+
+        with pytest.raises(SecretsConfigurationError, match="Unknown secrets"):
+            provider.read()

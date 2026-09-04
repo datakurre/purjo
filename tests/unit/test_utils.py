@@ -13,7 +13,6 @@ from javaobj.v2.transformers import JavaBool  # type: ignore[import-untyped]  # 
 from javaobj.v2.transformers import JavaInt
 from javaobj.v2.transformers import JavaList
 from javaobj.v2.transformers import JavaMap
-from operaton.tasks.types import VariableValueDto
 from operaton.tasks.types import VariableValueType
 from pathlib import Path
 from purjo.utils import data_uri
@@ -31,11 +30,8 @@ from purjo.utils import operaton_value_from_py
 from purjo.utils import py_from_javaobj
 from purjo.utils import ValueInfo
 from typing import Any
-from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
-from unittest.mock import Mock
 from unittest.mock import patch
-import asyncio
 import base64
 import datetime
 import json
@@ -494,7 +490,7 @@ class TestInlineScreenshots:
         # Create HTML with image reference
         html_file = temp_dir / "report.html"
         html_content = (
-            f'<html><body><img src="screenshot.png" width="800px"></body></html>'
+            '<html><body><img src="screenshot.png" width="800px"></body></html>'
         )
         html_file.write_text(html_content)
 
@@ -626,3 +622,29 @@ class TestOperatonValueFromPyEdgeCases:
             assert result.type == VariableValueType.String
         finally:
             outside_file.unlink()
+
+
+class TestOperatonFromPyDatetimeStrings:
+    """Tests for string values that are recognised as datetimes.
+
+    A plain string is emitted as String, but an ISO-8601 string is promoted
+    to the BPMN Date type so the engine stores it as a date.
+
+    Related: US-015
+    """
+
+    def test_iso_string_is_converted_to_date(self) -> None:
+        """Test that an ISO-8601 string becomes a Date variable."""
+        result = operaton_from_py({"when": "2026-09-04T12:30:00+00:00"})
+
+        assert result["when"].type == VariableValueType.Date
+        value = result["when"].value
+        assert isinstance(value, str)
+        assert value.startswith("2026-09-04T12:30:00")
+
+    def test_non_iso_string_stays_a_string(self) -> None:
+        """Test that an ordinary string is not promoted to Date."""
+        result = operaton_from_py({"when": "not a date"})
+
+        assert result["when"].type == VariableValueType.String
+        assert result["when"].value == "not a date"

@@ -134,9 +134,6 @@ def is_python_fqfn(value: str) -> bool:
     # Check for double dots
     if ".." in value:
         return False
-    # Check for leading or trailing dots (redundant, caught by regex above)
-    if value.startswith(".") or value.endswith("."):  # pragma: no cover
-        return False  # pragma: no cover
     return True
 
 
@@ -536,30 +533,24 @@ def create_task(
                 )
 
                 # Preserve variable types from original task
-                for name_, variable in (
-                    task.variables or {}
-                ).items():  # pragma: no cover
-                    if (
-                        name_ in task_variables and task_variables[name_].value is None
-                    ):  # pragma: no cover
-                        task_variables[name_].type = variable.type  # pragma: no cover
-                    if name_ in process_variables:  # pragma: no cover
-                        process_variables[name_].type = (
-                            variable.type
-                        )  # pragma: no cover
+                for name_, variable in (task.variables or {}).items():
+                    if name_ in task_variables and task_variables[name_].value is None:
+                        task_variables[name_].type = variable.type
+                    if name_ in process_variables:
+                        process_variables[name_].type = variable.type
 
                 # Attach output files
                 log_html_path = working_dir / "log.html"
-                if log_html_path.exists():  # pragma: no cover
+                if log_html_path.exists():
                     task_variables["log.html"] = build_file_attachment(
                         log_html_path, "log.html", "text/html"
-                    )  # pragma: no cover
+                    )
 
                 output_xml_path = working_dir / "output.xml"
-                if output_xml_path.exists():  # pragma: no cover
+                if output_xml_path.exists():
                     task_variables["output.xml"] = build_file_attachment(
                         output_xml_path, "output.xml", "text/xml"
-                    )  # pragma: no cover
+                    )
 
                 # Detect if failure was caused by explicit Fail keyword
                 explicit_fail = (
@@ -578,7 +569,7 @@ def create_task(
                         output_xml_path,
                         on_fail,
                     )
-                else:  # pragma: no cover
+                else:
                     return await handle_failure_result(
                         task,
                         on_fail,

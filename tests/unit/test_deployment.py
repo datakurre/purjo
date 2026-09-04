@@ -11,7 +11,6 @@ Related ADRs:
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
-from unittest.mock import MagicMock
 from unittest.mock import patch
 import aiohttp
 import json

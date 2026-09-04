@@ -26,7 +26,6 @@ Related ADRs:
 """
 
 from pathlib import Path
-from purjo.config import OnFail
 from purjo.main import cli_init
 from purjo.main import cli_run
 from purjo.main import cli_serve
@@ -34,13 +33,9 @@ from purjo.main import operaton_deploy
 from purjo.main import operaton_start
 from typing import Any
 from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
 from unittest.mock import Mock
 from unittest.mock import patch
 from zipfile import ZipFile
-import asyncio
-import json
-import os
 import pytest
 import typer
 

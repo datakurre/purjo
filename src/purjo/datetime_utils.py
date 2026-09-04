@@ -27,4 +27,6 @@ def dt_to_operaton(dt: datetime.datetime) -> str:
         return f"{date_str}+0000"
     if date_str[-3] == ":":
         return f"{date_str[:-3]}{date_str[-2:]}"
+    # Unreachable via datetime.isoformat(), which always emits a colon in the
+    # offset; kept in case a non-stdlib tzinfo formats an offset differently.
     return date_str  # pragma: no cover

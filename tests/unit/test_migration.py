@@ -7,14 +7,9 @@ Related ADRs:
 - ADR-003: Architecture overview
 """
 
-from datetime import datetime
 from operaton.tasks.types import ProcessDefinitionDto
-from operaton.tasks.types import ProcessInstanceDto
 from typing import Any
-from typing import Dict
-from typing import List
 from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
 from unittest.mock import patch
 import pytest
 

@@ -40,7 +40,7 @@ env:  ## Build and link the Python virtual environment
 check:  ## Run static analysis checks
 	black --check src tests
 	isort -c src tests
-	flake8 src
+	flake8 src tests
 	MYPYPATH=$(PWD)/stubs mypy --show-error-codes --strict src tests
 	python scripts/check-links.py
 

@@ -75,10 +75,10 @@ def _get_output_variables(
         else:
             with ZipFile(robot, "r") as fp:
                 fp.extractall(robot_dir)
+                # Only present in packages wrapped with `pur wrap --offline`,
+                # which the unit tests do not build.
                 if (Path(robot_dir) / ".cache").is_dir():  # pragma: no cover
-                    shutil.move(
-                        Path(robot_dir) / ".cache", working_dir
-                    )  # pragma: no cover
+                    shutil.move(Path(robot_dir) / ".cache", working_dir)
         (Path(working_dir) / "variables.json").write_text(
             json.dumps(variables, default=json_serializer)
         )
@@ -94,6 +94,8 @@ def _get_output_variables(
             )
         )
         log_html_path = Path(working_dir) / "log.html"
+        # log.html only exists after a real nested Robot run; these tests drive
+        # the library with a mocked run, so the reporting branches never fire.
         if log_html_path.exists():  # pragma: no cover
             log_html_data = base64.b64encode(log_html_path.read_bytes()).decode("utf-8")
             tmpdir_name = Path(working_dir).name
