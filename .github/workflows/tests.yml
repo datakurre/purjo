@@ -50,8 +50,23 @@ jobs:
       - name: Run e2e tests against live services
         timeout-minutes: 15
         run: |
-          devenv shell -- devenv processes up -d
-          devenv shell -- make test-e2e-ci
+          # `devenv processes up` in the foreground, backgrounded here, rather
+          # than `up -d`: the daemon that -d relies on never signals ready on
+          # this runner -- "Daemon failed to start within 120s" -- even though
+          # every service does come up (they are all in the job's orphan list
+          # at cleanup). That daemon is the most likely reason `devenv test`
+          # hung too: it waits on the same thing, just without the 120s bound.
+          devenv shell -- devenv processes up > processes.log 2>&1 &
+          processes_pid=$!
+          status=0
+          devenv shell -- make test-e2e-ci || status=$?
+          kill "$processes_pid" 2>/dev/null || true
+          if [ "$status" -ne 0 ]; then
+            echo "::group::devenv processes output"
+            tail -n 200 processes.log || true
+            echo "::endgroup::"
+          fi
+          exit "$status"
 
       - name: Report coverage in job summary
         if: always()
