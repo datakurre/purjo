@@ -1028,6 +1028,67 @@ class TestIsExplicitRobotFail:
 
         assert is_explicit_robot_fail(xml_file) is True
 
+    def test_not_run_fail_branch_is_not_explicit(self, temp_dir: Path) -> None:
+        """A `Fail` in a skipped IF branch must not mask a technical failure.
+
+        Robot writes non-executed keywords into output.xml as
+        `<kw name="Fail" owner="BuiltIn">` with `status="NOT RUN"`. Matching
+        `status="FAIL"` across the whole document skips past such an element
+        and hits the enclosing test's own status, which would report an
+        unrelated assertion failure to the engine as a catchable BPMN error
+        instead of a task failure. This is the exact shape Robot 7 emits for
+        `src/purjo/data/hello.robot` when the die roll takes the other branch.
+        """
+        from purjo.runner import is_explicit_robot_fail
+
+        xml_file = temp_dir / "output.xml"
+        xml_file.write_text(
+            '<robot><suite id="s1" name="Hello">\n'
+            '<test id="s1-t1" name="My Test in Robot">\n'
+            "<if>\n"
+            '<branch type="IF" condition="${dice} &lt; 3">\n'
+            '<kw name="Fail" owner="BuiltIn">\n'
+            "<arg>never executed</arg>\n"
+            '<status status="NOT RUN" start="2026-01-01T00:00:00" elapsed="0.0"/>\n'
+            "</kw>\n"
+            '<status status="NOT RUN" start="2026-01-01T00:00:00" elapsed="0.0"/>\n'
+            "</branch>\n"
+            '<status status="PASS" start="2026-01-01T00:00:00" elapsed="0.0"/>\n'
+            "</if>\n"
+            '<kw name="Should Be Equal" owner="BuiltIn">\n'
+            '<status status="FAIL" start="2026-01-01T00:00:00" elapsed="0.0">'
+            "1 != 2</status>\n"
+            "</kw>\n"
+            '<status status="FAIL" start="2026-01-01T00:00:00" elapsed="0.0">'
+            "1 != 2</status>\n"
+            "</test>\n"
+            '<status status="FAIL" start="2026-01-01T00:00:00" elapsed="0.0"/>\n'
+            "</suite></robot>"
+        )
+
+        assert is_explicit_robot_fail(xml_file) is False
+
+    def test_executed_fail_after_not_run_fail_is_explicit(self, temp_dir: Path) -> None:
+        """A NOT RUN `Fail` must not hide a genuinely executed one elsewhere."""
+        from purjo.runner import is_explicit_robot_fail
+
+        xml_file = temp_dir / "output.xml"
+        xml_file.write_text(
+            '<robot><test id="s1-t1" name="Test">\n'
+            '<kw name="Fail" owner="BuiltIn">\n'
+            '<status status="NOT RUN" start="2026-01-01T00:00:00" elapsed="0.0"/>\n'
+            "</kw>\n"
+            '<kw name="Fail" owner="BuiltIn">\n'
+            '<msg time="2026-01-01T00:00:00" level="FAIL">Bad luck</msg>\n'
+            '<status status="FAIL" start="2026-01-01T00:00:00" elapsed="0.0">'
+            "Bad luck</status>\n"
+            "</kw>\n"
+            '<status status="FAIL">Bad luck</status>\n'
+            "</test></robot>"
+        )
+
+        assert is_explicit_robot_fail(xml_file) is True
+
 
 @pytest.fixture
 def temp_dir() -> Any:

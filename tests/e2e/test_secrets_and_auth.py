@@ -15,7 +15,7 @@ realm (`fixture/keycloak/operaton-realm.json`) and
 
 Both scenarios below deploy the same deterministic
 `fixtures/secrets_example` package (a single service task, no dice-rolled
-failure branch like `examples/hello`), so the assertions aren't a coin flip.
+failure branch like `hello_example`), so the assertions aren't a coin flip.
 
 Related User Stories:
 - US-003: Provide authorization

@@ -97,13 +97,30 @@ def fail_reason(path: Path) -> str:
     return reason
 
 
+# A single <kw name="Fail" owner="BuiltIn"> element and its body. `Fail` is a
+# leaf built-in keyword, so its body holds only <arg>/<msg>/<status> children
+# and never a nested <kw>, which makes the lazy match up to </kw> exact.
+FAIL_KEYWORD_RE = re.compile(
+    r'<kw\s+name="Fail"\s+owner="BuiltIn"[^>]*(?<!/)>(?P<body>.*?)</kw>', re.S
+)
+FAIL_STATUS_RE = re.compile(r'<status\s[^>]*status="FAIL"')
+
+
 def is_explicit_robot_fail(path: Path) -> bool:
     """Check if the failure was caused by Robot Framework's Fail keyword.
 
     When a robot task uses the built-in ``Fail`` keyword, the output.xml will
-    contain a ``<kw name="Fail" owner="BuiltIn">`` element with
-    ``status="FAIL"``.  This function detects that pattern so the caller can
-    treat an explicit Fail as a BPMN error rather than a technical failure.
+    contain a ``<kw name="Fail" owner="BuiltIn">`` element whose own
+    ``<status>`` child is ``status="FAIL"``.  This function detects that
+    pattern so the caller can treat an explicit Fail as a BPMN error rather
+    than a technical failure.
+
+    The status check is scoped to the body of each ``Fail`` element on
+    purpose.  Robot also writes *non-executed* branches into output.xml, as
+    ``<kw name="Fail" owner="BuiltIn">`` with ``status="NOT RUN"``; searching
+    the whole document would skip past such an element and match the enclosing
+    test's own ``status="FAIL"``, reporting an unrelated technical failure as
+    an explicit Fail.
 
     Args:
         path: Path to the output.xml file.
@@ -112,13 +129,9 @@ def is_explicit_robot_fail(path: Path) -> bool:
         True if the failure originated from an explicit Fail keyword.
     """
     xml = path.read_text()
-    # Match <kw name="Fail" owner="BuiltIn"> ... status="FAIL"
-    return bool(
-        re.search(
-            r'<kw\s+name="Fail"\s+owner="BuiltIn"[^>]*>.*?status="FAIL"',
-            xml,
-            re.S,
-        )
+    return any(
+        FAIL_STATUS_RE.search(match.group("body"))
+        for match in FAIL_KEYWORD_RE.finditer(xml)
     )
 
 

@@ -11,6 +11,7 @@ from pathlib import Path
 from purjo.secrets import FileProviderConfig
 from purjo.secrets import FileSecretsAdapter
 from purjo.secrets import get_secrets_provider
+from purjo.secrets import rebase_provider_config
 from purjo.secrets import SecretsConfigurationError
 from purjo.secrets import SecretsProvider
 from purjo.secrets import VaultProviderConfig
@@ -200,6 +201,77 @@ class TestGetSecretsProvider:
             SecretsConfigurationError, match="Profile 'missing' not found"
         ):
             get_secrets_provider(config=config, profile="missing")
+
+
+class TestRelativeSecretsPaths:
+    """Tests for resolving a relative `file` provider path.
+
+    A package declares `path = "secrets.json"` next to its own
+    pyproject.toml, but `pur serve <package>` may run from anywhere, so the
+    path must be resolved against the package rather than the process
+    working directory.
+
+    Related: US-004
+    """
+
+    def test_relative_path_is_resolved_against_base_path(
+        self, sample_secrets_file: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Test that a bare filename resolves next to the package."""
+        monkeypatch.chdir(tmp_path)
+        config = {
+            "default": {"provider": "file", "path": sample_secrets_file.name},
+        }
+
+        provider = get_secrets_provider(
+            config=config, base_path=sample_secrets_file.parent
+        )
+
+        assert provider is not None
+        assert provider.read()["username"] == "testuser"
+
+    def test_relative_path_is_resolved_for_a_named_profile(
+        self, sample_secrets_file: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Test that the rebase also applies when picking a named profile."""
+        monkeypatch.chdir(tmp_path)
+        config = {
+            "default": {"provider": "file", "path": sample_secrets_file.name},
+            "production": {"provider": "file", "path": sample_secrets_file.name},
+        }
+
+        provider = get_secrets_provider(
+            config=config,
+            profile="production",
+            base_path=sample_secrets_file.parent,
+        )
+
+        assert provider is not None
+        assert provider.read()["username"] == "testuser"
+
+    def test_absolute_path_is_left_alone(self, sample_secrets_file: Path) -> None:
+        """Test that an absolute configured path ignores the base path."""
+        config = {"provider": "file", "path": str(sample_secrets_file)}
+
+        assert rebase_provider_config(config, Path("/nonexistent")) == config
+
+    def test_config_without_base_path_is_unchanged(self) -> None:
+        """Test that no base path means no rebasing."""
+        config = {"provider": "file", "path": "secrets.json"}
+
+        assert rebase_provider_config(config, None) == config
+
+    def test_non_file_provider_is_unchanged(self) -> None:
+        """Test that a Vault path is not a filesystem path and is untouched."""
+        config = {"provider": "vault", "path": "myapp/credentials"}
+
+        assert rebase_provider_config(config, Path("/somewhere")) == config
+
+    def test_config_without_a_string_path_is_unchanged(self) -> None:
+        """Test that a malformed entry is passed through for pydantic to reject."""
+        config: dict[str, object] = {"provider": "file"}
+
+        assert rebase_provider_config(config, Path("/somewhere")) == config
 
 
 class TestSecretsProvider:

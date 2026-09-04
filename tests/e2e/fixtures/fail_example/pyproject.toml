@@ -1,0 +1,13 @@
+[project]
+name = "e2e-fail-example"
+version = "0.1.0"
+description = "e2e fixture: deterministic BPMN error path via an explicit Fail"
+requires-python = ">=3.12"
+dependencies = [
+    "robotframework>=7.4.1",
+]
+
+[tool.purjo.topics."My Topic in BPMN"]
+name = "My Test in Robot"
+on-fail = "FAIL"
+process-variables = true

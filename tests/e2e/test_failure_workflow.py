@@ -1,8 +1,8 @@
-"""End-to-end failure-path test using the `examples/fail-example` package.
+"""End-to-end failure-path test using the `fail_example` fixture package.
 
-`examples/fail-example/hello.robot` fails unconditionally (a plain `Fail`
-before anything else runs), so unlike `examples/hello` it deterministically
-exercises the BPMN error boundary event. This proves Invariant 2 ("Task
+Its `hello.robot` fails unconditionally (a plain `Fail` before anything else
+runs), so unlike `hello_example` it deterministically exercises the BPMN
+error boundary event. This proves Invariant 2 ("Task
 results must ALWAYS be reported to the BPM engine",
 `tests/test_invariants.py::TestInvariant2_TaskResultsReporting`) against a
 live engine, not just in the mocked unit suite.
@@ -21,8 +21,7 @@ from pathlib import Path
 from typing import Any
 import aiohttp
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-FAIL_EXAMPLE_DIR = REPO_ROOT / "examples" / "fail-example"
+FAIL_EXAMPLE_DIR = Path(__file__).parent / "fixtures" / "fail_example"
 FAIL_EXAMPLE_BPMN = FAIL_EXAMPLE_DIR / "hello.bpmn"
 
 TEST_FAILED_ACTIVITY_ID = "Event_0p6xzhn"

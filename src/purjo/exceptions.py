@@ -11,11 +11,16 @@ class PurjoError(Exception):
     pass
 
 
-class EnvironmentError(PurjoError):
+class PurjoEnvironmentError(PurjoError):
     """Exception raised for environment-related errors.
 
     This includes issues with Python environment setup, missing executables,
     or invalid environment configurations.
+
+    Deliberately *not* named ``EnvironmentError``: that shadows the builtin
+    alias of ``OSError``, so ``from purjo.exceptions import EnvironmentError``
+    would silently stop ``except EnvironmentError:`` from catching real
+    ``FileNotFoundError`` / ``PermissionError``.
     """
 
     pass

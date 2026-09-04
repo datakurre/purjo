@@ -132,15 +132,42 @@ def create_file_provider(file_path: Path) -> SecretsProvider:
     )
 
 
+def rebase_provider_config(
+    config: Dict[str, Any],
+    base_path: Optional[Path],
+) -> Dict[str, Any]:
+    """Resolve a `file` provider's relative path against the robot package.
+
+    A package declares its secrets file in its own `pyproject.toml`, next to
+    itself, but `pur serve <package>` may be run from any directory. Without
+    this the relative path would be resolved against the process working
+    directory and `FileProviderConfig.path: FilePath` would reject it.
+
+    An absolute configured path is left untouched (`Path.__truediv__` already
+    discards `base_path` for one).
+    """
+    path = config.get("path")
+    if (
+        base_path is None
+        or config.get("provider") != "file"
+        or not isinstance(path, str)
+    ):
+        return config
+    return {**config, "path": str(base_path / path)}
+
+
 def resolve_profile(
     config: Dict[str, Any],
     profile: Optional[str],
+    base_path: Optional[Path] = None,
 ) -> SecretsProvider:
     """Resolve the profile to use from the config."""
     # If only one config entry, return it
     if len(config) == 1:
         for name in config:
-            return SecretsProvider(**dict(config=config[name]))
+            return SecretsProvider.model_validate(
+                {"config": rebase_provider_config(config[name], base_path)}
+            )
 
     # Use default profile if no profile specified
     if not profile:
@@ -154,14 +181,25 @@ def resolve_profile(
         )
 
     # Return the specified profile
-    return SecretsProvider(**dict(config=config[profile]))
+    return SecretsProvider.model_validate(
+        {"config": rebase_provider_config(config[profile], base_path)}
+    )
 
 
 def get_secrets_provider(
     config: Optional[Dict[str, Any]] = None,
     profile: Optional[str] = None,
+    base_path: Optional[Path] = None,
 ) -> Optional[SecretsProvider]:
-    """Get secrets provider based on the config and profile."""
+    """Get secrets provider based on the config and profile.
+
+    Args:
+        config: The `[tool.purjo.secrets]` table from the package's
+            pyproject.toml, if any.
+        profile: A profile name, or a path to a secrets file to use directly.
+        base_path: The robot package directory, used to resolve a relative
+            `file` provider path declared in `config`.
+    """
     # If profile is a file path, use it directly
     if profile and Path(profile).is_file():
         return create_file_provider(Path(profile))
@@ -171,4 +209,4 @@ def get_secrets_provider(
         return None
 
     # Resolve and return the profile
-    return resolve_profile(config, profile)
+    return resolve_profile(config, profile, base_path)

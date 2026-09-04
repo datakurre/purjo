@@ -1,8 +1,8 @@
-"""End-to-end happy-path test using the `examples/hello` package.
+"""End-to-end happy-path test using the `hello_example` fixture package.
 
 Automates the "End-to-end testing" checklist from
-docs/development_environment.md: deploy `examples/hello/hello.bpmn`, start
-an instance, run `pur serve` against `examples/hello`, and verify through the
+docs/development_environment.md: deploy the fixture's `hello.bpmn`, start an
+instance, run `pur serve` against the package, and verify through the
 engine's history REST API that the instance reached the "Test passed" end
 event with the expected output variable.
 
@@ -21,8 +21,7 @@ from typing import Any
 import aiohttp
 import asyncio
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-HELLO_DIR = REPO_ROOT / "examples" / "hello"
+HELLO_DIR = Path(__file__).parent / "fixtures" / "hello_example"
 HELLO_BPMN = HELLO_DIR / "hello.bpmn"
 
 TEST_PASSED_ACTIVITY_ID = "Event_07zpz98"
@@ -30,7 +29,7 @@ TEST_PASSED_ACTIVITY_ID = "Event_07zpz98"
 # hello.robot rolls a die and takes the "Random failure" boundary-error path
 # on a 1 or 2 (about a third of the time). Starting several instances and
 # requiring at least one to reach "Test passed" keeps the assertion
-# deterministic without modifying the example package itself.
+# deterministic without modifying the fixture package itself.
 ATTEMPTS = 6
 
 

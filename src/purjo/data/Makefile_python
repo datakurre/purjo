@@ -17,7 +17,7 @@ dist: ## Build distribution package
 	pur wrap
 
 deploy: ## Deploy files (BPMN, DMN, forms) to engine
-	pur bpm deploy $(DEPLOY_FILES)
+	pur operaton deploy $(DEPLOY_FILES)
 
 serve: deploy ## Start external task worker
 	pur serve .

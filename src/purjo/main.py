@@ -31,7 +31,7 @@ from purjo.config import OnFail
 from purjo.deployment import build_cockpit_url
 from purjo.deployment import build_deployment_form
 from purjo.deployment import parse_variables_input
-from purjo.exceptions import EnvironmentError as PurjoEnvironmentError
+from purjo.exceptions import PurjoEnvironmentError
 from purjo.file_utils import get_wrap_pathspec
 from purjo.migration import migrate as migrate_all
 from purjo.runner import create_task
@@ -171,11 +171,16 @@ async def deploy_and_start(
         except (TypeError, ValidationError):
             print(json.dumps(await response.json(), indent=2))
             return
+        # Parsed once, outside the loop: `--variables -` reads stdin, which is
+        # already at EOF by the second definition.
+        variables_data = parse_variables_input(variables)
+        # Popped once too, so every definition still sees the explicit
+        # businessKey instead of only the first one.
+        business_key_input = variables_data.pop("businessKey", None)
         for definition in definitions:
             if migrate:
                 await migrate_all(definition, settings.LOG_LEVEL == "DEBUG")
-            variables_data = parse_variables_input(variables)
-            business_key = variables_data.pop("businessKey", None) or f"{uuid.uuid4()}"
+            business_key = business_key_input or f"{uuid.uuid4()}"
             response = await request_with_auth_retry(
                 session,
                 "POST",
@@ -257,12 +262,19 @@ def register_topics(
         if robot.is_dir():
             robot = robot.resolve()
             robot_toml = tomllib.loads((robot / "pyproject.toml").read_text())
+            # A directory package declares its secrets file relative to itself.
+            secrets_base_path = robot
         else:
             with ZipFile(robot, "r") as fp:
                 robot_toml = tomllib.loads(fp.read("pyproject.toml").decode("utf-8"))
+            # A zipped package cannot carry its own secrets file, so a relative
+            # path there refers to the directory the archive sits in.
+            secrets_base_path = robot.resolve().parent
         purjo_toml = (robot_toml.get("tool") or {}).get("purjo") or {}
         secrets_provider = get_secrets_provider(
-            purjo_toml.get("secrets"), profile=secrets
+            purjo_toml.get("secrets"),
+            profile=secrets,
+            base_path=secrets_base_path,
         )
         for topic, config in (purjo_toml.get("topics") or {}).items():
             task_config = Task(**config)
@@ -283,8 +295,13 @@ def register_topics(
 
 
 def start_worker() -> None:
-    """Start the external task worker event loop."""
-    asyncio.get_event_loop().run_until_complete(external_task_worker(handlers=handlers))
+    """Start the external task worker event loop.
+
+    Uses `asyncio.run` rather than `get_event_loop().run_until_complete`:
+    since Python 3.14 there is no implicit event loop in the main thread, so
+    `get_event_loop()` raises RuntimeError instead of creating one.
+    """
+    asyncio.run(external_task_worker(handlers=handlers))
 
 
 @cli.command(
@@ -488,7 +505,7 @@ process-variables = true
         if agents:
             (cwd_path / "AGENTS.md").write_text(render_agents_template(task))
     (cwd_path / ".wrapignore").write_text("AGENTS.md\n" if agents else "")
-    cli_wrap()
+    wrap_package(cwd_path)
     (cwd_path / "robot.zip").unlink(missing_ok=True)
     if (cwd_path / ".venv").exists():  # pragma: no cover
         shutil.rmtree(cwd_path / ".venv")  # pragma: no cover
@@ -544,9 +561,22 @@ def cli_wrap(
     log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "INFO",
 ) -> None:
     """Wrap the current directory into a robot.zip package."""
+    wrap_package(Path(os.getcwd()), offline=offline, log_level=log_level)
+
+
+def wrap_package(
+    cwd_path: Path,
+    offline: bool = False,
+    log_level: str = "INFO",
+) -> None:
+    """Wrap `cwd_path` into a `robot.zip` package inside it.
+
+    Split out of `cli_wrap` so callers that already know the target directory
+    (notably `initialize_robot_package`) can wrap it without depending on the
+    process working directory.
+    """
     logger.setLevel(log_level)
     set_log_level(log_level)
-    cwd_path = Path(os.getcwd())
     if offline:
         # Cache dependencies
         if cwd_path.joinpath(".venv").exists():  # pragma: no cover
@@ -574,7 +604,10 @@ def cli_wrap(
             cwd_path, negate=True, follow_links=False
         ):
             print(f"Adding {file_path}")
-            zipf.write(file_path)
+            # `match_tree_files` yields paths relative to `cwd_path`; read them
+            # from there rather than from the process working directory, but
+            # keep the relative name as the archive entry.
+            zipf.write(cwd_path / file_path, file_path)
         if offline:
             print("Adding .cache")
             for file_path_ in (cwd_path / ".cache").rglob("*"):

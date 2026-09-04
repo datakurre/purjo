@@ -254,7 +254,7 @@ class TestCliInit:
         with pytest.raises(FileNotFoundError, match="'uv' executable is not found"):
             cli_init(log_level="INFO")
 
-    @patch("purjo.main.cli_wrap")
+    @patch("purjo.main.wrap_package")
     @patch("purjo.main.run")
     @patch("purjo.main.shutil.which")
     def test_init_robot_template(
@@ -279,7 +279,7 @@ class TestCliInit:
 
         mock_run.side_effect = mock_run_async
 
-        # Mock cli_wrap to prevent it from failing on missing files
+        # Mock wrap_package to prevent it from failing on missing files
         def mock_wrap_impl(*args: Any, **kwargs: Any) -> None:
             # Create robot.zip so unlink doesn't fail
             (temp_dir / "robot.zip").write_text("mock")
@@ -291,10 +291,10 @@ class TestCliInit:
 
         # Verify key files were created
         assert (temp_dir / "pyproject.toml").exists()
-        # Verify cli_wrap was called
+        # Verify wrap_package was called
         assert mock_wrap.called
 
-    @patch("purjo.main.cli_wrap")
+    @patch("purjo.main.wrap_package")
     @patch("purjo.main.run")
     @patch("purjo.main.shutil.which")
     def test_init_python_template(
@@ -319,7 +319,7 @@ class TestCliInit:
 
         mock_run.side_effect = mock_run_async
 
-        # Mock cli_wrap to prevent it from failing on missing files
+        # Mock wrap_package to prevent it from failing on missing files
         def mock_wrap_impl(*args: Any, **kwargs: Any) -> None:
             # Create robot.zip so unlink doesn't fail
             (temp_dir / "robot.zip").write_text("mock")
@@ -331,7 +331,7 @@ class TestCliInit:
 
         # Verify key files were created
         assert (temp_dir / "pyproject.toml").exists()
-        # Verify cli_wrap was called
+        # Verify wrap_package was called
         assert mock_wrap.called
 
     def test_init_fails_if_pyproject_exists(
@@ -360,7 +360,7 @@ class TestCliInit:
         # The guard runs before any side effect
         assert not (temp_dir / "pyproject.toml").exists()
 
-    @patch("purjo.main.cli_wrap")
+    @patch("purjo.main.wrap_package")
     @patch("purjo.main.run")
     @patch("purjo.main.shutil.which")
     def test_init_task_template(
@@ -385,7 +385,7 @@ class TestCliInit:
 
         mock_run.side_effect = mock_run_async
 
-        # Mock cli_wrap to prevent it from failing on missing files
+        # Mock wrap_package to prevent it from failing on missing files
         def mock_wrap_impl(*args: Any, **kwargs: Any) -> None:
             # Create robot.zip so unlink doesn't fail
             (temp_dir / "robot.zip").write_text("mock")
@@ -397,7 +397,7 @@ class TestCliInit:
 
         # Verify key files were created
         assert (temp_dir / "pyproject.toml").exists()
-        # Verify cli_wrap was called
+        # Verify wrap_package was called
         assert mock_wrap.called
 
 
