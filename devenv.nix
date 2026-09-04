@@ -4,24 +4,14 @@ let
     {
       pkgs,
       config,
-      inputs,
-      lib,
+      devenv-module-operaton,
       ...
     }:
     {
-      package.image.path = "datakurre/purjo/purjo";
-      package.image.package = config.outputs.python.app;
-      package.image.callable = "pur";
-      package.image.extraPackages = [
-        pkgs.uv
-        pkgs.python311
-        pkgs.python312
-        pkgs.python313
-        pkgs.python314
-      ];
-
       services.operaton.port = 8080;
-      services.operaton.postgresql.enable = true;
+      services.operaton.package =
+        devenv-module-operaton.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      services.operaton.postgres.enable = true;
 
       services.vault = {
         enable = true;
@@ -58,53 +48,13 @@ let
         in
         "${configureScript}/bin/configure-vault-kv";
 
-      languages.python.interpreter = pkgs.python313;
-      languages.python.workspaceRoot = ./.;
-      languages.python.uv.package = lib.mkForce (
-        pkgs.buildFHSEnv {
-          name = "uv";
-          targetPkgs = pkgs: [
-            pkgs.python313
-            inputs.uv2nix.packages.${pkgs.system}.uv-bin
-          ];
-          runScript = "uv";
-        }
-      );
-      languages.python.pyprojectOverrides =
-        final: prev:
-        let
-          packagesToBuildWithSetuptools = [
-            "aiohttp"
-            "coverage"
-            "cmarkgfm"
-            "markupsafe"
-            "robotframework"
-          ];
-        in
-        {
-          "hatchling" = prev."hatchling".overrideAttrs (old: {
-            propagatedBuildInputs = [ final."editables" ];
-          });
-          "pydantic-core" = prev."pydantic-core".overrideAttrs (old: {
-            nativeBuildInputs =
-              old.nativeBuildInputs
-              ++ final.resolveBuildSystem ({
-                "maturin" = [ ];
-              });
-          });
-        }
-        // builtins.listToAttrs (
-          map (pkg: {
-            name = pkg;
-            value = prev.${pkg}.overrideAttrs (old: {
-              nativeBuildInputs =
-                old.nativeBuildInputs
-                ++ final.resolveBuildSystem ({
-                  "setuptools" = [ ];
-                });
-            });
-          }) packagesToBuildWithSetuptools
-        );
+      languages.python.enable = true;
+      languages.python.version = "3.13";
+      languages.python.uv.enable = true;
+      languages.python.uv.sync.enable = true;
+      languages.python.venv.enable = true;
+
+      outputs.python.app = config.languages.python.import ./. { };
 
       packages =
         let

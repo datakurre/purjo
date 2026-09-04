@@ -1,68 +1,44 @@
 {
   "nodes": {
-    "devenv": {
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
       "locked": {
-        "dir": "src/modules",
-        "lastModified": 1788521467,
-        "narHash": "sha256-P2Z1zy491+ZBD/+dVXbXfaLaaPCk9r15eJvLvo2QRCY=",
-        "owner": "cachix",
-        "repo": "devenv",
-        "rev": "681f861ece9d93754487b2f1b9a77fd7e4a7e47a",
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
         "type": "github"
       },
       "original": {
-        "dir": "src/modules",
-        "owner": "cachix",
-        "repo": "devenv",
+        "owner": "numtide",
+        "repo": "flake-utils",
         "type": "github"
       }
     },
-    "devenv-module-devcontainer": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1784659822,
-        "narHash": "sha256-sDjzZoqUjwVVzIGtUULqT8tN8eiOGtCOUXyF0bEe5Wg=",
-        "owner": "datakurre",
-        "repo": "devenv-module-devcontainer",
-        "rev": "d18345b498b06999e66a22f485cd2ae7bc973fc3",
-        "type": "github"
+    "flake-utils-vasara": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "pyproject-build-systems": "pyproject-build-systems",
+        "pyproject-nix": "pyproject-nix",
+        "uv2nix": "uv2nix"
       },
-      "original": {
-        "owner": "datakurre",
-        "repo": "devenv-module-devcontainer",
-        "type": "github"
-      }
-    },
-    "devenv-module-operaton": {
-      "flake": false,
       "locked": {
-        "lastModified": 1788353093,
-        "narHash": "sha256-w2aEOTqj9AC3BaDFZIjhi5dkj1QLYdq3pLJtivYBz5E=",
+        "lastModified": 1778502591,
+        "narHash": "sha256-p7piCJfaNMDaCDdK28cRezjVsvwV63Oh3uQFN9HyLWw=",
         "owner": "vasara-bpm",
-        "repo": "devenv-module-operaton",
-        "rev": "c8aa383ed8756ad4b9605409e2cf2056cc56a3c9",
+        "repo": "flake-utils-vasara",
+        "rev": "9e7392b850953a57071cdafb61bec20b52c9dbb6",
         "type": "gitlab"
       },
       "original": {
         "owner": "vasara-bpm",
-        "repo": "devenv-module-operaton",
+        "repo": "flake-utils-vasara",
         "type": "gitlab"
-      }
-    },
-    "flake-compat": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1767039857,
-        "narHash": "sha256-vNpUSpF5Nuw8xvDLj2KCwwksIbjua2LZCqhV1LNRDns=",
-        "owner": "edolstra",
-        "repo": "flake-compat",
-        "rev": "5edf11c44bc78a0d334f6334cdaf7d60d732daab",
-        "type": "github"
-      },
-      "original": {
-        "owner": "edolstra",
-        "repo": "flake-compat",
-        "type": "github"
       }
     },
     "nixpkgs": {
@@ -81,36 +57,18 @@
         "type": "github"
       }
     },
-    "nixpkgs-python": {
-      "inputs": {
-        "flake-compat": "flake-compat",
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1786471740,
-        "narHash": "sha256-9PEUIbLorWC455Oa/4dxuLh+PFPfENBOgEN52gw+Onk=",
-        "owner": "cachix",
-        "repo": "nixpkgs-python",
-        "rev": "4d2bd16c09baaa04f4045f16f6a5574654aaba16",
-        "type": "github"
-      },
-      "original": {
-        "owner": "cachix",
-        "repo": "nixpkgs-python",
-        "type": "github"
-      }
-    },
     "pyproject-build-systems": {
       "inputs": {
         "nixpkgs": [
+          "flake-utils-vasara",
           "nixpkgs"
         ],
         "pyproject-nix": [
+          "flake-utils-vasara",
           "pyproject-nix"
         ],
         "uv2nix": [
+          "flake-utils-vasara",
           "uv2nix"
         ]
       },
@@ -131,6 +89,7 @@
     "pyproject-nix": {
       "inputs": {
         "nixpkgs": [
+          "flake-utils-vasara",
           "nixpkgs"
         ]
       },
@@ -150,22 +109,34 @@
     },
     "root": {
       "inputs": {
-        "devenv": "devenv",
-        "devenv-module-devcontainer": "devenv-module-devcontainer",
-        "devenv-module-operaton": "devenv-module-operaton",
-        "nixpkgs": "nixpkgs",
-        "nixpkgs-python": "nixpkgs-python",
-        "pyproject-build-systems": "pyproject-build-systems",
-        "pyproject-nix": "pyproject-nix",
-        "uv2nix": "uv2nix"
+        "flake-utils": "flake-utils",
+        "flake-utils-vasara": "flake-utils-vasara",
+        "nixpkgs": "nixpkgs"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
       }
     },
     "uv2nix": {
       "inputs": {
         "nixpkgs": [
+          "flake-utils-vasara",
           "nixpkgs"
         ],
         "pyproject-nix": [
+          "flake-utils-vasara",
           "pyproject-nix"
         ]
       },

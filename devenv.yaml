@@ -2,24 +2,17 @@
 inputs:
   nixpkgs:
     url: github:nixos/nixpkgs/nixos-25.11
-  mvn2nix:
-    url: gitlab:vasara-bpm/mvn2nix
-  devenv-module-mvn2nix:
-    url: gitlab:vasara-bpm/devenv-module-mvn2nix
-    flake: false
   devenv-module-operaton:
     url: gitlab:vasara-bpm/devenv-module-operaton
-    flake: false
-  devenv-module-image:
-    url: gitlab:vasara-bpm/devenv-module-image
-    flake: false
-  devenv-module-uv2nix:
-    url: gitlab:vasara-bpm/devenv-module-uv2nix
-    flake: false
   devenv-module-devcontainer:
     url: github:datakurre/devenv-module-devcontainer
     flake: false
   # module dependencies, because devenv.yaml does not compose yet
+  nixpkgs-python:
+    url: github:cachix/nixpkgs-python
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
   pyproject-nix:
     url: github:pyproject-nix/pyproject.nix
     inputs:
@@ -43,9 +36,6 @@ inputs:
         follows: uv2nix
 allowUnfree: true
 imports:
-- devenv-module-mvn2nix
-- devenv-module-operaton
-- devenv-module-uv2nix
-- devenv-module-image
+- devenv-module-operaton/module.nix
 - devenv-module-devcontainer
 profile: shell
