@@ -71,7 +71,11 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+markers = [
+    "e2e: requires live devenv services (Operaton, Vault, Keycloak) -- run via `make test-e2e`, not the default suite",
+]
 addopts = [
+    "-m", "not e2e",
     "--cov=src/purjo",
     "--cov-report=term-missing",
     "--cov-report=html",
