@@ -21,4 +21,5 @@ Test Hello
     ...    My Task in Robot
     ...    BPMN:PROCESS=global
     ...    name=${name}
+    ...    threshold=${0}
     Should be equal    ${message}    Hello ${name}!
