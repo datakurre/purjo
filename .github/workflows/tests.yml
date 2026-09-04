@@ -50,6 +50,14 @@ jobs:
       - name: Run e2e tests against live services
         timeout-minutes: 15
         run: |
+          # The engine is OAuth2-protected (services.operaton.oauth2 in
+          # devenv.nix), and the client credentials live in .env.example,
+          # matching the committed Keycloak realm fixture. .env is gitignored
+          # and devenv's dotenv loader reads it on shell entry, so CI has to
+          # materialise it: without it every `pur run` gets 401 and the oauth2
+          # test errors on an unset OAUTH2_CLIENT_SECRET. Written here rather
+          # than at job level so it cannot perturb the unit-test steps above.
+          cp .env.example .env
           # `devenv processes up` in the foreground, backgrounded here, rather
           # than `up -d`: the daemon that -d relies on never signals ready on
           # this runner -- "Daemon failed to start within 120s" -- even though
