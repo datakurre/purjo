@@ -270,10 +270,12 @@ class TestCliInit:
         monkeypatch.chdir(temp_dir)
 
         # Mock the async run function
-        async def mock_run_async(*args: Any, **kwargs: Any) -> None:
+        async def mock_run_async(*args: Any, **kwargs: Any) -> Any:
             # Create a minimal pyproject.toml so init doesn't fail
             if not (temp_dir / "pyproject.toml").exists():
                 (temp_dir / "pyproject.toml").write_text("[project]\nname='test'\n")
+            # Match the real signature: (return_code, stdout, stderr)
+            return (0, b"", b"")
 
         mock_run.side_effect = mock_run_async
 
@@ -308,10 +310,12 @@ class TestCliInit:
         monkeypatch.chdir(temp_dir)
 
         # Mock the async run function
-        async def mock_run_async(*args: Any, **kwargs: Any) -> None:
+        async def mock_run_async(*args: Any, **kwargs: Any) -> Any:
             # Create a minimal pyproject.toml so init doesn't fail
             if not (temp_dir / "pyproject.toml").exists():
                 (temp_dir / "pyproject.toml").write_text("[project]\nname='test'\n")
+            # Match the real signature: (return_code, stdout, stderr)
+            return (0, b"", b"")
 
         mock_run.side_effect = mock_run_async
 
@@ -372,10 +376,12 @@ class TestCliInit:
         monkeypatch.chdir(temp_dir)
 
         # Mock the async run function
-        async def mock_run_async(*args: Any, **kwargs: Any) -> None:
+        async def mock_run_async(*args: Any, **kwargs: Any) -> Any:
             # Create a minimal pyproject.toml so init doesn't fail
             if not (temp_dir / "pyproject.toml").exists():
                 (temp_dir / "pyproject.toml").write_text("[project]\nname='test'\n")
+            # Match the real signature: (return_code, stdout, stderr)
+            return (0, b"", b"")
 
         mock_run.side_effect = mock_run_async
 
