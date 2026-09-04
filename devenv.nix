@@ -11,6 +11,7 @@ let
       services.operaton.port = 8080;
       services.operaton.package =
         devenv-module-operaton.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      services.operaton.enable = true;
       services.operaton.postgres.enable = true;
 
       services.vault = {
