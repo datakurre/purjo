@@ -20,6 +20,13 @@ When you run `devenv up`, the following services are started automatically:
 *   **Port:** `8080`
 *   **URL:** `http://localhost:8080/operaton`
 *   **Description:** A lightweight, open-source BPM engine. It serves as the orchestration core for your `purjo` tasks.
+*   **Authentication:** OAuth2-protected by default (via the Keycloak service below), rather than the plain HTTP Basic credential used in older setups. Requests need either a valid OAuth2 bearer token or `ENGINE_REST_AUTHORIZATION` -- never both (see [CLI Reference](cli_reference.md)).
+
+### Keycloak
+*   **Port:** `8081`
+*   **URL:** `http://localhost:8081`
+*   **Description:** An identity provider supplying OAuth2 client-credentials tokens for the Operaton engine above.
+*   **Configuration:** The environment imports the `operaton` realm from `fixture/keycloak/operaton-realm.json`, including the `operaton` service-account client that `pur` authenticates as.
 
 ### HashiCorp Vault
 *   **Port:** `8200`
@@ -48,13 +55,11 @@ When working with `purjo` in VS Code, the following extensions are recommended:
 
 ## Running tests
 
-The development environment includes a test suite that verifies the integration between `purjo` and the services.
-
 ```console
 $ devenv test
 ```
 
-This command waits for the services (Operaton, Vault) to be ready and then runs the project's test suite.
+This command waits for all services (Operaton, Vault, Keycloak) to be ready, then runs the unit test suite (`make test`) followed by the end-to-end suite against those live services (`make test-e2e`; see [End-to-end testing](#end-to-end-testing) below).
 
 ## Testing strategies
 
@@ -69,7 +74,21 @@ See [Testing Tasks](testing_tasks.md) for the full guide and examples.
 
 ### End-to-end testing
 
-For full end-to-end testing, you can:
+`purjo`'s own end-to-end suite (`tests/e2e/`) automates exactly this flow
+against live services -- deploy, start an instance, run `pur serve`, then
+verify the result through the engine's history REST API -- for both Basic
+and OAuth2 authentication. Run it with:
+
+```console
+$ devenv up            # start Operaton, Vault, Keycloak, Mockoon
+$ devenv shell -- make test-e2e
+```
+
+or run `devenv test` (used by CI) to run the full suite, including e2e,
+with the required services started and waited for automatically.
+
+You can also drive the same flow by hand, which is what `tests/e2e/`
+automates:
 1.  Start the services with `devenv up`.
 2.  Deploy your process using `pur run` or `pur operaton deploy`.
 3.  Start a process instance.
