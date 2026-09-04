@@ -125,3 +125,18 @@ class TestInitIntegration:
 
         assert not (temp_dir / "AGENTS.md").exists()
         assert (temp_dir / ".wrapignore").read_text() == ""
+
+    @pytest.mark.asyncio
+    async def test_init_rejects_agents_with_python(self, temp_dir: Path) -> None:
+        """Test that agents combined with python is rejected by the function.
+
+        The CLI raises typer.BadParameter for the same combination, but the
+        invariant belongs to initialize_robot_package itself, which is also
+        called directly.
+        """
+        with pytest.raises(ValueError, match="not supported with python"):
+            await initialize_robot_package(temp_dir, python=True, agents=True)
+
+        # Nothing was scaffolded before the guard tripped
+        assert not (temp_dir / "AGENTS.md").exists()
+        assert not (temp_dir / ".wrapignore").exists()

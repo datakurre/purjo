@@ -339,7 +339,14 @@ async def initialize_robot_package(
         python: If True, create a Python template instead of a Robot template.
         task: If True, create a Robot task template instead of a test template.
         agents: If True, also create an AGENTS.md guide for LLM coding agents.
+
+    Raises:
+        ValueError: If agents is combined with python, which is unsupported.
     """
+    if agents and python:
+        raise ValueError(
+            "agents is not supported with python, which is still experimental."
+        )
     await run(
         "uv",
         [
