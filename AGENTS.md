@@ -53,11 +53,18 @@ Before making changes, agents MUST:
 | File | Responsibility |
 |------|----------------|
 | `src/purjo/main.py` | CLI entry point (typer app) |
-| `src/purjo/runner.py` | Task execution logic |
-| `src/purjo/task.py` | External task worker integration |
+| `src/purjo/runner.py` | Task execution logic and worker registration |
 | `src/purjo/Purjo.py` | Robot Framework library |
 | `src/purjo/config.py` | Configuration loading |
 | `src/purjo/secrets.py` | Secrets management |
+| `src/purjo/serialization.py` | Variable (de)serialization to and from BPMN types |
+| `src/purjo/file_utils.py` | Package, archive and path helpers |
+| `src/purjo/deployment.py` | Resource deployment payloads |
+| `src/purjo/migration.py` | Process instance migration |
+| `src/purjo/models.py` | Shared data models |
+| `src/purjo/exceptions.py` | Exception hierarchy |
+| `src/purjo/datetime_utils.py` | Timezone-aware datetime conversion |
+| `src/purjo/data/` | Templates written by `pur init` |
 
 ---
 

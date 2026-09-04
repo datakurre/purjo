@@ -11,7 +11,7 @@ This guide explains how to start a new `purjo` project using the `pur init` comm
 
 ## Prerequisites
 
-`purjo` relies on [`uv`](https://github.com/astral-sh/uv) for Python package and environment management. Ensure `uv` is installed and available in your system PATH.
+`purjo` requires Python 3.10 or newer, and relies on [`uv`](https://github.com/astral-sh/uv) for Python package and environment management. Ensure `uv` is installed and available in your system PATH.
 
 ## Initializing a new project
 
