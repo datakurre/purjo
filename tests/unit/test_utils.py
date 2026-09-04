@@ -82,10 +82,27 @@ class TestGetWrapPathspec:
             ".venv/",
             ".wrapignore",
             ".cache",
+            "secrets.json",
         ]
 
         for exclude in default_excludes:
             assert spec.match_file(exclude)
+
+    def test_secrets_json_cannot_be_negated_back_in(self, temp_dir: Path) -> None:
+        """Test that .wrapignore cannot re-include the secrets file.
+
+        The default excludes are appended after the .wrapignore lines, and the
+        last matching gitignore pattern wins, so a negation cannot bring the
+        secrets file back into the package.
+        """
+        (temp_dir / ".wrapignore").write_text("!secrets.json\n")
+
+        spec = get_wrap_pathspec(temp_dir)
+
+        assert spec.match_file("secrets.json")
+        # Only the package root is anchored; a nested file of the same name is
+        # left alone.
+        assert not spec.match_file("sub/secrets.json")
 
 
 class TestFromIsoToDt:
@@ -628,23 +645,35 @@ class TestOperatonFromPyDatetimeStrings:
     """Tests for string values that are recognised as datetimes.
 
     A plain string is emitted as String, but an ISO-8601 string is promoted
-    to the BPMN Date type so the engine stores it as a date.
+    to the BPMN Date type so the engine stores it as a date -- and, like the
+    File coercion, only when a sandbox is given.
 
     Related: US-015
     """
 
-    def test_iso_string_is_converted_to_date(self) -> None:
+    def test_iso_string_is_converted_to_date(self, temp_dir: Path) -> None:
         """Test that an ISO-8601 string becomes a Date variable."""
-        result = operaton_from_py({"when": "2026-09-04T12:30:00+00:00"})
+        result = operaton_from_py({"when": "2026-09-04T12:30:00+00:00"}, [temp_dir])
 
         assert result["when"].type == VariableValueType.Date
         value = result["when"].value
         assert isinstance(value, str)
         assert value.startswith("2026-09-04T12:30:00")
 
-    def test_non_iso_string_stays_a_string(self) -> None:
+    def test_non_iso_string_stays_a_string(self, temp_dir: Path) -> None:
         """Test that an ordinary string is not promoted to Date."""
-        result = operaton_from_py({"when": "not a date"})
+        result = operaton_from_py({"when": "not a date"}, [temp_dir])
 
         assert result["when"].type == VariableValueType.String
         assert result["when"].value == "not a date"
+
+    def test_iso_string_without_sandbox_stays_a_string(self) -> None:
+        """Test that Date coercion is gated on a sandbox, as File is.
+
+        Callers that pass no sandbox opt out of string coercion entirely, so
+        an ISO-8601 string is returned verbatim as String.
+        """
+        result = operaton_from_py({"when": "2026-09-04T12:30:00+00:00"})
+
+        assert result["when"].type == VariableValueType.String
+        assert result["when"].value == "2026-09-04T12:30:00+00:00"

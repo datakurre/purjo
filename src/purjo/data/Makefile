@@ -21,7 +21,7 @@ test: ## Run Robot Framework tests
 	uv run --group dev robot $(ROBOT_TEST)
 
 deploy: ## Deploy files (BPMN, DMN, forms) to engine
-	pur bpm deploy $(DEPLOY_FILES)
+	pur operaton deploy $(DEPLOY_FILES)
 
 serve: deploy ## Start external task worker
 	pur serve .

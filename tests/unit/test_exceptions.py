@@ -10,7 +10,7 @@ Related ADRs:
 
 from purjo.exceptions import ConfigurationError
 from purjo.exceptions import DeploymentError
-from purjo.exceptions import EnvironmentError
+from purjo.exceptions import PurjoEnvironmentError
 from purjo.exceptions import PurjoError
 from purjo.exceptions import RobotExecutionError
 from purjo.exceptions import SerializationError
@@ -35,22 +35,22 @@ class TestPurjoError:
         assert str(error) == "Custom error message"
 
 
-class TestEnvironmentError:
-    """Tests for EnvironmentError exception."""
+class TestPurjoEnvironmentError:
+    """Tests for PurjoEnvironmentError exception."""
 
     def test_environment_error_inherits_from_purjo_error(self) -> None:
-        """Test that EnvironmentError inherits from PurjoError."""
-        assert issubclass(EnvironmentError, PurjoError)
+        """Test that PurjoEnvironmentError inherits from PurjoError."""
+        assert issubclass(PurjoEnvironmentError, PurjoError)
 
     def test_environment_error_can_be_raised(self) -> None:
-        """Test that EnvironmentError can be raised and caught."""
-        with pytest.raises(EnvironmentError):
-            raise EnvironmentError("Missing executable")
+        """Test that PurjoEnvironmentError can be raised and caught."""
+        with pytest.raises(PurjoEnvironmentError):
+            raise PurjoEnvironmentError("Missing executable")
 
     def test_environment_error_caught_as_purjo_error(self) -> None:
-        """Test that EnvironmentError can be caught as PurjoError."""
+        """Test that PurjoEnvironmentError can be caught as PurjoError."""
         with pytest.raises(PurjoError):
-            raise EnvironmentError("Missing executable")
+            raise PurjoEnvironmentError("Missing executable")
 
 
 class TestRobotExecutionError:
@@ -131,7 +131,7 @@ class TestExceptionHierarchy:
     def test_all_exceptions_are_purjo_errors(self) -> None:
         """Test that all custom exceptions inherit from PurjoError."""
         exceptions = [
-            EnvironmentError,
+            PurjoEnvironmentError,
             RobotExecutionError,
             DeploymentError,
             SerializationError,

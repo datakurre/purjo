@@ -13,6 +13,7 @@ Related ADRs:
 from pathlib import Path
 from purjo.main import cli_wrap
 from purjo.main import operaton_create
+from purjo.main import wrap_package
 from typing import Any
 from unittest.mock import Mock
 from unittest.mock import patch
@@ -113,6 +114,40 @@ name = "Test"
             # Cache should be included
             cache_files = [n for n in names if ".cache" in n]
             assert len(cache_files) > 0
+
+    def test_wrap_package_ignores_process_cwd(
+        self, temp_dir: Path, monkeypatch: Any
+    ) -> None:
+        """`wrap_package` wraps its argument, not the process working directory.
+
+        `initialize_robot_package` scaffolds into an explicit `cwd_path` that
+        need not be `os.getcwd()`; wrapping the latter would zip the wrong
+        tree and leave a stray robot.zip behind in it.
+        """
+        package_dir = temp_dir / "package"
+        package_dir.mkdir()
+        (package_dir / "pyproject.toml").write_text(
+            '[tool.purjo.topics.test]\nname = "Test"'
+        )
+        (package_dir / "test.robot").write_text(
+            "*** Test Cases ***\nTest\n    Log    Test"
+        )
+
+        elsewhere = temp_dir / "elsewhere"
+        elsewhere.mkdir()
+        (elsewhere / "stray.robot").write_text(
+            "*** Test Cases ***\nStray\n    Log    Stray"
+        )
+        monkeypatch.chdir(elsewhere)
+
+        wrap_package(package_dir)
+
+        assert (package_dir / "robot.zip").exists()
+        assert not (elsewhere / "robot.zip").exists()
+        with ZipFile(package_dir / "robot.zip", "r") as zf:
+            names = zf.namelist()
+        assert "test.robot" in names
+        assert "stray.robot" not in names
 
 
 class TestOperatonCreate:

@@ -158,11 +158,19 @@ def _try_resolve_file(
 
 
 def _convert_string(value: str, sandbox: Optional[List[Path]]) -> VariableValueDto:
-    """Convert a string value to VariableValueDto, checking for datetime and file."""
+    """Convert a string value to VariableValueDto, checking for datetime and file.
+
+    Both coercions are gated on a non-empty `sandbox`. In the pre-refactor
+    `operaton_value_from_py` the datetime parse lived *inside*
+    `for path in sandbox or []`, so a caller passing no sandbox always got a
+    plain String back; keeping that gate avoids silently turning a string like
+    "2024-01-01" into a Date for library consumers.
+    """
     # Try parsing as datetime first
-    datetime_result = _try_parse_datetime(value)
-    if datetime_result is not None:
-        return datetime_result
+    if sandbox:
+        datetime_result = _try_parse_datetime(value)
+        if datetime_result is not None:
+            return datetime_result
 
     # Try resolving as file
     file_result = _try_resolve_file(value, sandbox)
@@ -196,9 +204,13 @@ def operaton_value_from_py(
     - int -> Integer (32-bit) or Long (64-bit)
     - str -> Date (if ISO format), File (if path in sandbox), or String
 
+    Both string coercions require a non-empty `sandbox`; with no sandbox every
+    string is returned as String.
+
     Args:
         value: The Python value to convert.
-        sandbox: Optional list of paths to check for file resolution.
+        sandbox: Optional list of paths that enables (and bounds) the Date and
+            File coercions for string values.
 
     Returns:
         A VariableValueDto with the appropriate type and value.

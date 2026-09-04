@@ -19,8 +19,8 @@ class TestInitIntegration:
         if not shutil.which("uv"):
             pytest.skip("uv not available")
 
-        # Mock cli_wrap to prevent ZIP timestamp issues
-        with mock.patch("purjo.main.cli_wrap"):
+        # Mock wrap_package to prevent ZIP timestamp issues
+        with mock.patch("purjo.main.wrap_package"):
             # Initialize with task flag
             await initialize_robot_package(temp_dir, python=False, task=True)
 
@@ -50,8 +50,8 @@ class TestInitIntegration:
         if not shutil.which("uv"):
             pytest.skip("uv not available")
 
-        # Mock cli_wrap to prevent ZIP timestamp issues
-        with mock.patch("purjo.main.cli_wrap"):
+        # Mock wrap_package to prevent ZIP timestamp issues
+        with mock.patch("purjo.main.wrap_package"):
             # Initialize without task flag
             await initialize_robot_package(temp_dir, python=False, task=False)
 
@@ -81,7 +81,7 @@ class TestInitIntegration:
         if not shutil.which("uv"):
             pytest.skip("uv not available")
 
-        with mock.patch("purjo.main.cli_wrap"):
+        with mock.patch("purjo.main.wrap_package"):
             await initialize_robot_package(temp_dir, python=False, agents=True)
 
         agents_content = (temp_dir / "AGENTS.md").read_text()
@@ -100,7 +100,7 @@ class TestInitIntegration:
         if not shutil.which("uv"):
             pytest.skip("uv not available")
 
-        with mock.patch("purjo.main.cli_wrap"):
+        with mock.patch("purjo.main.wrap_package"):
             await initialize_robot_package(
                 temp_dir, python=False, task=True, agents=True
             )
@@ -120,7 +120,7 @@ class TestInitIntegration:
         if not shutil.which("uv"):
             pytest.skip("uv not available")
 
-        with mock.patch("purjo.main.cli_wrap"):
+        with mock.patch("purjo.main.wrap_package"):
             await initialize_robot_package(temp_dir, python=False)
 
         assert not (temp_dir / "AGENTS.md").exists()
@@ -149,7 +149,7 @@ class TestInitIntegration:
         explicit check a failed `uv init` surfaced much later as a
         FileNotFoundError on a pyproject.toml that was never written.
         """
-        from purjo.exceptions import EnvironmentError as PurjoEnvironmentError
+        from purjo.exceptions import PurjoEnvironmentError
 
         async def failing_run(*args: object, **kwargs: object) -> object:
             return (1, b"", b"network unreachable")
@@ -177,7 +177,7 @@ class TestInitIntegration:
         awkward = temp_dir / "2024.report_"
         awkward.mkdir()
 
-        with mock.patch("purjo.main.cli_wrap"):
+        with mock.patch("purjo.main.wrap_package"):
             await initialize_robot_package(awkward, python=False)
 
         assert (awkward / "pyproject.toml").exists()

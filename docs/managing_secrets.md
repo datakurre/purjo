@@ -21,7 +21,7 @@ provider = "file"
 path = "secrets.json"
 ```
 
-In this example, the `default` profile uses a file named `secrets.json` in the project root.
+In this example, the `default` profile uses a file named `secrets.json` in the project root. A relative path is resolved against the package directory, so `pur serve` finds it no matter which directory you run it from. (A zipped package is not extracted until a task runs, so a relative path in one is resolved against the working directory instead.)
 
 **`secrets.json` Example:**
 ```json
@@ -29,6 +29,8 @@ In this example, the `default` profile uses a file named `secrets.json` in the p
   "api_key": "my-secret-key"
 }
 ```
+
+`pur wrap` never packages a `secrets.json` from the project root, and `pur serve` does not copy it into the sandbox a task runs in — secrets reach tasks as variables, not as a file. Note that this covers the documented name in the project root only: a secrets file kept under another name, or in a subdirectory, is packaged like any other file.
 
 ### Vault provider
 
