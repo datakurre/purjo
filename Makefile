@@ -27,9 +27,6 @@ build-docs: ## Build the Sphinx documentation site
 watch-docs: ## Serve the Sphinx documentation site locally
 	sphinx-autobuild docs docs/_build/html
 
-env:  ## Build and link the Python virtual environment
-	ln -s $(shell $(DEVENV) $(DEVENV_OPTIONS) build outputs.python.virtualenv) env
-
 check:  ## Run static analysis checks
 	black --check src tests
 	isort -c src tests

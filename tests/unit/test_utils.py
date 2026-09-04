@@ -82,10 +82,27 @@ class TestGetWrapPathspec:
             ".venv/",
             ".wrapignore",
             ".cache",
+            "secrets.json",
         ]
 
         for exclude in default_excludes:
             assert spec.match_file(exclude)
+
+    def test_secrets_json_cannot_be_negated_back_in(self, temp_dir: Path) -> None:
+        """Test that .wrapignore cannot re-include the secrets file.
+
+        The default excludes are appended after the .wrapignore lines, and the
+        last matching gitignore pattern wins, so a negation cannot bring the
+        secrets file back into the package.
+        """
+        (temp_dir / ".wrapignore").write_text("!secrets.json\n")
+
+        spec = get_wrap_pathspec(temp_dir)
+
+        assert spec.match_file("secrets.json")
+        # Only the package root is anchored; a nested file of the same name is
+        # left alone.
+        assert not spec.match_file("sub/secrets.json")
 
 
 class TestFromIsoToDt:

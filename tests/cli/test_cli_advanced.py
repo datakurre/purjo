@@ -54,8 +54,7 @@ class TestCliServe:
         with pytest.raises(FileNotFoundError, match="'uv' executable is not found"):
             cli_serve(robots=[Path("/tmp/test.zip")], log_level="INFO")
 
-    @patch("purjo.main.asyncio.get_event_loop")
-    @patch("purjo.main.external_task_worker")
+    @patch("purjo.main.external_task_worker", new_callable=AsyncMock)
     @patch("purjo.main.task")
     @patch("purjo.main.shutil.which")
     def test_serve_with_directory_robot(
@@ -63,7 +62,6 @@ class TestCliServe:
         mock_which: Any,
         mock_task: Any,
         mock_worker: Any,
-        mock_loop: Any,
         temp_dir: Any,
     ) -> None:
         """Test cli_serve with a directory robot package."""
@@ -81,11 +79,6 @@ on-fail = "ERROR"
             "*** Test Cases ***\nTest\n    Log    Test"
         )
 
-        # Mock asyncio event loop
-        mock_event_loop = Mock()
-        mock_event_loop.run_until_complete = Mock()
-        mock_loop.return_value = mock_event_loop
-
         # Run cli_serve
         cli_serve(
             robots=[robot_dir],
@@ -96,8 +89,7 @@ on-fail = "ERROR"
         # Verify task was registered
         assert mock_task.called
 
-    @patch("purjo.main.asyncio.get_event_loop")
-    @patch("purjo.main.external_task_worker")
+    @patch("purjo.main.external_task_worker", new_callable=AsyncMock)
     @patch("purjo.main.task")
     @patch("purjo.main.shutil.which")
     def test_serve_with_zip_robot(
@@ -105,7 +97,6 @@ on-fail = "ERROR"
         mock_which: Any,
         mock_task: Any,
         mock_worker: Any,
-        mock_loop: Any,
         temp_dir: Any,
     ) -> None:
         """Test cli_serve with a zip robot package."""
@@ -123,11 +114,6 @@ name = "Test Task"
             )
             zf.writestr("test.robot", "*** Test Cases ***\nTest\n    Log    Test")
 
-        # Mock asyncio event loop
-        mock_event_loop = Mock()
-        mock_event_loop.run_until_complete = Mock()
-        mock_loop.return_value = mock_event_loop
-
         # Run cli_serve
         cli_serve(
             robots=[robot_zip],
@@ -138,8 +124,7 @@ name = "Test Task"
         # Verify task was registered
         assert mock_task.called
 
-    @patch("purjo.main.asyncio.get_event_loop")
-    @patch("purjo.main.external_task_worker")
+    @patch("purjo.main.external_task_worker", new_callable=AsyncMock)
     @patch("purjo.main.task")
     @patch("purjo.main.shutil.which")
     @patch("purjo.main.get_secrets_provider")
@@ -149,7 +134,6 @@ name = "Test Task"
         mock_which: Any,
         mock_task: Any,
         mock_worker: Any,
-        mock_loop: Any,
         temp_dir: Any,
     ) -> None:
         """Test cli_serve with secrets configuration."""
@@ -171,19 +155,13 @@ name = "Test Task"
             "*** Test Cases ***\nTest\n    Log    Test"
         )
 
-        # Mock asyncio event loop
-        mock_event_loop = Mock()
-        mock_event_loop.run_until_complete = Mock()
-        mock_loop.return_value = mock_event_loop
-
         # Run cli_serve
         cli_serve(robots=[robot_dir], secrets="test_profile", log_level="INFO")
 
         # Verify secrets provider was called with correct profile
         mock_secrets.assert_called()
 
-    @patch("purjo.main.asyncio.get_event_loop")
-    @patch("purjo.main.external_task_worker")
+    @patch("purjo.main.external_task_worker", new_callable=AsyncMock)
     @patch("purjo.main.task")
     @patch("purjo.main.shutil.which")
     def test_serve_settings_configuration(
@@ -191,7 +169,6 @@ name = "Test Task"
         mock_which: Any,
         mock_task: Any,
         mock_worker: Any,
-        mock_loop: Any,
         temp_dir: Any,
     ) -> None:
         """Test cli_serve configures settings correctly."""
@@ -206,11 +183,6 @@ name = "Test Task"
 [tool.purjo.topics.test_topic]
 name = "Test Task"
 """)
-
-        # Mock asyncio event loop
-        mock_event_loop = Mock()
-        mock_event_loop.run_until_complete = Mock()
-        mock_loop.return_value = mock_event_loop
 
         # Run cli_serve with custom settings
         base_url = "http://custom:9090/engine-rest"

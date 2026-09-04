@@ -258,6 +258,7 @@ def register_topics(
         on_fail: Default failure handling strategy.
         semaphore: Semaphore for limiting concurrent job execution.
     """
+    secrets_base_path: Optional[Path]
     for robot in robots:
         if robot.is_dir():
             robot = robot.resolve()
@@ -267,9 +268,11 @@ def register_topics(
         else:
             with ZipFile(robot, "r") as fp:
                 robot_toml = tomllib.loads(fp.read("pyproject.toml").decode("utf-8"))
-            # A zipped package cannot carry its own secrets file, so a relative
-            # path there refers to the directory the archive sits in.
-            secrets_base_path = robot.resolve().parent
+            # The archive is not extracted until a task runs, long after this
+            # validates the provider config, so there is no package root to
+            # resolve against here; leave the path relative to the working
+            # directory.
+            secrets_base_path = None
         purjo_toml = (robot_toml.get("tool") or {}).get("purjo") or {}
         secrets_provider = get_secrets_provider(
             purjo_toml.get("secrets"),

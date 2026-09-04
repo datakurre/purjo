@@ -33,6 +33,9 @@ DEFAULT_WRAP_EXCLUDES = [
     "/.venv/",
     "/.wrapignore",
     "/.cache",
+    # Never ship a local secrets file: the defaults are applied after the
+    # .wrapignore lines, so this cannot be negated back in.
+    "/secrets.json",
 ]
 
 
