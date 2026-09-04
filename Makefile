@@ -69,6 +69,9 @@ test-coverage: htmlcov  ## Generate HTML coverage reports
 test-pytest:  ## Run unit tests with pytest
 	pytest --cov=$(MODULE) tests
 
+test-e2e:  ## Run e2e tests against live devenv services (Operaton, Vault, Keycloak)
+	pytest -o addopts="" -m e2e tests/e2e
+
 watch: .env  ## Start the application in watch mode
 	$(APP) -- --reload
 

@@ -133,8 +133,10 @@ let
       enterTest = ''
         wait_for_port 8080 60
         wait_for_port 8200 60
+        wait_for_port 8081 60
         source ${config.env.DEVENV_STATE}/env_file
         make test
+        make test-e2e
       '';
 
       processes.mockoon.exec = "mockoon-cli start --data ./fixture/mockoon/data.json --port 3080 --hostname 0.0.0.0 --log-transaction";

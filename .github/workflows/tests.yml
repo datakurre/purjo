@@ -25,6 +25,9 @@ jobs:
       - name: Run tests with coverage
         run: devenv shell -- python -m pytest --cov-report=xml
 
+      - name: Run e2e tests against live services
+        run: devenv shell -- devenv test --no-tui
+
       - name: Report coverage in job summary
         if: always()
         run: |
