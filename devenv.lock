@@ -33,6 +33,22 @@
         "type": "github"
       }
     },
+    "devenv-module-devcontainer-nixpkgs": {
+      "locked": {
+        "lastModified": 1788316716,
+        "narHash": "sha256-bc7rSpXIdn9QWGNqfWcPZWOhEVF8NoeAZkWq0XWnf/k=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "devenv-module-operaton": {
       "inputs": {
         "flake-utils": "flake-utils",
@@ -216,6 +232,7 @@
       "inputs": {
         "devenv": "devenv",
         "devenv-module-devcontainer": "devenv-module-devcontainer",
+        "devenv-module-devcontainer-nixpkgs": "devenv-module-devcontainer-nixpkgs",
         "devenv-module-operaton": "devenv-module-operaton",
         "git-hooks": "git-hooks",
         "nixpkgs": "nixpkgs_3",

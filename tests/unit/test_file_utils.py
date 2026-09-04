@@ -20,6 +20,19 @@ from unittest.mock import patch
 import pytest
 
 
+async def _delegate_to_session(
+    http: Any, method: str, url: str, authorization: Any = None, **kwargs: Any
+) -> Any:
+    """Stand in for request_with_auth_retry, delegating to the mocked session.
+
+    operaton-tasks>=1.0b3 moved authorization from session construction to a
+    per-request middleware, so purjo now calls request_with_auth_retry
+    instead of session.get/post directly. This delegate bridges that to the
+    still-mocked session.get/post so tests need no other changes.
+    """
+    return await getattr(http, method.lower())(url, **kwargs)
+
+
 class TestFetch:
     """Tests for fetch function."""
 
@@ -44,7 +57,10 @@ class TestFetch:
         mock_response.raise_for_status = MagicMock()
         mock_response.read = AsyncMock(return_value=file_content)
 
-        with patch("purjo.file_utils.operaton_session") as mock_session:
+        with (
+            patch("purjo.file_utils.operaton_session") as mock_session,
+            patch("purjo.file_utils.request_with_auth_retry", new=_delegate_to_session),
+        ):
             session = AsyncMock()
             session.get = AsyncMock(return_value=mock_response)
             mock_session.return_value.__aenter__ = AsyncMock(return_value=session)
@@ -133,7 +149,10 @@ class TestPyFromOperaton:
         mock_response.raise_for_status = MagicMock()
         mock_response.read = AsyncMock(return_value=b"file content")
 
-        with patch("purjo.file_utils.operaton_session") as mock_session:
+        with (
+            patch("purjo.file_utils.operaton_session") as mock_session,
+            patch("purjo.file_utils.request_with_auth_retry", new=_delegate_to_session),
+        ):
             session = AsyncMock()
             session.get = AsyncMock(return_value=mock_response)
             mock_session.return_value.__aenter__ = AsyncMock(return_value=session)

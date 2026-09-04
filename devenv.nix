@@ -8,11 +8,28 @@ let
       ...
     }:
     {
-      services.operaton.port = 8080;
-      services.operaton.package =
-        devenv-module-operaton.packages.${pkgs.stdenv.hostPlatform.system}.default;
-      services.operaton.enable = true;
-      services.operaton.postgres.enable = true;
+      services.operaton = {
+        enable = true;
+        port = 8080;
+        forwardHeadersStrategy = "native";
+        package = devenv-module-operaton.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        deployment = ./fixture/operaton;
+        oauth2 = {
+          enable = true;
+          issuerUri = "http://localhost:8081/realms/operaton";
+        };
+        postgres.enable = true;
+      };
+
+      services.keycloak = {
+        enable = true;
+        settings.http-port = 8081;
+        realms.operaton = {
+          path = "./fixture/keycloak/operaton-realm.json";
+          import = true;
+          export = true;
+        };
+      };
 
       services.vault = {
         enable = true;
@@ -52,7 +69,10 @@ let
       languages.python.enable = true;
       languages.python.version = "3.13";
       languages.python.uv.enable = true;
-      languages.python.uv.sync.enable = true;
+      languages.python.uv.sync = {
+        enable = true;
+        allGroups = true;
+      };
       languages.python.venv.enable = true;
 
       outputs.python.app = config.languages.python.import ./. { };
@@ -108,8 +128,6 @@ let
         if [ -f "${config.env.DEVENV_STATE}/env_file" ]; then
           source ${config.env.DEVENV_STATE}/env_file
         fi
-        export UV_NO_CONFIG=1
-        export UV_NO_WORKSPACE=1
       '';
 
       enterTest = ''

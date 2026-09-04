@@ -19,6 +19,7 @@ from operaton.tasks.types import DeploymentWithDefinitionsDto
 from operaton.tasks.types import ProcessDefinitionDto
 from operaton.tasks.types import ProcessInstanceDto
 from operaton.tasks.types import StartProcessInstanceDto
+from operaton.tasks.utils import request_with_auth_retry
 from pathlib import Path
 from purjo.config import DEFAULT_DEPLOYMENT_NAME
 from purjo.config import DEFAULT_ENGINE_BASE_URL
@@ -77,7 +78,9 @@ async def deploy_resources(
     """Deploy resources to BPM engine (extracted for testability)."""
     async with operaton_session(headers={"Content-Type": None}) as session:
         form = build_deployment_form(resources, name, not force)
-        response = await session.post(
+        response = await request_with_auth_retry(
+            session,
+            "POST",
             f"{base_url}/deployment/create",
             data=form,
         )
@@ -106,7 +109,9 @@ async def start_process(
     variables_data = parse_variables_input(variables)
     business_key = variables_data.pop("businessKey", None) or f"{uuid.uuid4()}"
     async with operaton_session() as session:
-        response = await session.post(
+        response = await request_with_auth_retry(
+            session,
+            "POST",
             f"{base_url}/process-definition/key/{key}/start",
             json=StartProcessInstanceDto(
                 businessKey=business_key,
@@ -137,7 +142,9 @@ async def deploy_and_start(
     """Deploy resources and start process instance (extracted for testability)."""
     async with operaton_session(headers={"Content-Type": None}) as session:
         form = build_deployment_form(resources, name, not force)
-        response = await session.post(
+        response = await request_with_auth_retry(
+            session,
+            "POST",
             f"{base_url}/deployment/create",
             data=form,
         )
@@ -149,8 +156,10 @@ async def deploy_and_start(
         except ValidationError:
             print(json.dumps(await response.json(), indent=2))
             return
-        response = await session.get(
-            f"{base_url}/process-definition?deploymentId={deployment.id}"
+        response = await request_with_auth_retry(
+            session,
+            "GET",
+            f"{base_url}/process-definition?deploymentId={deployment.id}",
         )
         if response.status >= 400:
             print(json.dumps(await response.json(), indent=2))
@@ -167,7 +176,9 @@ async def deploy_and_start(
                 await migrate_all(definition, settings.LOG_LEVEL == "DEBUG")
             variables_data = parse_variables_input(variables)
             business_key = variables_data.pop("businessKey", None) or f"{uuid.uuid4()}"
-            response = await session.post(
+            response = await request_with_auth_retry(
+                session,
+                "POST",
                 f"{base_url}/process-definition/key/{definition.key}/start",
                 json=StartProcessInstanceDto(
                     businessKey=business_key,

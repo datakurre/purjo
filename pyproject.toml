@@ -17,7 +17,7 @@ requires-python = ">= 3.10"
 dependencies =[
     "hvac>=2.4.0",
     "javaobj-py3>=0.4.4",
-    "operaton-tasks>=1.0.0a6",
+    "operaton-tasks>=1.0b3",
     "pathspec>=1.0.3",
     "typer>=0.21.1",
     "tzlocal>=5.3.1",

@@ -14,6 +14,19 @@ from unittest.mock import patch
 import pytest
 
 
+async def _delegate_to_session(
+    http: Any, method: str, url: str, authorization: Any = None, **kwargs: Any
+) -> Any:
+    """Stand in for request_with_auth_retry, delegating to the mocked session.
+
+    operaton-tasks>=1.0b3 moved authorization from session construction to a
+    per-request middleware, so purjo now calls request_with_auth_retry
+    instead of session.get/post directly. This delegate bridges that to the
+    still-mocked session.get/post so tests need no other changes.
+    """
+    return await getattr(http, method.lower())(url, **kwargs)
+
+
 class TestMigrate:
     """Tests for migrate function."""
 
@@ -32,7 +45,10 @@ class TestMigrate:
         mock_response = AsyncMock()
         mock_response.json = AsyncMock(return_value=[])
 
-        with patch("purjo.migration.operaton_session") as mock_session:
+        with (
+            patch("purjo.migration.operaton_session") as mock_session,
+            patch("purjo.migration.request_with_auth_retry", new=_delegate_to_session),
+        ):
             session = AsyncMock()
             session.get = AsyncMock(return_value=mock_response)
             session.post = AsyncMock()
@@ -79,7 +95,10 @@ class TestMigrate:
         mock_execute_response = AsyncMock()
         mock_execute_response.json = AsyncMock(return_value={})
 
-        with patch("purjo.migration.operaton_session") as mock_session:
+        with (
+            patch("purjo.migration.operaton_session") as mock_session,
+            patch("purjo.migration.request_with_auth_retry", new=_delegate_to_session),
+        ):
             session = AsyncMock()
             session.get = AsyncMock(return_value=mock_get_response)
             session.post = AsyncMock(
@@ -127,7 +146,10 @@ class TestMigrate:
         mock_execute_response = AsyncMock()
         mock_execute_response.json = AsyncMock(return_value={"migrated": True})
 
-        with patch("purjo.migration.operaton_session") as mock_session:
+        with (
+            patch("purjo.migration.operaton_session") as mock_session,
+            patch("purjo.migration.request_with_auth_retry", new=_delegate_to_session),
+        ):
             session = AsyncMock()
             session.get = AsyncMock(return_value=mock_get_response)
             session.post = AsyncMock(
@@ -188,7 +210,10 @@ class TestMigrate:
             AsyncMock(json=AsyncMock(return_value={})),
         ]
 
-        with patch("purjo.migration.operaton_session") as mock_session:
+        with (
+            patch("purjo.migration.operaton_session") as mock_session,
+            patch("purjo.migration.request_with_auth_retry", new=_delegate_to_session),
+        ):
             session = AsyncMock()
             session.get = AsyncMock(return_value=mock_get_response)
             session.post = AsyncMock(side_effect=post_responses)
@@ -224,7 +249,10 @@ class TestMigrate:
         mock_get_response = AsyncMock()
         mock_get_response.json = AsyncMock(return_value=instances)
 
-        with patch("purjo.migration.operaton_session") as mock_session:
+        with (
+            patch("purjo.migration.operaton_session") as mock_session,
+            patch("purjo.migration.request_with_auth_retry", new=_delegate_to_session),
+        ):
             session = AsyncMock()
             session.get = AsyncMock(return_value=mock_get_response)
             session.post = AsyncMock()
