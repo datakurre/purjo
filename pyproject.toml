@@ -73,8 +73,8 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 markers = [
     "e2e: requires live devenv services (Operaton, Vault, Keycloak) -- run via `make test-e2e`, not the default suite",
-    "auth_basic: e2e test needing the engine on its default Basic credential (devenv `basic` profile)",
-    "auth_oauth2: e2e test needing the OAuth2-protected engine and Keycloak (devenv `shell` profile)",
+    "auth_basic: e2e test that runs under the devenv `basic` profile (engine on HTTP Basic)",
+    "auth_oauth2: e2e test that runs under the devenv `shell` profile (engine on OAuth2 + Keycloak)",
 ]
 addopts = [
     "-m", "not e2e",

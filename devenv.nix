@@ -190,6 +190,17 @@ let
         };
       };
     };
+  # Engine on HTTP Basic instead of OAuth2. basicAuth.enable is required:
+  # devenv-module-operaton defaults it to false, so without it /engine-rest is
+  # left unauthenticated altogether and the `auth_basic` tests would pass
+  # against an open engine, proving nothing. The module asserts that this and
+  # oauth2.enable are mutually exclusive, which is why they are separate
+  # profiles rather than one environment.
+  basicAuthEngine =
+    { ... }:
+    {
+      services.operaton.basicAuth.enable = true;
+    };
   devcontainer =
     { ... }:
     {
@@ -208,11 +219,13 @@ in
       imports = [ oauth2Engine ];
     };
   };
-  # No Keycloak and no services.operaton.oauth2: the engine keeps its default
-  # Basic credential, which is what the `basic_auth_env` e2e tests need.
+  # HTTP Basic on /engine-rest, no Keycloak and no OAuth2.
   # Select with `devenv --profile basic ...`.
   profiles.basic = {
     extends = [ "base" ];
+    module = {
+      imports = [ basicAuthEngine ];
+    };
   };
   profiles.devcontainer.module = {
     imports = [ devcontainer ];
