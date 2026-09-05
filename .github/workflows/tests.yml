@@ -96,6 +96,15 @@ jobs:
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
+      # Build the profile's environment before the timed step below, so its
+      # port wait budgets service startup only, not a cold-runner nix
+      # download. Each matrix job gets its own runner with an empty store, and
+      # without this the oauth2 profile (Keycloak's closure) was still
+      # downloading when the wait expired -- the cleanup listed no service
+      # processes at all, because none had started yet.
+      - name: Build the ${{ matrix.auth }} environment
+        run: devenv --profile ${{ matrix.profile }} shell -- true
+
       # Deliberately not `devenv test`. It does not run enterTest until every
       # process reports ready, and the daemon it waits on never signals ready
       # here ("Daemon failed to start within 120s" from `processes up -d`),
@@ -120,7 +129,8 @@ jobs:
           devenv --profile ${{ matrix.profile }} shell -- \
             make test-e2e-ci \
               E2E_PORTS="${{ matrix.ports }}" \
-              E2E_MARKERS="e2e and auth_${{ matrix.auth }}" || status=$?
+              E2E_MARKERS="e2e and auth_${{ matrix.auth }}" \
+              E2E_WAIT_SECONDS=300 || status=$?
           kill "$processes_pid" 2>/dev/null || true
           if [ "$status" -ne 0 ]; then
             echo "::group::devenv processes output"
