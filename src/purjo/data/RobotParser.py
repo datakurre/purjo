@@ -13,12 +13,13 @@ import json
 import os
 import pathlib
 
-
 try:
     from robot.api.types import Secret  # type: ignore
 
     HAS_SECRET = True
-except ImportError:
+# Only taken on Robot Framework versions without robot.api.types.Secret,
+# which is older than the version pinned for development and tests.
+except ImportError:  # pragma: no cover
     HAS_SECRET = False
 
     class Secret(str):  # type: ignore

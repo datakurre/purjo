@@ -1,141 +1,233 @@
-{
-  pkgs,
-  config,
-  inputs,
-  lib,
-  ...
-}:
-{
-  package.image.group = "datakurre";
-  package.image.repo = "purjo";
-  package.image.name = "purjo";
-  package.image.package = config.outputs.python.app;
-  package.image.callable = "pur";
-  package.image.extraPackages = [
-    pkgs.uv
-    pkgs.python311
-    pkgs.python312
-    pkgs.python313
-    pkgs.python314
-  ];
+let
+  # Everything that is the same whichever way the engine authenticates.
+  # The auth-specific pieces live in the two profiles at the bottom, because
+  # the engine can only be configured one way at a time -- so exercising both
+  # means two environments, and two CI jobs, not two fixtures.
+  base =
+    {
+      pkgs,
+      lib,
+      config,
+      devenv-module-operaton,
+      ...
+    }:
+    {
+      services.operaton = {
+        enable = true;
+        port = 8080;
+        forwardHeadersStrategy = "native";
+        package = devenv-module-operaton.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        deployment = ./fixture/operaton;
+        postgres.enable = true;
+      };
 
-  package.operaton.port = 8080;
+      services.vault = {
+        enable = true;
+        disableMlock = true;
+        ui = true;
+      };
 
-  services.vault = {
-    enable = true;
-    disableMlock = true;
-    ui = true;
-  };
+      processes.vault-configure-kv.exec =
+        let
+          configureScript = pkgs.writeShellScriptBin "configure-vault-kv" ''
+            set -euo pipefail
 
-  processes.vault-configure-kv.exec =
-    let
-      configureScript = pkgs.writeShellScriptBin "configure-vault-kv" ''
-        set -euo pipefail
+            # Both waits below are bounded. `devenv test` does not run
+            # enterTest until every process is ready, so an unbounded wait
+            # here does not just stall this one process, it hangs the entire
+            # run: CI sat for 26 minutes with this script's `sleep` as the
+            # only thing still moving, and would have burned the full 6 hour
+            # job timeout. Failing loudly names the missing precondition
+            # instead.
+            timeout_seconds=120
 
-        # Wait for the vault server to start up
-        response=""
-        while [ -z "$response" ]; do
-          response=$(${pkgs.curl}/bin/curl -s --max-time 5 "${config.env.VAULT_API_ADDR}/v1/sys/init" | ${pkgs.jq}/bin/jq '.initialized' || true)
-          if [ -z "$response" ]; then
-            echo "Waiting for vault server to respond..."
-            sleep 1
-          fi
-        done
-        while [ ! -f "${config.env.DEVENV_STATE}/env_file" ]; do
-            sleep 1s
-        done
+            # Wait for the vault server to start up
+            response=""
+            deadline=$((SECONDS + timeout_seconds))
+            while [ -z "$response" ]; do
+              if [ "$SECONDS" -ge "$deadline" ]; then
+                echo "configure-vault-kv: vault did not respond at ${config.env.VAULT_API_ADDR} within $timeout_seconds seconds" >&2
+                exit 1
+              fi
+              response=$(${pkgs.curl}/bin/curl -s --max-time 5 "${config.env.VAULT_API_ADDR}/v1/sys/init" | ${pkgs.jq}/bin/jq '.initialized' || true)
+              if [ -z "$response" ]; then
+                echo "Waiting for vault server to respond..."
+                sleep 1
+              fi
+            done
 
+            # Wait for vault-configure to write the root token
+            deadline=$((SECONDS + timeout_seconds))
+            while [ ! -f "${config.env.DEVENV_STATE}/env_file" ]; do
+              if [ "$SECONDS" -ge "$deadline" ]; then
+                echo "configure-vault-kv: vault-configure did not write ${config.env.DEVENV_STATE}/env_file within $timeout_seconds seconds" >&2
+                exit 1
+              fi
+              sleep 1
+            done
+
+            # Export VAULT_TOKEN
+            source ${config.env.DEVENV_STATE}/env_file
+
+            # Ensure /kv/secret
+            if ! ${pkgs.vault-bin}/bin/vault secrets list | grep -q '^secret/'; then
+              ${pkgs.vault-bin}/bin/vault secrets enable -path=secret kv-v2
+            fi
+          '';
+        in
+        "${configureScript}/bin/configure-vault-kv";
+
+      # devenv's own `vault-configure` deliberately never exits -- its script
+      # ends in `while true; do sleep 1; done` after unsealing -- and it ships
+      # no readiness probe, so it sits in Running/not-ready forever. devenv's
+      # own shell-side waiter skips such processes explicitly ("Filter
+      # not_ready processes that have readiness probes"), but `devenv test`
+      # waited on it: CI reached this point and then produced no further
+      # output for 26 minutes, with `configure-vault` and its `sleep` still
+      # alive at cancellation and no make/pytest process ever spawned.
+      #
+      # Give it the probe it lacks: env_file is what it writes once vault is
+      # initialised, and what enterTest sources straight afterwards.
+      processes.vault-configure.ready = {
+        exec = "test -f ${config.env.DEVENV_STATE}/env_file";
+        initial_delay = 1;
+        period = 1;
+      };
+
+      languages.python.enable = true;
+      languages.python.version = "3.13";
+      languages.python.uv.enable = true;
+      languages.python.uv.sync = {
+        enable = true;
+        allGroups = true;
+      };
+      languages.python.venv.enable = true;
+
+      outputs.python.app = config.languages.python.import ./. { };
+
+      # https://devenv.sh/pre-commit-hooks/
+      # Keeps `treefmt` runnable as a plain command (via `make format` /
+      # `devenv test`) without installing it as an actual git hook: the
+      # installer only skips installing a hook type when every hook enabled
+      # for it has stages = [ "manual" ], so it must be set on the hook
+      # itself and not only as default_stages, which does not affect that
+      # decision.
+      git-hooks.hooks.treefmt = {
+        enable = true;
+        stages = [ "manual" ];
+        settings.formatters = [ pkgs.nixfmt-rfc-style ];
+      };
+      # devenv's own `devenv:git-hooks:run` task (run by `devenv test`) always
+      # does a plain `prek run -a`, which filters to the `pre-commit` stage
+      # regardless of the hooks' configured stage. Since every hook here is
+      # `manual`-only (see above), that leaves nothing to run and `devenv
+      # test` fails outright with "No hooks found for stage `pre-commit`".
+      # Override it to run the `manual` stage instead, mirroring what
+      # git-hooks.nix's own check derivation does for this same setup.
+      tasks."devenv:git-hooks:run".exec = lib.mkForce ''
+        export PATH="${config.env.UV_PROJECT_ENVIRONMENT}/bin:$PATH"
+        ${lib.getExe config.git-hooks.package} run -c ${config.git-hooks.configPath} --hook-stage manual --all-files
+      '';
+
+      packages =
+        let
+          mockoon-cli = pkgs.callPackage ./fixture/mockoon { };
+        in
+        [
+          pkgs.entr
+          pkgs.findutils
+          pkgs.git
+          pkgs.gnumake
+          pkgs.openssl
+          pkgs.vim
+          pkgs.zip
+          pkgs.curl
+          pkgs.jq
+          pkgs.vault-bin
+          pkgs.nixfmt-rfc-style
+          mockoon-cli
+        ];
+
+      dotenv.enable = true;
+
+      enterShell = ''
         # Export VAULT_TOKEN
-        source ${config.env.DEVENV_STATE}/env_file
-
-        # Ensure /kv/secret
-        if ! ${pkgs.vault-bin}/bin/vault secrets list | grep -q '^secret/'; then
-          ${pkgs.vault-bin}/bin/vault secrets enable -path=secret kv-v2
+        if [ -f "${config.env.DEVENV_STATE}/env_file" ]; then
+          source ${config.env.DEVENV_STATE}/env_file
         fi
       '';
-    in
-    "${configureScript}/bin/configure-vault-kv";
 
-  languages.python.interpreter = pkgs.python312;
-  languages.python.workspaceRoot = ./.;
-  languages.python.uv.package = lib.mkForce (
-    pkgs.buildFHSEnv {
-      name = "uv";
-      targetPkgs = pkgs: [
-        pkgs.python312
-        inputs.uv2nix.packages.${pkgs.system}.uv-bin
-      ];
-      runScript = "uv";
-    }
-  );
-  languages.python.pyprojectOverrides =
-    final: prev:
-    let
-      packagesToBuildWithSetuptools = [
-        "robotframework"
-      ];
-    in
+      enterTest = ''
+        wait_for_port 8080 60
+        wait_for_port 8200 60
+        wait_for_port 8081 60
+        source ${config.env.DEVENV_STATE}/env_file
+        make test
+        make test-e2e
+      '';
+
+      processes.mockoon.exec = "mockoon-cli start --data ./fixture/mockoon/data.json --port 3080 --hostname 0.0.0.0 --log-transaction";
+
+      cachix.pull = [ "datakurre" ];
+    };
+  # OAuth2-protected engine, backed by the Keycloak realm fixture. The client
+  # credentials that match it are in .env.example.
+  oauth2Engine =
+    { ... }:
     {
-      "hatchling" = prev."hatchling".overrideAttrs (old: {
-        propagatedBuildInputs = [ final."editables" ];
-      });
-    }
-    // builtins.listToAttrs (
-      map (pkg: {
-        name = pkg;
-        value = prev.${pkg}.overrideAttrs (old: {
-          nativeBuildInputs =
-            old.nativeBuildInputs
-            ++ final.resolveBuildSystem ({
-              "setuptools" = [ ];
-            });
-        });
-      }) packagesToBuildWithSetuptools
-    );
+      services.operaton.oauth2 = {
+        enable = true;
+        issuerUri = "http://localhost:8081/realms/operaton";
+      };
 
-  packages =
-    let
-      mockoon-cli = pkgs.callPackage ./fixture/mockoon { };
-    in
-    [
-      pkgs.entr
-      pkgs.findutils
-      pkgs.mockoon
-      pkgs.git
-      pkgs.gnumake
-      pkgs.openssl
-      pkgs.zip
-      pkgs.curl
-      pkgs.jq
-      pkgs.vault-bin
-      mockoon-cli
-    ];
-
-  dotenv.disableHint = true;
-
-  enterShell = ''
-    # Export VAULT_TOKEN
-    if [ -f "${config.env.DEVENV_STATE}/env_file" ]; then
-      source ${config.env.DEVENV_STATE}/env_file
-    fi
-  '';
-
-  enterTest = ''
-    wait_for_port 8080 60
-    wait_for_port 8200 60
-    source ${config.env.DEVENV_STATE}/env_file
-  '';
-
-  processes.mockoon.exec = "mockoon-cli start --data ./fixture/mockoon/data.json --port 3080 --hostname 0.0.0.0 --log-transaction";
-
-  cachix.pull = [ "datakurre" ];
-
-  devcontainer.enable = true;
-
-  git-hooks.hooks.treefmt = {
-    enable = true;
-    settings.formatters = [
-      pkgs.nixfmt-rfc-style
-    ];
+      services.keycloak = {
+        enable = true;
+        settings.http-port = 8081;
+        realms.operaton = {
+          path = "./fixture/keycloak/operaton-realm.json";
+          import = true;
+          export = true;
+        };
+      };
+    };
+  # Engine on HTTP Basic instead of OAuth2. basicAuth.enable is required:
+  # devenv-module-operaton defaults it to false, so without it /engine-rest is
+  # left unauthenticated altogether and the `auth_basic` tests would pass
+  # against an open engine, proving nothing. The module asserts that this and
+  # oauth2.enable are mutually exclusive, which is why they are separate
+  # profiles rather than one environment.
+  basicAuthEngine =
+    { ... }:
+    {
+      services.operaton.basicAuth.enable = true;
+    };
+  devcontainer =
+    { ... }:
+    {
+      devcontainer.enable = true;
+    };
+in
+{
+  profiles.base.module = {
+    imports = [ base ];
+  };
+  # The default (devenv.yaml sets `profile: shell`), so a plain `devenv shell`
+  # still gets the OAuth2 engine it did before.
+  profiles.shell = {
+    extends = [ "base" ];
+    module = {
+      imports = [ oauth2Engine ];
+    };
+  };
+  # HTTP Basic on /engine-rest, no Keycloak and no OAuth2.
+  # Select with `devenv --profile basic ...`.
+  profiles.basic = {
+    extends = [ "base" ];
+    module = {
+      imports = [ basicAuthEngine ];
+    };
+  };
+  profiles.devcontainer.module = {
+    imports = [ devcontainer ];
   };
 }

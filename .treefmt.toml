@@ -7,11 +7,14 @@ includes = ["*.nix"]
 [formatter.black]
 command = "black"
 includes = ["*.py"]
+priority = 0
 
 [formatter.isort]
 command = "isort"
 includes = ["*.py"]
+priority = 1
 
-[formatter.robotidy]
-command = "robotidy"
+[formatter.robocop]
+command = "robocop"
+options = ["format"]
 includes = ["*.robot"]

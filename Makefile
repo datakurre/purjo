@@ -7,7 +7,6 @@ INDEX_HOSTNAME ?= pypi.python.org
 export NETRC ?= $(HOME)/.netrc
 
 export PYTHONPATH=$(PWD)/src
-
 MODULE := purjo
 APP := pur
 
@@ -28,14 +27,12 @@ build-docs: ## Build the Sphinx documentation site
 watch-docs: ## Serve the Sphinx documentation site locally
 	sphinx-autobuild docs docs/_build/html
 
-env:  ## Build and link the Python virtual environment
-	ln -s $(shell $(DEVENV) $(DEVENV_OPTIONS) build outputs.python.virtualenv) env
-
 check:  ## Run static analysis checks
 	black --check src tests
 	isort -c src tests
-	flake8 src
+	flake8 src tests
 	MYPYPATH=$(PWD)/stubs mypy --show-error-codes --strict src tests
+	python scripts/check-links.py
 
 clean:  ## Remove build artifacts and temporary files
 	$(DEVENV) $(DEVENV_OPTIONS) gc
@@ -69,6 +66,44 @@ test-coverage: htmlcov  ## Generate HTML coverage reports
 test-pytest:  ## Run unit tests with pytest
 	pytest --cov=$(MODULE) tests
 
+E2E_WAIT_SECONDS ?= 180
+# The engine authenticates one way at a time, so each auth scenario is its own
+# devenv profile and its own CI job. Override both of these together:
+#   oauth2 (default `shell` profile): ports 8080 8200 8081, -m "e2e and auth_oauth2"
+#   basic  (`basic` profile):         ports 8080 8200,      -m "e2e and auth_basic"
+E2E_PORTS ?= 8080 8200 8081
+E2E_MARKERS ?= e2e
+# A listening port is not readiness. Keycloak accepts connections on 8081 while
+# it is still importing the realm and answers 503 "Bootstrap in progress",
+# which failed the oauth2 token request even though the port wait had passed.
+# Set this to a URL that only returns 200 once the engine's auth is actually
+# servable; empty skips the check.
+E2E_READY_URL ?=
+
+test-e2e:  ## Run e2e tests against live devenv services (see E2E_MARKERS)
+	pytest -o addopts="" -m "$(E2E_MARKERS)" tests/e2e
+
+test-e2e-ci:  ## Wait for already-started devenv services, then run e2e (used by CI)
+# Waits itself rather than relying on `devenv test`, which does not run
+# enterTest until every process reports ready -- and mockoon and
+# keycloak-realm-export-all ship no readiness probe, so that wait never
+# finishes. Fails loudly on a missing service: require_live_services in
+# tests/e2e/conftest.py *skips* the suite when a port is closed, so without
+# this a dead service would be a green run.
+	@for port in $(E2E_PORTS); do \
+	  echo "waiting for localhost:$$port"; \
+	  timeout $(E2E_WAIT_SECONDS) bash -c \
+	    "until (echo > /dev/tcp/localhost/$$port) 2>/dev/null; do sleep 1; done" \
+	    || { echo "ERROR: nothing listening on port $$port after $(E2E_WAIT_SECONDS)s"; exit 1; }; \
+	done
+	@if [ -n "$(E2E_READY_URL)" ]; then \
+	  echo "waiting for 200 from $(E2E_READY_URL)"; \
+	  timeout $(E2E_WAIT_SECONDS) bash -c \
+	    "until [ \"\$$(curl -s -o /dev/null -w '%{http_code}' '$(E2E_READY_URL)')\" = 200 ]; do sleep 1; done" \
+	    || { echo "ERROR: $(E2E_READY_URL) never returned 200 in $(E2E_WAIT_SECONDS)s"; exit 1; }; \
+	fi
+	@set -a; . "$$DEVENV_STATE/env_file"; set +a; $(MAKE) test-e2e E2E_MARKERS="$(E2E_MARKERS)"
+
 watch: .env  ## Start the application in watch mode
 	$(APP) -- --reload
 
@@ -90,8 +125,8 @@ htmlcov: .coverage
 
 define _env_script
 cat << EOF > .env
-ENGINE_REST_BASE_URL="http://localhost:8080/engine-rest"
-ENGINE_REST_AUTHORIZATION="Basic ZGVtbzpkZW1v"
+ENGINE_REST_BASE_URL=http://localhost:8080/engine-rest
+ENGINE_REST_AUTHORIZATION=Basic ZGVtbzpkZW1v
 EOF
 endef
 export env_script = $(value _env_script)

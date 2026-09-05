@@ -1,3 +1,13 @@
+"""Main CLI module for purjo.
+
+This module provides the command-line interface for managing Robot Framework
+packages and interacting with the Operaton BPM engine. It includes commands for:
+- Serving robot packages as external tasks
+- Initializing new robot packages
+- Wrapping packages into robot.zip files
+- Deploying and managing BPMN resources
+"""
+
 from operaton.tasks import external_task_worker
 from operaton.tasks import handlers
 from operaton.tasks import operaton_session
@@ -9,16 +19,27 @@ from operaton.tasks.types import DeploymentWithDefinitionsDto
 from operaton.tasks.types import ProcessDefinitionDto
 from operaton.tasks.types import ProcessInstanceDto
 from operaton.tasks.types import StartProcessInstanceDto
+from operaton.tasks.utils import request_with_auth_retry
 from pathlib import Path
+from purjo.config import DEFAULT_DEPLOYMENT_NAME
+from purjo.config import DEFAULT_ENGINE_BASE_URL
+from purjo.config import DEFAULT_LOCK_TTL_SECONDS
+from purjo.config import DEFAULT_POLL_TTL_SECONDS
+from purjo.config import DEFAULT_TIMEOUT_SECONDS
+from purjo.config import DEFAULT_WORKER_ID
 from purjo.config import OnFail
+from purjo.deployment import build_cockpit_url
+from purjo.deployment import build_deployment_form
+from purjo.deployment import parse_variables_input
+from purjo.exceptions import PurjoEnvironmentError
+from purjo.file_utils import get_wrap_pathspec
+from purjo.migration import migrate as migrate_all
 from purjo.runner import create_task
 from purjo.runner import logger
 from purjo.runner import run
 from purjo.runner import Task
 from purjo.secrets import get_secrets_provider
-from purjo.utils import get_wrap_pathspec
-from purjo.utils import migrate as migrate_all
-from purjo.utils import operaton_from_py
+from purjo.serialization import operaton_from_py
 from pydantic import DirectoryPath
 from pydantic import FilePath
 from pydantic import ValidationError
@@ -26,21 +47,18 @@ from typing import Annotated
 from typing import List
 from typing import Optional
 from typing import Union
-from urllib.parse import urlparse
 from zipfile import ZipFile
-import aiohttp
 import asyncio
 import importlib.resources
 import json
 import os
 import random
+import re
 import shutil
 import string
-import sys
 import tomllib
 import typer
 import uuid
-
 
 cli = typer.Typer(
     no_args_is_help=True,
@@ -49,33 +67,161 @@ cli = typer.Typer(
 )
 
 
-@cli.command(
-    name="serve",
-    no_args_is_help=True,
-)
-def cli_serve(
-    robots: List[Union[FilePath, DirectoryPath]],
-    base_url: Annotated[
-        str, typer.Option(envvar="ENGINE_REST_BASE_URL")
-    ] = "http://localhost:8080/engine-rest",
-    authorization: Annotated[
-        Optional[str], typer.Option(envvar="ENGINE_REST_AUTHORIZATION")
-    ] = None,
-    secrets: Annotated[
-        Optional[str], typer.Option(envvar="TASKS_SECRETS_PROFILE")
-    ] = None,
-    timeout: Annotated[int, typer.Option(envvar="ENGINE_REST_TIMEOUT_SECONDS")] = 20,
-    poll_ttl: Annotated[int, typer.Option(envvar="ENGINE_REST_POLL_TTL_SECONDS")] = 10,
-    lock_ttl: Annotated[int, typer.Option(envvar="ENGINE_REST_LOCK_TTL_SECONDS")] = 30,
-    max_jobs: int = 1,
-    worker_id: Annotated[
-        str, typer.Option(envvar="TASKS_WORKER_ID")
-    ] = "operaton-robot-runner",
-    log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "DEBUG",
-    on_fail: OnFail = OnFail.FAIL,
+# Extracted async functions for testability
+async def deploy_resources(
+    resources: List[Path],
+    name: str,
+    force: bool,
+    migrate: bool,
+    base_url: str,
 ) -> None:
-    """
-    Serve robot.zip packages (or directories) as BPMN service tasks.
+    """Deploy resources to BPM engine (extracted for testability)."""
+    async with operaton_session(headers={"Content-Type": None}) as session:
+        form = build_deployment_form(resources, name, not force)
+        response = await request_with_auth_retry(
+            session,
+            "POST",
+            f"{base_url}/deployment/create",
+            data=form,
+        )
+        if response.status >= 400:
+            print(json.dumps(await response.json(), indent=2))
+            return
+        try:
+            deployment = DeploymentWithDefinitionsDto(**await response.json())
+        except ValidationError:
+            print(json.dumps(await response.json(), indent=2))
+            return
+        url = build_cockpit_url(base_url, "/process-definition")
+        for definition in (deployment.deployedProcessDefinitions or {}).values():
+            if migrate:
+                await migrate_all(definition, settings.LOG_LEVEL == "DEBUG")
+            print(f"Deployed: {url}/{definition.id}/runtime")
+            print(f"With key: {definition.key}")
+
+
+async def start_process(
+    key: str,
+    variables: Optional[str],
+    base_url: str,
+) -> None:
+    """Start a process instance (extracted for testability)."""
+    variables_data = parse_variables_input(variables)
+    business_key = variables_data.pop("businessKey", None) or f"{uuid.uuid4()}"
+    async with operaton_session() as session:
+        response = await request_with_auth_retry(
+            session,
+            "POST",
+            f"{base_url}/process-definition/key/{key}/start",
+            json=StartProcessInstanceDto(
+                businessKey=business_key,
+                variables=operaton_from_py(variables_data, [Path(os.getcwd())]),
+            ).model_dump(),
+            headers={"Content-Type": "application/json"},
+        )
+        if response.status >= 400:
+            print(json.dumps(await response.json(), indent=2))
+            return
+        try:
+            instance = ProcessInstanceDto(**await response.json())
+        except ValidationError:
+            print(json.dumps(await response.json(), indent=2))
+            return
+        url = build_cockpit_url(base_url, "/process-instance")
+        print(f"Started: {url}/{instance.id}/runtime")
+
+
+async def deploy_and_start(
+    resources: List[Path],
+    name: str,
+    variables: Optional[str],
+    migrate: bool,
+    force: bool,
+    base_url: str,
+) -> None:
+    """Deploy resources and start process instance (extracted for testability)."""
+    async with operaton_session(headers={"Content-Type": None}) as session:
+        form = build_deployment_form(resources, name, not force)
+        response = await request_with_auth_retry(
+            session,
+            "POST",
+            f"{base_url}/deployment/create",
+            data=form,
+        )
+        if response.status >= 400:
+            print(json.dumps(await response.json(), indent=2))
+            return
+        try:
+            deployment = DeploymentDto(**await response.json())
+        except ValidationError:
+            print(json.dumps(await response.json(), indent=2))
+            return
+        response = await request_with_auth_retry(
+            session,
+            "GET",
+            f"{base_url}/process-definition?deploymentId={deployment.id}",
+        )
+        if response.status >= 400:
+            print(json.dumps(await response.json(), indent=2))
+            return
+        try:
+            definitions = [
+                ProcessDefinitionDto(**element) for element in await response.json()
+            ]
+        except (TypeError, ValidationError):
+            print(json.dumps(await response.json(), indent=2))
+            return
+        # Parsed once, outside the loop: `--variables -` reads stdin, which is
+        # already at EOF by the second definition.
+        variables_data = parse_variables_input(variables)
+        # Popped once too, so every definition still sees the explicit
+        # businessKey instead of only the first one.
+        business_key_input = variables_data.pop("businessKey", None)
+        for definition in definitions:
+            if migrate:
+                await migrate_all(definition, settings.LOG_LEVEL == "DEBUG")
+            business_key = business_key_input or f"{uuid.uuid4()}"
+            response = await request_with_auth_retry(
+                session,
+                "POST",
+                f"{base_url}/process-definition/key/{definition.key}/start",
+                json=StartProcessInstanceDto(
+                    businessKey=business_key,
+                    variables=operaton_from_py(variables_data, [Path(os.getcwd())]),
+                ).model_dump(),
+                headers={"Content-Type": "application/json"},
+            )
+            if response.status >= 400:
+                print(json.dumps(await response.json(), indent=2))
+                return
+            try:
+                instance = ProcessInstanceDto(**await response.json())
+            except ValidationError:
+                print(json.dumps(await response.json(), indent=2))
+                return
+            url = build_cockpit_url(base_url, "/process-instance")
+            print(f"Started: {url}/{instance.id}/runtime")
+
+
+def configure_settings(
+    base_url: str,
+    authorization: Optional[str],
+    timeout: int,
+    poll_ttl: int,
+    lock_ttl: int,
+    worker_id: str,
+    log_level: str,
+) -> None:
+    """Configure the operaton settings for the worker.
+
+    Args:
+        base_url: The base URL for the Operaton engine REST API.
+        authorization: Optional authorization header value.
+        timeout: Request timeout in seconds.
+        poll_ttl: Long-polling timeout in seconds.
+        lock_ttl: Task lock duration in seconds.
+        worker_id: Unique identifier for this worker.
+        log_level: Logging level (DEBUG, INFO, etc.).
     """
     settings.ENGINE_REST_BASE_URL = base_url
     settings.ENGINE_REST_AUTHORIZATION = authorization
@@ -87,21 +233,51 @@ def cli_serve(
     logger.setLevel(log_level)
     set_log_level(log_level)
 
-    semaphore = asyncio.Semaphore(max_jobs)
 
+def validate_environment() -> None:
+    """Validate that required executables are available.
+
+    Raises:
+        FileNotFoundError: If the 'uv' executable is not found.
+    """
     if not shutil.which("uv"):
         raise FileNotFoundError("The 'uv' executable is not found in the system PATH.")
 
+
+def register_topics(
+    robots: List[Union[FilePath, DirectoryPath, Path]],
+    secrets: Optional[str],
+    on_fail: OnFail,
+    semaphore: asyncio.Semaphore,
+) -> None:
+    """Register robot packages as external task handlers.
+
+    Args:
+        robots: List of robot package paths (directories or zip files).
+        secrets: Optional secrets profile name.
+        on_fail: Default failure handling strategy.
+        semaphore: Semaphore for limiting concurrent job execution.
+    """
+    secrets_base_path: Optional[Path]
     for robot in robots:
         if robot.is_dir():
             robot = robot.resolve()
             robot_toml = tomllib.loads((robot / "pyproject.toml").read_text())
+            # A directory package declares its secrets file relative to itself.
+            secrets_base_path = robot
         else:
             with ZipFile(robot, "r") as fp:
                 robot_toml = tomllib.loads(fp.read("pyproject.toml").decode("utf-8"))
+            # The archive is not extracted until a task runs, long after this
+            # validates the provider config, so there is no package root to
+            # resolve against here; leave the path relative to the working
+            # directory.
+            secrets_base_path = None
         purjo_toml = (robot_toml.get("tool") or {}).get("purjo") or {}
         secrets_provider = get_secrets_provider(
-            purjo_toml.get("secrets"), profile=secrets
+            purjo_toml.get("secrets"),
+            profile=secrets,
+            base_path=secrets_base_path,
         )
         for topic, config in (purjo_toml.get("topics") or {}).items():
             task_config = Task(**config)
@@ -120,7 +296,222 @@ def cli_serve(
             )
             logger.info("Topic | %s | %s", topic, config)
 
-    asyncio.get_event_loop().run_until_complete(external_task_worker(handlers=handlers))
+
+def start_worker() -> None:
+    """Start the external task worker event loop.
+
+    Uses `asyncio.run` rather than `get_event_loop().run_until_complete`:
+    since Python 3.14 there is no implicit event loop in the main thread, so
+    `get_event_loop()` raises RuntimeError instead of creating one.
+    """
+    asyncio.run(external_task_worker(handlers=handlers))
+
+
+@cli.command(
+    name="serve",
+    no_args_is_help=True,
+)
+def cli_serve(
+    robots: List[Union[FilePath, DirectoryPath]],
+    base_url: Annotated[
+        str, typer.Option(envvar="ENGINE_REST_BASE_URL")
+    ] = DEFAULT_ENGINE_BASE_URL,
+    authorization: Annotated[
+        Optional[str], typer.Option(envvar="ENGINE_REST_AUTHORIZATION")
+    ] = None,
+    secrets: Annotated[
+        Optional[str], typer.Option(envvar="TASKS_SECRETS_PROFILE")
+    ] = None,
+    timeout: Annotated[
+        int, typer.Option(envvar="ENGINE_REST_TIMEOUT_SECONDS")
+    ] = DEFAULT_TIMEOUT_SECONDS,
+    poll_ttl: Annotated[
+        int, typer.Option(envvar="ENGINE_REST_POLL_TTL_SECONDS")
+    ] = DEFAULT_POLL_TTL_SECONDS,
+    lock_ttl: Annotated[
+        int, typer.Option(envvar="ENGINE_REST_LOCK_TTL_SECONDS")
+    ] = DEFAULT_LOCK_TTL_SECONDS,
+    max_jobs: int = 1,
+    worker_id: Annotated[
+        str, typer.Option(envvar="TASKS_WORKER_ID")
+    ] = DEFAULT_WORKER_ID,
+    log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "DEBUG",
+    on_fail: OnFail = OnFail.FAIL,
+) -> None:
+    """
+    Serve robot.zip packages (or directories) as BPMN service tasks.
+    """
+    configure_settings(
+        base_url=base_url,
+        authorization=authorization,
+        timeout=timeout,
+        poll_ttl=poll_ttl,
+        lock_ttl=lock_ttl,
+        worker_id=worker_id,
+        log_level=log_level,
+    )
+    validate_environment()
+    semaphore = asyncio.Semaphore(max_jobs)
+    register_topics(robots, secrets, on_fail, semaphore)
+    start_worker()
+
+
+# The task-flavoured AGENTS.md differs from the test-flavoured one only in
+# Robot Framework's test/task vocabulary, so it is derived rather than kept as
+# a second near-identical copy. Robot's own `test` wording is left alone where
+# it is correct in both flavours, which is why these are explicit phrases and
+# not a blanket test -> task rename. A test asserts every phrase below still
+# matches the template, so rewording one cannot silently stop substituting.
+_AGENTS_TASK_SUBSTITUTIONS = (
+    ("*** Test Cases ***", "*** Tasks ***"),
+    ("Test Template ", "Task Template "),
+    ("Run Robot Test", "Run Robot Task"),
+    ("My Test in Robot", "My Task in Robot"),
+    ("the mapped Robot test", "the mapped Robot task"),
+    ("the test name under", "the task name under"),
+    ("the Robot test name to execute", "the Robot task name to execute"),
+    ("a failing test does", "a failing task does"),
+    ("runs a test from another", "runs a task from another"),
+)
+
+
+def render_agents_template(task: bool) -> str:
+    """Render the AGENTS.md guide for the test or the task flavour."""
+    content = (
+        importlib.resources.files("purjo.data") / "AGENTS.template.md"
+    ).read_text()
+    if not task:
+        return content
+    for pattern, replacement in _AGENTS_TASK_SUBSTITUTIONS:
+        content = content.replace(pattern, replacement)
+    return content
+
+
+def _package_name_for(cwd_path: Path) -> str:
+    """Derive a valid PEP 508 package name from a directory name.
+
+    `uv init` derives the package name from the directory and fails when that
+    name is not a valid package name, so directories like "2024-report" or
+    "my.project_" cannot be initialised without an explicit --name.
+    """
+    name = re.sub(r"[^A-Za-z0-9._-]+", "-", cwd_path.name).strip("._-").lower()
+    return name or "robot-package"
+
+
+async def _run_uv(args: List[str], cwd_path: Path, step: str) -> None:
+    """Run a uv command, failing loudly when it does not succeed.
+
+    `run` reports the exit code but does not raise. Without this check a
+    failed `uv init` or `uv add` (a transient network error, for example)
+    would go unnoticed and surface later as a confusing FileNotFoundError
+    on the pyproject.toml that was never created.
+    """
+    return_code, _, stderr = await run(
+        "uv",
+        args,
+        cwd_path,
+        {
+            "UV_NO_SYNC": "0",
+            "UV_NO_CONFIG": "1",
+            "UV_NO_WORKSPACE": "1",
+            "VIRTUAL_ENV": "",
+        },
+    )
+    if return_code != 0:
+        raise PurjoEnvironmentError(
+            f"{step} failed with exit code {return_code}: "
+            f"{stderr.decode('utf-8', 'replace').strip()}"
+        )
+
+
+async def initialize_robot_package(
+    cwd_path: Path, python: bool = False, task: bool = False, agents: bool = False
+) -> None:
+    """Initialize a new robot package in the specified directory.
+
+    This function creates a new robot package with all necessary files:
+    - Initializes a uv project
+    - Adds robotframework and optional dependencies
+    - Creates template files (BPMN, Robot/Python)
+    - Configures pyproject.toml with purjo topics
+
+    Args:
+        cwd_path: The directory to initialize the package in.
+        python: If True, create a Python template instead of a Robot template.
+        task: If True, create a Robot task template instead of a test template.
+        agents: If True, also create an AGENTS.md guide for LLM coding agents.
+
+    Raises:
+        ValueError: If agents is combined with python, which is unsupported.
+    """
+    if agents and python:
+        raise ValueError(
+            "agents is not supported with python, which is still experimental."
+        )
+    await _run_uv(
+        ["init", "--no-workspace", "--name", _package_name_for(cwd_path)],
+        cwd_path,
+        "uv init",
+    )
+    await _run_uv(
+        ["add", "robotframework"] + (["pydantic"] if python else []) + ["--no-sources"],
+        cwd_path,
+        "uv add robotframework",
+    )
+    await _run_uv(
+        ["add", "--dev"]
+        + (["purjo"] if python else ["robotframework-robotlibrary>=1.0a3"])
+        + ["--no-sources"],
+        cwd_path,
+        "uv add --dev",
+    )
+    for fixture_py in [
+        cwd_path / "hello.py",
+        cwd_path / "main.py",
+        cwd_path / ".python-version",
+    ]:
+        if fixture_py.exists():  # pragma: no cover
+            fixture_py.unlink()  # pragma: no cover
+    (cwd_path / "pyproject.toml").write_text(
+        (cwd_path / "pyproject.toml").read_text() + f"""
+[tool.purjo.topics."My Topic in BPMN"]
+name = "{'tasks.main' if python else 'My Task in Robot' if task else 'My Test in Robot'}"
+on-fail = "{'FAIL' if python else 'ERROR'}"
+process-variables = true
+"""
+    )
+    (cwd_path / "hello.bpmn").write_text(
+        (importlib.resources.files("purjo.data") / "hello.bpmn").read_text()
+    )
+    makefile_template = "Makefile_python" if python else "Makefile"
+    (cwd_path / "Makefile").write_text(
+        (importlib.resources.files("purjo.data") / makefile_template).read_text()
+    )
+    if python:
+        (cwd_path / "tasks.py").write_text(
+            (importlib.resources.files("purjo.data") / "tasks.py").read_text()
+        )
+    else:
+        hello_robot_file = "hello_task.robot" if task else "hello.robot"
+        test_hello_robot_file = "test_hello_task.robot" if task else "test_hello.robot"
+        (cwd_path / "hello.robot").write_text(
+            (importlib.resources.files("purjo.data") / hello_robot_file).read_text()
+        )
+        (cwd_path / "Hello.py").write_text(
+            (importlib.resources.files("purjo.data") / "Hello.py").read_text()
+        )
+        (cwd_path / "test_hello.robot").write_text(
+            (
+                importlib.resources.files("purjo.data") / test_hello_robot_file
+            ).read_text()
+        )
+        if agents:
+            (cwd_path / "AGENTS.md").write_text(render_agents_template(task))
+    (cwd_path / ".wrapignore").write_text("AGENTS.md\n" if agents else "")
+    wrap_package(cwd_path)
+    (cwd_path / "robot.zip").unlink(missing_ok=True)
+    if (cwd_path / ".venv").exists():  # pragma: no cover
+        shutil.rmtree(cwd_path / ".venv")  # pragma: no cover
 
 
 @cli.command(name="init")
@@ -131,9 +522,30 @@ def cli_init(
             "--python", help="Create a Python template instead of a Robot template"
         ),
     ] = False,
+    task: Annotated[
+        bool,
+        typer.Option(
+            "--task", help="Create a Robot task template instead of a test template"
+        ),
+    ] = False,
+    agents: Annotated[
+        bool,
+        typer.Option(
+            "--agents",
+            help=(
+                "Create an AGENTS.md guide for LLM coding agents"
+                " (not supported with --python)"
+            ),
+        ),
+    ] = False,
     log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "INFO",
 ) -> None:
     """Initialize a new robot package into the current directory."""
+    if agents and python:
+        raise typer.BadParameter(
+            "--agents is not supported with --python, which is still experimental.",
+            param_hint="--agents",
+        )
     logger.setLevel(log_level)
     set_log_level(log_level)
     cwd_path = Path(os.getcwd())
@@ -143,85 +555,7 @@ def cli_init(
     if not shutil.which("uv"):
         raise FileNotFoundError("The 'uv' executable is not found in the system PATH.")
 
-    async def init() -> None:
-        await run(
-            "uv",
-            [
-                "init",
-                "--no-workspace",
-            ],
-            cwd_path,
-            {
-                "UV_NO_SYNC": "0",
-                "VIRTUAL_ENV": "",
-            },
-        )
-        await run(
-            "uv",
-            [
-                "add",
-                "robotframework",
-            ]
-            + (["pydantic"] if python else [])
-            + [
-                "--no-sources",
-            ],
-            cwd_path,
-            {
-                "UV_NO_SYNC": "0",
-                "VIRTUAL_ENV": "",
-            },
-        )
-        if python:
-            await run(
-                "uv",
-                [
-                    "add",
-                    "--dev",
-                    "purjo",
-                ]
-                + [
-                    "--no-sources",
-                ],
-                cwd_path,
-                {
-                    "UV_NO_SYNC": "0",
-                    "VIRTUAL_ENV": "",
-                },
-            )
-        for fixture_py in [cwd_path / "hello.py", cwd_path / "main.py"]:
-            if fixture_py.exists():
-                fixture_py.unlink()
-        (cwd_path / "pyproject.toml").write_text(
-            (cwd_path / "pyproject.toml").read_text()
-            + f"""
-[tool.purjo.topics."My Topic in BPMN"]
-name = "{'tasks.main' if python else 'My Test in Robot'}"
-on-fail = "{'FAIL' if python else 'ERROR'}"
-process-variables = true
-"""
-        )
-        (cwd_path / "hello.bpmn").write_text(
-            (importlib.resources.files("purjo.data") / "hello.bpmn").read_text()
-        )
-        if python:
-            (cwd_path / "tasks.py").write_text(
-                (importlib.resources.files("purjo.data") / "tasks.py").read_text()
-            )
-        else:
-            (cwd_path / "hello.robot").write_text(
-                (importlib.resources.files("purjo.data") / "hello.robot").read_text()
-            )
-            (cwd_path / "Hello.py").write_text(
-                (importlib.resources.files("purjo.data") / "Hello.py").read_text()
-            )
-        (cwd_path / ".wrapignore").write_text("")
-        cli_wrap()
-        (cwd_path / "robot.zip").unlink()
-        if (cwd_path / ".venv").exists():
-            shutil.rmtree(cwd_path / ".venv")
-
-    asyncio.run(init())
+    asyncio.run(initialize_robot_package(cwd_path, python, task, agents))
 
 
 @cli.command(name="wrap")
@@ -230,13 +564,26 @@ def cli_wrap(
     log_level: Annotated[str, typer.Option(envvar="LOG_LEVEL")] = "INFO",
 ) -> None:
     """Wrap the current directory into a robot.zip package."""
+    wrap_package(Path(os.getcwd()), offline=offline, log_level=log_level)
+
+
+def wrap_package(
+    cwd_path: Path,
+    offline: bool = False,
+    log_level: str = "INFO",
+) -> None:
+    """Wrap `cwd_path` into a `robot.zip` package inside it.
+
+    Split out of `cli_wrap` so callers that already know the target directory
+    (notably `initialize_robot_package`) can wrap it without depending on the
+    process working directory.
+    """
     logger.setLevel(log_level)
     set_log_level(log_level)
-    cwd_path = Path(os.getcwd())
     if offline:
         # Cache dependencies
-        if cwd_path.joinpath(".venv").exists():
-            shutil.rmtree(cwd_path / ".venv")
+        if cwd_path.joinpath(".venv").exists():  # pragma: no cover
+            shutil.rmtree(cwd_path / ".venv")  # pragma: no cover
         asyncio.run(
             run(
                 "uv",
@@ -256,9 +603,14 @@ def cli_wrap(
     spec = get_wrap_pathspec(cwd_path)
     zip_path = cwd_path / "robot.zip"
     with ZipFile(zip_path, "w") as zipf:
-        for file_path in spec.match_tree(cwd_path, negate=True, follow_links=False):
+        for file_path in spec.match_tree_files(
+            cwd_path, negate=True, follow_links=False
+        ):
             print(f"Adding {file_path}")
-            zipf.write(file_path)
+            # `match_tree_files` yields paths relative to `cwd_path`; read them
+            # from there rather than from the process working directory, but
+            # keep the relative name as the archive entry.
+            zipf.write(cwd_path / file_path, file_path)
         if offline:
             print("Adding .cache")
             for file_path_ in (cwd_path / ".cache").rglob("*"):
@@ -323,12 +675,14 @@ def operaton_create(
 @operaton.command(name="deploy")
 def operaton_deploy(
     resources: List[FilePath],
-    name: Annotated[str, typer.Option(envvar="DEPLOYMENT_NAME")] = "pur(jo) deployment",
+    name: Annotated[
+        str, typer.Option(envvar="DEPLOYMENT_NAME")
+    ] = DEFAULT_DEPLOYMENT_NAME,
     migrate: bool = True,
     force: bool = False,
     base_url: Annotated[
         str, typer.Option(envvar="ENGINE_REST_BASE_URL")
-    ] = "http://localhost:8080/engine-rest",
+    ] = DEFAULT_ENGINE_BASE_URL,
     authorization: Annotated[
         Optional[str], typer.Option(envvar="ENGINE_REST_AUTHORIZATION")
     ] = None,
@@ -340,56 +694,7 @@ def operaton_deploy(
     logger.setLevel(log_level)
     set_log_level(log_level)
 
-    async def deploy() -> None:
-        async with operaton_session(headers={"Content-Type": None}) as session:
-            form = aiohttp.FormData()
-            for resource in resources:
-                form.add_field(
-                    "deployment-name",
-                    name,
-                    content_type="text/plain",
-                )
-                form.add_field(
-                    "deployment-source",
-                    "pur(jo)",
-                    content_type="text/plain",
-                )
-                form.add_field(
-                    "deploy-changed-only",
-                    "true" if not force else "false",
-                    content_type="text/plain",
-                )
-                form.add_field(
-                    resource.name,
-                    resource.read_text(),
-                    filename=resource.name,
-                    content_type="application/octet-stream",
-                )
-            response = await session.post(
-                f"{base_url}/deployment/create",
-                data=form,
-            )
-            if response.status >= 400:
-                print(json.dumps(await response.json(), indent=2))
-                return
-            try:
-                deployment = DeploymentWithDefinitionsDto(**await response.json())
-            except ValidationError:
-                print(json.dumps(await response.json(), indent=2))
-                return
-            port = urlparse(base_url).port or 8080
-            url = (
-                base_url.replace("/engine-rest", "").rstrip("/")
-                if "CODESPACE_NAME" not in os.environ
-                else f"https://{os.environ['CODESPACE_NAME']}-{port}.app.github.dev"
-            ) + "/operaton/app/cockpit/default/#/process-definition"
-            for definition in (deployment.deployedProcessDefinitions or {}).values():
-                if migrate:
-                    await migrate_all(definition, settings.LOG_LEVEL == "DEBUG")
-                print(f"Deployed: {url}/{definition.id}/runtime")
-                print(f"With key: {definition.key}")
-
-    asyncio.run(deploy())
+    asyncio.run(deploy_resources(resources, name, force, migrate, base_url))
 
 
 @operaton.command(name="start")
@@ -398,7 +703,7 @@ def operaton_start(
     variables: Optional[str] = None,
     base_url: Annotated[
         str, typer.Option(envvar="ENGINE_REST_BASE_URL")
-    ] = "http://localhost:8080/engine-rest",
+    ] = DEFAULT_ENGINE_BASE_URL,
     authorization: Annotated[
         Optional[str], typer.Option(envvar="ENGINE_REST_AUTHORIZATION")
     ] = None,
@@ -410,43 +715,7 @@ def operaton_start(
     logger.setLevel(log_level)
     set_log_level(log_level)
 
-    async def start() -> None:
-        variables_data = (
-            json.load(sys.stdin)
-            if variables == "-"
-            else (
-                json.loads(Path(variables).read_text())
-                if variables and os.path.isfile(variables)
-                else (json.loads(variables) if variables else {})
-            )
-        )
-        business_key = variables_data.pop("businessKey", None) or f"{uuid.uuid4()}"
-        async with operaton_session() as session:
-            response = await session.post(
-                f"{base_url}/process-definition/key/{key}/start",
-                json=StartProcessInstanceDto(
-                    businessKey=business_key,
-                    variables=operaton_from_py(variables_data, [Path(os.getcwd())]),
-                ).model_dump(),
-                headers={"Content-Type": "application/json"},
-            )
-            if response.status >= 400:
-                print(json.dumps(await response.json(), indent=2))
-                return
-            try:
-                instance = ProcessInstanceDto(**await response.json())
-            except ValidationError:
-                print(json.dumps(await response.json(), indent=2))
-                return
-            port = urlparse(base_url).port or 8080
-            url = (
-                base_url.replace("/engine-rest", "").rstrip("/")
-                if "CODESPACE_NAME" not in os.environ
-                else f"https://{os.environ['CODESPACE_NAME']}-{port}.app.github.dev"
-            ) + "/operaton/app/cockpit/default/#/process-instance"
-            print(f"Started: {url}/{instance.id}/runtime")
-
-    asyncio.run(start())
+    asyncio.run(start_process(key, variables, base_url))
 
 
 cli.add_typer(operaton, name="operaton")
@@ -459,13 +728,15 @@ cli.add_typer(operaton, name="bpm", hidden=True)
 )
 def cli_run(
     resources: List[FilePath],
-    name: Annotated[str, typer.Option(envvar="DEPLOYMENT_NAME")] = "pur(jo) deployment",
+    name: Annotated[
+        str, typer.Option(envvar="DEPLOYMENT_NAME")
+    ] = DEFAULT_DEPLOYMENT_NAME,
     variables: Optional[str] = None,
     migrate: bool = True,
     force: bool = False,
     base_url: Annotated[
         str, typer.Option(envvar="ENGINE_REST_BASE_URL")
-    ] = "http://localhost:8080/engine-rest",
+    ] = DEFAULT_ENGINE_BASE_URL,
     authorization: Annotated[
         Optional[str], typer.Option(envvar="ENGINE_REST_AUTHORIZATION")
     ] = None,
@@ -478,97 +749,8 @@ def cli_run(
     logger.setLevel(log_level)
     set_log_level(log_level)
 
-    async def start() -> None:
-        async with operaton_session(headers={"Content-Type": None}) as session:
-            form = aiohttp.FormData()
-            for resource in resources:
-                form.add_field(
-                    "deployment-name",
-                    name,
-                    content_type="text/plain",
-                )
-                form.add_field(
-                    "deployment-source",
-                    "pur(jo)",
-                    content_type="text/plain",
-                )
-                form.add_field(
-                    "deploy-changed-only",
-                    "true" if not force else "false",
-                    content_type="text/plain",
-                )
-                form.add_field(
-                    resource.name,
-                    resource.read_text(),
-                    filename=resource.name,
-                    content_type="application/octet-stream",
-                )
-            response = await session.post(
-                f"{base_url}/deployment/create",
-                data=form,
-            )
-            if response.status >= 400:
-                print(json.dumps(await response.json(), indent=2))
-                return
-            try:
-                deployment = DeploymentDto(**await response.json())
-            except ValidationError:
-                print(json.dumps(await response.json(), indent=2))
-                return
-            response = await session.get(
-                f"{base_url}/process-definition?deploymentId={deployment.id}"
-            )
-            if response.status >= 400:
-                print(json.dumps(await response.json(), indent=2))
-                return
-            try:
-                definitions = [
-                    ProcessDefinitionDto(**element) for element in await response.json()
-                ]
-            except (TypeError, ValidationError):
-                print(json.dumps(await response.json(), indent=2))
-                return
-            for definition in definitions:
-                if migrate:
-                    await migrate_all(definition, settings.LOG_LEVEL == "DEBUG")
-                variables_data = (
-                    json.load(sys.stdin)
-                    if variables == "-"
-                    else (
-                        json.loads(Path(variables).read_text())
-                        if variables and os.path.isfile(variables)
-                        else (json.loads(variables) if variables else {})
-                    )
-                )
-                business_key = (
-                    variables_data.pop("businessKey", None) or f"{uuid.uuid4()}"
-                )
-                response = await session.post(
-                    f"{base_url}/process-definition/key/{definition.key}/start",
-                    json=StartProcessInstanceDto(
-                        businessKey=business_key,
-                        variables=operaton_from_py(variables_data, [Path(os.getcwd())]),
-                    ).model_dump(),
-                    headers={"Content-Type": "application/json"},
-                )
-                if response.status >= 400:
-                    print(json.dumps(await response.json(), indent=2))
-                    return
-                try:
-                    instance = ProcessInstanceDto(**await response.json())
-                except ValidationError:
-                    print(json.dumps(await response.json(), indent=2))
-                    return
-                port = urlparse(base_url).port or 8080
-                url = (
-                    base_url.replace("/engine-rest", "").rstrip("/")
-                    if "CODESPACE_NAME" not in os.environ
-                    else f"https://{os.environ['CODESPACE_NAME']}-{port}.app.github.dev"
-                ) + "/operaton/app/cockpit/default/#/process-instance"
-                print(f"Started: {url}/{instance.id}/runtime")
-
-    asyncio.run(start())
+    asyncio.run(deploy_and_start(resources, name, variables, migrate, force, base_url))
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover
     cli()

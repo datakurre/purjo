@@ -1,7 +1,11 @@
 ## 1.0b8 (unreleased)
 
 
-- Nothing changed yet.
+- Fix 'pur wrap' to exclude secrets.json, and stop copying it into the task sandbox
+- Fix relative 'file' secrets paths to resolve against a directory package
+- Fix a Fail keyword that never ran being reported as an explicit robot failure
+- Fix 'pur operaton deploy --variables -' with multiple process definitions
+- Fix 'pur serve' on Python 3.14
 
 
 ## 1.0b7 (2026-01-23)
