@@ -72,6 +72,11 @@ async def test_secret_is_used_but_never_logged(
     )
 
 
+# Runs under both profiles: this is the check that the engine requires
+# credentials at all, and it is the one that catches an engine left open. It
+# deliberately does not name a scheme, because a bare 401 does not identify
+# one -- the two tests below are what separate them.
+@pytest.mark.auth_basic
 @pytest.mark.auth_oauth2
 async def test_unauthenticated_request_is_rejected(
     engine_base_url: str,
@@ -80,8 +85,53 @@ async def test_unauthenticated_request_is_rejected(
     async with engine_session.get(f"{engine_base_url}/deployment") as response:
         assert response.status == 401, (
             "an unauthenticated request to the engine succeeded "
-            f"(status {response.status}); services.operaton.oauth2 may not "
-            "be enabled"
+            f"(status {response.status}); /engine-rest is unprotected -- "
+            "neither services.operaton.oauth2.enable nor "
+            "services.operaton.basicAuth.enable took effect"
+        )
+
+
+@pytest.mark.auth_oauth2
+async def test_basic_credential_is_rejected_under_oauth2(
+    basic_auth_env: dict[str, str],
+    engine_base_url: str,
+    engine_session: aiohttp.ClientSession,
+) -> None:
+    """OAuth2 is enabled *instead of* Basic, so the legacy credential must fail.
+
+    Without this, `test_unauthenticated_request_is_rejected` passing would be
+    equally consistent with the engine running Basic auth rather than OAuth2.
+    """
+    async with engine_session.get(
+        f"{engine_base_url}/deployment",
+        headers={"Authorization": basic_auth_env["ENGINE_REST_AUTHORIZATION"]},
+    ) as response:
+        assert response.status == 401, (
+            "the engine accepted a Basic credential under the OAuth2 profile "
+            f"(status {response.status}); services.operaton.oauth2.enable may "
+            "not have taken effect"
+        )
+
+
+@pytest.mark.auth_basic
+async def test_basic_credential_is_accepted_under_basic_auth(
+    basic_auth_env: dict[str, str],
+    engine_base_url: str,
+    engine_session: aiohttp.ClientSession,
+) -> None:
+    """The credential the `auth_basic` tests rely on is really being checked.
+
+    Paired with `test_unauthenticated_request_is_rejected` above, this is what
+    distinguishes "Basic auth is enforced and this credential satisfies it"
+    from "the engine accepts anything and the header is ignored".
+    """
+    async with engine_session.get(
+        f"{engine_base_url}/deployment",
+        headers={"Authorization": basic_auth_env["ENGINE_REST_AUTHORIZATION"]},
+    ) as response:
+        assert response.status == 200, (
+            "the engine rejected the demo Basic credential "
+            f"(status {response.status}): {await response.text()}"
         )
 
 

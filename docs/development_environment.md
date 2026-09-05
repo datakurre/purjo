@@ -85,7 +85,14 @@ test is marked with the one it needs:
 | Profile | Engine | Marker |
 | --- | --- | --- |
 | `shell` (the default) | OAuth2-protected, with Keycloak | `auth_oauth2` |
-| `basic` | default Basic credential, no Keycloak | `auth_basic` |
+| `basic` | HTTP Basic on `/engine-rest`, no Keycloak | `auth_basic` |
+
+`services.operaton` asserts that its `oauth2` and `basicAuth` options are
+mutually exclusive, which is why these are separate profiles. Each profile
+proves its own engine is actually protected rather than merely reachable:
+`test_unauthenticated_request_is_rejected` carries both markers and runs in
+either, and a scheme-specific test either side of it checks that the Basic
+credential is accepted under `basic` and rejected under `shell`.
 
 ```console
 $ devenv up                                     # OAuth2 engine (default profile)
