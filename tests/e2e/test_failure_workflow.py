@@ -20,6 +20,11 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Any
 import aiohttp
+import pytest
+
+# Needs the engine on its default Basic credential, i.e. the `basic`
+# devenv profile. Under the OAuth2 profile the engine rejects Basic.
+pytestmark = pytest.mark.auth_basic
 
 FAIL_EXAMPLE_DIR = Path(__file__).parent / "fixtures" / "fail_example"
 FAIL_EXAMPLE_BPMN = FAIL_EXAMPLE_DIR / "hello.bpmn"

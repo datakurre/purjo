@@ -20,8 +20,16 @@ from typing import Any
 from unittest.mock import Mock
 from unittest.mock import patch
 import json
+import os
 import pytest
 import tomllib
+
+# chmod-based denial does nothing for uid 0, which is the norm inside the
+# devcontainer and the container image built by CI.
+skip_as_root = pytest.mark.skipif(
+    os.geteuid() == 0,
+    reason="root bypasses the file permission bits these assert on",
+)
 
 
 class TestSubprocessFailures:
@@ -112,6 +120,7 @@ module = "timeout_task"
 class TestFileSystemErrors:
     """Test file system error handling."""
 
+    @skip_as_root
     def test_permission_denied_reading_pyproject(self, temp_dir: Any) -> None:
         """Test handling of permission denied when reading pyproject.toml."""
         task_dir = temp_dir / "no_perms"
@@ -171,6 +180,7 @@ module = "no_perms"
                 output_file = temp_dir / "output.txt"
                 output_file.write_text("test data")
 
+    @skip_as_root
     def test_read_only_directory(self, temp_dir: Any) -> None:
         """Test handling operations in read-only directory."""
         readonly_dir = temp_dir / "readonly"

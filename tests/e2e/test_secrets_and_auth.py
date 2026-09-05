@@ -33,6 +33,7 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Any
 import aiohttp
+import pytest
 
 SECRETS_EXAMPLE_DIR = Path(__file__).resolve().parent / "fixtures" / "secrets_example"
 SECRETS_EXAMPLE_BPMN = SECRETS_EXAMPLE_DIR / "hello.bpmn"
@@ -41,6 +42,7 @@ RAW_SECRET_VALUE = "e2e-secret-should-never-appear-in-logs"
 TEST_PASSED_ACTIVITY_ID = "Event_TestPassed"
 
 
+@pytest.mark.auth_basic
 async def test_secret_is_used_but_never_logged(
     basic_auth_env: dict[str, str],
     deploy_and_start: Callable[[Path, str, str, dict[str, str]], str],
@@ -70,6 +72,7 @@ async def test_secret_is_used_but_never_logged(
     )
 
 
+@pytest.mark.auth_oauth2
 async def test_unauthenticated_request_is_rejected(
     engine_base_url: str,
     engine_session: aiohttp.ClientSession,
@@ -82,6 +85,7 @@ async def test_unauthenticated_request_is_rejected(
         )
 
 
+@pytest.mark.auth_oauth2
 async def test_oauth2_bearer_token_authenticates_the_workflow(
     oauth2_env: dict[str, str],
     oauth2_bearer_authorization: str,

@@ -3,16 +3,28 @@ on:
   push:
     branches:
       - main
+  # Deliberately unfiltered. `pull_request` filters on the *base* branch, so
+  # `branches: [main]` gave zero CI to any PR targeting a feature branch --
+  # silently, with no skipped check to notice. A PR stacked on another branch
+  # is exactly where the tests are wanted.
   pull_request:
-    branches:
-      - main
 permissions:
   contents: read
+
+# A push to a PR branch supersedes the run already in flight for it; without
+# this they both run to completion and queue behind each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Without this a hung process takes GitHub's 6 hour default with it. 60
+    # rather than 45 because a cold runner can spend up to ~40 min in a single
+    # slow NAR fetch (see the cachix note in the setup-devenv action).
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup devenv
         uses: ./.github/actions/setup-devenv
@@ -24,9 +36,6 @@ jobs:
 
       - name: Run tests with coverage
         run: devenv shell -- python -m pytest --cov-report=xml
-
-      - name: Run e2e tests against live services
-        run: devenv shell -- devenv test --no-tui
 
       - name: Report coverage in job summary
         if: always()
@@ -40,7 +49,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: ./coverage.xml
           flags: unittests
@@ -50,7 +59,7 @@ jobs:
 
       - name: Upload coverage artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-reports
           path: |
@@ -58,3 +67,79 @@ jobs:
             coverage.xml
             coverage.json
           retention-days: 30
+
+  # The engine can only be configured for one authentication method at a time,
+  # so covering both means two environments rather than two fixtures: a devenv
+  # profile each (see devenv.nix) and a job each. `--profile` overrides the
+  # `profile: shell` default in devenv.yaml rather than adding to it, so the
+  # basic matrix entry really does get an engine without OAuth2 or Keycloak.
+  e2e:
+    name: e2e (${{ matrix.auth }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      # One auth scenario failing should still report the other.
+      fail-fast: false
+      matrix:
+        include:
+          - auth: oauth2
+            profile: shell
+            ports: 8080 8200 8081
+            # Keycloak listens on 8081 before it can serve tokens; this is the
+            # endpoint that stops returning 503 once the realm is imported.
+            ready_url: http://localhost:8081/realms/operaton
+          - auth: basic
+            profile: basic
+            ports: 8080 8200
+            ready_url: ""
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup devenv
+        uses: ./.github/actions/setup-devenv
+        with:
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      # Build the profile's environment before the timed step below, so its
+      # port wait budgets service startup only, not a cold-runner nix
+      # download. Each matrix job gets its own runner with an empty store, and
+      # without this the oauth2 profile (Keycloak's closure) was still
+      # downloading when the wait expired -- the cleanup listed no service
+      # processes at all, because none had started yet.
+      - name: Build the ${{ matrix.auth }} environment
+        run: devenv --profile ${{ matrix.profile }} shell -- true
+
+      # Deliberately not `devenv test`. It does not run enterTest until every
+      # process reports ready, and the daemon it waits on never signals ready
+      # here ("Daemon failed to start within 120s" from `processes up -d`),
+      # so runs sat for 15-26 min with every service up and no pytest ever
+      # spawned. Start the processes in the foreground, backgrounded from the
+      # step, and let `make test-e2e-ci` do its own bounded port waiting --
+      # which also fails loudly on a service that never appears, instead of
+      # letting require_live_services skip the suite green.
+      - name: Run ${{ matrix.auth }} e2e tests
+        timeout-minutes: 15
+        run: |
+          # Only the OAuth2 engine needs credentials on the environment: the
+          # basic tests pass ENGINE_REST_AUTHORIZATION to `pur` themselves via
+          # the basic_auth_env fixture, and operaton-tasks rejects a config
+          # that sets both auth methods at once. .env is gitignored, and
+          # devenv's dotenv loader reads it on shell entry.
+          if [ "${{ matrix.auth }}" = "oauth2" ]; then cp .env.example .env; fi
+          devenv --profile ${{ matrix.profile }} shell -- \
+            devenv --profile ${{ matrix.profile }} processes up > processes.log 2>&1 &
+          processes_pid=$!
+          status=0
+          devenv --profile ${{ matrix.profile }} shell -- \
+            make test-e2e-ci \
+              E2E_PORTS="${{ matrix.ports }}" \
+              E2E_MARKERS="e2e and auth_${{ matrix.auth }}" \
+              E2E_READY_URL="${{ matrix.ready_url }}" \
+              E2E_WAIT_SECONDS=300 || status=$?
+          kill "$processes_pid" 2>/dev/null || true
+          if [ "$status" -ne 0 ]; then
+            echo "::group::devenv processes output"
+            tail -n 200 processes.log || true
+            echo "::endgroup::"
+          fi
+          exit "$status"

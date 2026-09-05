@@ -13,6 +13,22 @@ inputs:
         follows: nixpkgs
   nixpkgs:
     url: github:nixos/nixpkgs/nixos-25.11
+  # This matches devenv's own default rather than overriding it: devenv
+  # declares the input itself with `follows = [ "nixpkgs" ]` in
+  # src/modules/languages/python/default.nix, so removing the line here would
+  # not change the resolved nixpkgs.
+  #
+  # It is also a no-op today regardless. nixpkgs-python's flake.lock pins
+  # nixpkgs to b6018f87da91d19d0ab4cf979885689b469cdd41, which is exactly what
+  # our nixos-25.11 input already resolves to (devenv.lock, node nixpkgs_3).
+  #
+  # So `languages.python.version` compiling CPython on a cold runner is NOT
+  # caused by this line and is not fixed by dropping it -- that experiment has
+  # been run: the branch briefly had the follows removed AND
+  # nixpkgs-python.cachix.org configured as a substituter, and CPython still
+  # built from source, so that cache has no prebuilt for this combination.
+  # What actually makes a cold run fast is the datakurre cache carrying the
+  # built result (see cachix.pull in devenv.nix).
   nixpkgs-python:
     url: github:cachix/nixpkgs-python
     inputs:
