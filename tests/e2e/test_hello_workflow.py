@@ -20,6 +20,11 @@ from pathlib import Path
 from typing import Any
 import aiohttp
 import asyncio
+import pytest
+
+# Needs the engine on its default Basic credential, i.e. the `basic`
+# devenv profile. Under the OAuth2 profile the engine rejects Basic.
+pytestmark = pytest.mark.auth_basic
 
 HELLO_DIR = Path(__file__).parent / "fixtures" / "hello_example"
 HELLO_BPMN = HELLO_DIR / "hello.bpmn"

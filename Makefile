@@ -66,10 +66,16 @@ test-coverage: htmlcov  ## Generate HTML coverage reports
 test-pytest:  ## Run unit tests with pytest
 	pytest --cov=$(MODULE) tests
 
-test-e2e:  ## Run e2e tests against live devenv services (Operaton, Vault, Keycloak)
-	pytest -o addopts="" -m e2e tests/e2e
-
 E2E_WAIT_SECONDS ?= 180
+# The engine authenticates one way at a time, so each auth scenario is its own
+# devenv profile and its own CI job. Override both of these together:
+#   oauth2 (default `shell` profile): ports 8080 8200 8081, -m "e2e and auth_oauth2"
+#   basic  (`basic` profile):         ports 8080 8200,      -m "e2e and auth_basic"
+E2E_PORTS ?= 8080 8200 8081
+E2E_MARKERS ?= e2e
+
+test-e2e:  ## Run e2e tests against live devenv services (see E2E_MARKERS)
+	pytest -o addopts="" -m "$(E2E_MARKERS)" tests/e2e
 
 test-e2e-ci:  ## Wait for already-started devenv services, then run e2e (used by CI)
 # Waits itself rather than relying on `devenv test`, which does not run
@@ -78,13 +84,13 @@ test-e2e-ci:  ## Wait for already-started devenv services, then run e2e (used by
 # finishes. Fails loudly on a missing service: require_live_services in
 # tests/e2e/conftest.py *skips* the suite when a port is closed, so without
 # this a dead service would be a green run.
-	@for port in 8080 8200 8081; do \
+	@for port in $(E2E_PORTS); do \
 	  echo "waiting for localhost:$$port"; \
 	  timeout $(E2E_WAIT_SECONDS) bash -c \
 	    "until (echo > /dev/tcp/localhost/$$port) 2>/dev/null; do sleep 1; done" \
 	    || { echo "ERROR: nothing listening on port $$port after $(E2E_WAIT_SECONDS)s"; exit 1; }; \
 	done
-	@set -a; . "$$DEVENV_STATE/env_file"; set +a; $(MAKE) test-e2e
+	@set -a; . "$$DEVENV_STATE/env_file"; set +a; $(MAKE) test-e2e E2E_MARKERS="$(E2E_MARKERS)"
 
 watch: .env  ## Start the application in watch mode
 	$(APP) -- --reload

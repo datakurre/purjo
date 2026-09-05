@@ -59,7 +59,7 @@ When working with `purjo` in VS Code, the following extensions are recommended:
 $ devenv test
 ```
 
-This command waits for all services (Operaton, Vault, Keycloak) to be ready, then runs the unit test suite (`make test`) followed by the end-to-end suite against those live services (`make test-e2e`; see [End-to-end testing](#end-to-end-testing) below).
+This command waits for all services (Operaton, Vault, Keycloak) to be ready, then runs the unit test suite (`make test`) followed by the end-to-end suite against those live services (`make test-e2e`; see [End-to-end testing](#end-to-end-testing) below). It covers the default (OAuth2) profile only; CI does not use it.
 
 ## Testing strategies
 
@@ -76,16 +76,33 @@ See [Testing Tasks](testing_tasks.md) for the full guide and examples.
 
 `purjo`'s own end-to-end suite (`tests/e2e/`) automates exactly this flow
 against live services -- deploy, start an instance, run `pur serve`, then
-verify the result through the engine's history REST API -- for both Basic
-and OAuth2 authentication. Run it with:
+verify the result through the engine's history REST API.
+
+The engine authenticates one way at a time, so the two authentication
+scenarios are two devenv profiles rather than two fixtures, and every e2e
+test is marked with the one it needs:
+
+| Profile | Engine | Marker |
+| --- | --- | --- |
+| `shell` (the default) | OAuth2-protected, with Keycloak | `auth_oauth2` |
+| `basic` | default Basic credential, no Keycloak | `auth_basic` |
 
 ```console
-$ devenv up            # start Operaton, Vault, Keycloak, Mockoon
-$ devenv shell -- make test-e2e
+$ devenv up                                     # OAuth2 engine (default profile)
+$ cp .env.example .env                          # client credentials it needs
+$ devenv shell -- make test-e2e E2E_MARKERS="e2e and auth_oauth2"
+
+$ devenv --profile basic up                     # Basic-auth engine
+$ devenv --profile basic shell -- make test-e2e E2E_MARKERS="e2e and auth_basic"
 ```
 
-or run `devenv test` (used by CI) to run the full suite, including e2e,
-with the required services started and waited for automatically.
+Only the OAuth2 profile needs credentials on the environment; the Basic tests
+pass `ENGINE_REST_AUTHORIZATION` to `pur` themselves. Never set both -- see
+[CLI Reference](cli_reference.md).
+
+CI runs the two as separate matrix jobs, via `make test-e2e-ci`, which also
+waits for that profile's ports and fails if a service never appears (rather
+than letting the suite skip itself green).
 
 You can also drive the same flow by hand, which is what `tests/e2e/`
 automates:

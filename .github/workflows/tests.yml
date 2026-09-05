@@ -19,10 +19,9 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    # Without this a hung process takes GitHub's 6 hour default with it.
-    # 60 rather than 45 because a cold runner currently spends up to ~40 min
-    # in a single slow NAR fetch (see the cachix note below), which left no
-    # room for the e2e step underneath a 45 min cap.
+    # Without this a hung process takes GitHub's 6 hour default with it. 60
+    # rather than 45 because a cold runner can spend up to ~40 min in a single
+    # slow NAR fetch (see the cachix note in the setup-devenv action).
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
@@ -37,44 +36,6 @@ jobs:
 
       - name: Run tests with coverage
         run: devenv shell -- python -m pytest --cov-report=xml
-
-      # Deliberately not `devenv test`. It does not run enterTest until every
-      # process reports ready, and mockoon and keycloak-realm-export-all ship
-      # no readiness probe, so that wait never finishes: three runs sat here
-      # for 15-26 min with every probed service up and no make/pytest ever
-      # spawned. Start the services directly and let `make test-e2e-ci` do its
-      # own bounded waiting -- which also fails loudly on a service that never
-      # appears, instead of letting require_live_services skip the suite green.
-      # This duplicates nothing: enterTest's `make test` is already covered by
-      # the two steps above.
-      - name: Run e2e tests against live services
-        timeout-minutes: 15
-        run: |
-          # The engine is OAuth2-protected (services.operaton.oauth2 in
-          # devenv.nix), and the client credentials live in .env.example,
-          # matching the committed Keycloak realm fixture. .env is gitignored
-          # and devenv's dotenv loader reads it on shell entry, so CI has to
-          # materialise it: without it every `pur run` gets 401 and the oauth2
-          # test errors on an unset OAUTH2_CLIENT_SECRET. Written here rather
-          # than at job level so it cannot perturb the unit-test steps above.
-          cp .env.example .env
-          # `devenv processes up` in the foreground, backgrounded here, rather
-          # than `up -d`: the daemon that -d relies on never signals ready on
-          # this runner -- "Daemon failed to start within 120s" -- even though
-          # every service does come up (they are all in the job's orphan list
-          # at cleanup). That daemon is the most likely reason `devenv test`
-          # hung too: it waits on the same thing, just without the 120s bound.
-          devenv shell -- devenv processes up > processes.log 2>&1 &
-          processes_pid=$!
-          status=0
-          devenv shell -- make test-e2e-ci || status=$?
-          kill "$processes_pid" 2>/dev/null || true
-          if [ "$status" -ne 0 ]; then
-            echo "::group::devenv processes output"
-            tail -n 200 processes.log || true
-            echo "::endgroup::"
-          fi
-          exit "$status"
 
       - name: Report coverage in job summary
         if: always()
@@ -106,3 +67,64 @@ jobs:
             coverage.xml
             coverage.json
           retention-days: 30
+
+  # The engine can only be configured for one authentication method at a time,
+  # so covering both means two environments rather than two fixtures: a devenv
+  # profile each (see devenv.nix) and a job each. `--profile` overrides the
+  # `profile: shell` default in devenv.yaml rather than adding to it, so the
+  # basic matrix entry really does get an engine without OAuth2 or Keycloak.
+  e2e:
+    name: e2e (${{ matrix.auth }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      # One auth scenario failing should still report the other.
+      fail-fast: false
+      matrix:
+        include:
+          - auth: oauth2
+            profile: shell
+            ports: 8080 8200 8081
+          - auth: basic
+            profile: basic
+            ports: 8080 8200
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup devenv
+        uses: ./.github/actions/setup-devenv
+        with:
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      # Deliberately not `devenv test`. It does not run enterTest until every
+      # process reports ready, and the daemon it waits on never signals ready
+      # here ("Daemon failed to start within 120s" from `processes up -d`),
+      # so runs sat for 15-26 min with every service up and no pytest ever
+      # spawned. Start the processes in the foreground, backgrounded from the
+      # step, and let `make test-e2e-ci` do its own bounded port waiting --
+      # which also fails loudly on a service that never appears, instead of
+      # letting require_live_services skip the suite green.
+      - name: Run ${{ matrix.auth }} e2e tests
+        timeout-minutes: 15
+        run: |
+          # Only the OAuth2 engine needs credentials on the environment: the
+          # basic tests pass ENGINE_REST_AUTHORIZATION to `pur` themselves via
+          # the basic_auth_env fixture, and operaton-tasks rejects a config
+          # that sets both auth methods at once. .env is gitignored, and
+          # devenv's dotenv loader reads it on shell entry.
+          if [ "${{ matrix.auth }}" = "oauth2" ]; then cp .env.example .env; fi
+          devenv --profile ${{ matrix.profile }} shell -- \
+            devenv --profile ${{ matrix.profile }} processes up > processes.log 2>&1 &
+          processes_pid=$!
+          status=0
+          devenv --profile ${{ matrix.profile }} shell -- \
+            make test-e2e-ci \
+              E2E_PORTS="${{ matrix.ports }}" \
+              E2E_MARKERS="e2e and auth_${{ matrix.auth }}" || status=$?
+          kill "$processes_pid" 2>/dev/null || true
+          if [ "$status" -ne 0 ]; then
+            echo "::group::devenv processes output"
+            tail -n 200 processes.log || true
+            echo "::endgroup::"
+          fi
+          exit "$status"

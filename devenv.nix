@@ -1,5 +1,9 @@
 let
-  shell =
+  # Everything that is the same whichever way the engine authenticates.
+  # The auth-specific pieces live in the two profiles at the bottom, because
+  # the engine can only be configured one way at a time -- so exercising both
+  # means two environments, and two CI jobs, not two fixtures.
+  base =
     {
       pkgs,
       lib,
@@ -14,21 +18,7 @@ let
         forwardHeadersStrategy = "native";
         package = devenv-module-operaton.packages.${pkgs.stdenv.hostPlatform.system}.default;
         deployment = ./fixture/operaton;
-        oauth2 = {
-          enable = true;
-          issuerUri = "http://localhost:8081/realms/operaton";
-        };
         postgres.enable = true;
-      };
-
-      services.keycloak = {
-        enable = true;
-        settings.http-port = 8081;
-        realms.operaton = {
-          path = "./fixture/keycloak/operaton-realm.json";
-          import = true;
-          export = true;
-        };
       };
 
       services.vault = {
@@ -180,6 +170,26 @@ let
 
       cachix.pull = [ "datakurre" ];
     };
+  # OAuth2-protected engine, backed by the Keycloak realm fixture. The client
+  # credentials that match it are in .env.example.
+  oauth2Engine =
+    { ... }:
+    {
+      services.operaton.oauth2 = {
+        enable = true;
+        issuerUri = "http://localhost:8081/realms/operaton";
+      };
+
+      services.keycloak = {
+        enable = true;
+        settings.http-port = 8081;
+        realms.operaton = {
+          path = "./fixture/keycloak/operaton-realm.json";
+          import = true;
+          export = true;
+        };
+      };
+    };
   devcontainer =
     { ... }:
     {
@@ -187,8 +197,22 @@ let
     };
 in
 {
-  profiles.shell.module = {
-    imports = [ shell ];
+  profiles.base.module = {
+    imports = [ base ];
+  };
+  # The default (devenv.yaml sets `profile: shell`), so a plain `devenv shell`
+  # still gets the OAuth2 engine it did before.
+  profiles.shell = {
+    extends = [ "base" ];
+    module = {
+      imports = [ oauth2Engine ];
+    };
+  };
+  # No Keycloak and no services.operaton.oauth2: the engine keeps its default
+  # Basic credential, which is what the `basic_auth_env` e2e tests need.
+  # Select with `devenv --profile basic ...`.
+  profiles.basic = {
+    extends = [ "base" ];
   };
   profiles.devcontainer.module = {
     imports = [ devcontainer ];
