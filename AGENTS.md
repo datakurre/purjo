@@ -141,6 +141,23 @@ Violations indicate fundamental architectural problems that must be fixed immedi
 
 ---
 
+## Agent Sandbox
+```toml agent-sandbox
+[network]
+allowed_hosts = [
+    "pypi.org:443",
+    "files.pythonhosted.org:443",
+    "*.nixos.org:443",
+    "*.cachix.org:443",
+    "*.github.com:443",
+    "*.github.io:443",
+    "*.gitlab.com:443",
+]
+
+[ports]
+web = 8080
+```
+
 ## Documentation
 
 For comprehensive agent documentation, see:
