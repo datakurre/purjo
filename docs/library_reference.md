@@ -25,6 +25,7 @@ Executes a specific task (topic) from a robot package using a set of input varia
 *   `path`: The path to the robot package. This can be a directory containing `pyproject.toml` or a packaged `robot.zip` file.
 *   `topic`: The name of the BPMN topic to execute, as defined in the `[tool.purjo.topics]` section of `pyproject.toml`.
 *   `variables`: A dictionary containing the input variables to pass to the task. These simulate the process variables that would be sent by the BPM engine.
+*   `secrets`: (Optional) A dictionary containing the secrets to pass to the task, simulating the configured secrets provider. See [Testing Tasks](testing_tasks.md#testing-with-secrets).
 *   `log_level`: (Optional) The logging level to use during execution. Default is `DEBUG`.
 
 **Returns:**

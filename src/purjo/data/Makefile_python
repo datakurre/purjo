@@ -1,0 +1,27 @@
+.DEFAULT_GOAL := help
+
+export UV_NO_SYNC=0
+
+# Configuration
+DEPLOY_FILES = hello.bpmn
+
+.PHONY: help dist deploy serve run
+
+help: ## Show this help message
+	@echo 'Usage: make [target]'
+	@echo ''
+	@echo 'Available targets:'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
+dist: ## Build distribution package
+	pur wrap
+
+deploy: ## Deploy files (BPMN, DMN, forms) to engine
+	pur operaton deploy $(DEPLOY_FILES)
+
+serve: deploy ## Start external task worker
+	pur serve .
+
+run: ## Deploy, start a process instance and serve it
+	pur run $(DEPLOY_FILES)
+	pur serve .

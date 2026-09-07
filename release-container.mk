@@ -48,7 +48,7 @@ Labels.json: .FORCE
 container-dist: Labels.json  ## Build and load container image
 	@set -o pipefail
 	@echo "# Build the image"
-	$(shell devenv build outputs.image)|podman load -q
+	$(shell nix --extra-experimental-features 'nix-command flakes' build .#image --no-link --print-out-paths)|podman load -q
 	git restore Labels.json
 	podman tag localhost/$(CONTAINER_PATH):latest $(CONTAINER_NAME):$(CONTAINER_TAG)
 	@echo "# Tag every build as latest"

@@ -1,0 +1,67 @@
+name: Build and publish container
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*.*.*
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: datakurre/purjo/purjo
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # `make container-dist` derives CONTAINER_TAG from `git describe
+          # --tags`, which finds no names in a depth-1 checkout.
+          fetch-depth: 0
+
+      - name: Setup devenv
+        uses: ./.github/actions/setup-devenv
+        with:
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Set up container registry credentials
+        env:
+          REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Via stdin, not -p: an argv password is readable from /proc by any
+          # other process on the runner for as long as the login runs.
+          printenv REGISTRY_PASSWORD \
+            | podman login -u "${{ github.actor }}" --password-stdin "${{ env.REGISTRY }}"
+
+      - name: Determine container tags
+        id: meta
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+            TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}"
+            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          else
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}"
+          fi
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+
+      - name: Build container image
+        run: devenv shell -- make container-dist
+
+      - name: Push container image
+        run: |
+          IMAGE_ID="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          IFS=',' read -ra TAGS <<< "${{ steps.meta.outputs.tags }}"
+          
+          for TAG in "${TAGS[@]}"; do
+            podman tag localhost/${{ env.IMAGE_NAME }}:latest "${TAG}"
+            podman push "${TAG}"
+          done

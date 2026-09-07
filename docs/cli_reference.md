@@ -43,6 +43,8 @@ $ pur init [OPTIONS]
 ### Options
 
 *   `--python`: Create a pure Python template instead of a Robot Framework template.
+*   `--task`: Use Robot Framework's `*** Tasks ***` section instead of `*** Test Cases ***`.
+*   `--agents`: Also create an `AGENTS.md` guide for LLM coding agents. Not supported together with `--python`, which is still experimental.
 *   `--log-level TEXT`: Logging level. Default: `INFO`. (Env: `LOG_LEVEL`)
 
 ## `pur wrap`

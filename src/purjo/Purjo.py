@@ -65,7 +65,9 @@ def _get_output_variables(
         }
         if robot.is_dir():
             spec = get_wrap_pathspec(robot.absolute())
-            for file_path in spec.match_tree(robot, negate=True, follow_links=False):
+            for file_path in spec.match_tree_files(
+                robot, negate=True, follow_links=False
+            ):
                 src = robot / file_path
                 dst = Path(robot_dir) / file_path
                 dst.parent.mkdir(parents=True, exist_ok=True)
@@ -73,7 +75,9 @@ def _get_output_variables(
         else:
             with ZipFile(robot, "r") as fp:
                 fp.extractall(robot_dir)
-                if (Path(robot_dir) / ".cache").is_dir():
+                # Only present in packages wrapped with `pur wrap --offline`,
+                # which the unit tests do not build.
+                if (Path(robot_dir) / ".cache").is_dir():  # pragma: no cover
                     shutil.move(Path(robot_dir) / ".cache", working_dir)
         (Path(working_dir) / "variables.json").write_text(
             json.dumps(variables, default=json_serializer)
@@ -90,14 +94,17 @@ def _get_output_variables(
             )
         )
         log_html_path = Path(working_dir) / "log.html"
-        if log_html_path.exists():
+        # log.html only exists after a real nested Robot run; these tests drive
+        # the library with a mocked run, so the reporting branches never fire.
+        if log_html_path.exists():  # pragma: no cover
             log_html_data = base64.b64encode(log_html_path.read_bytes()).decode("utf-8")
             tmpdir_name = Path(working_dir).name
             log_html_uri = f"data:text/html;base64,{log_html_data}"
         if return_code == 0:
-            if log_html_path.exists():
+            if log_html_path.exists():  # pragma: no cover
                 robot_logger.debug(
-                    f'<a href="{log_html_uri}" download="{tmpdir_name}.log.html" target="_blank">Purjo log.html</a>',
+                    f'<a href="{log_html_uri}" download="{tmpdir_name}.log.html"'
+                    ' target="_blank">Purjo log.html</a>',
                     html=True,
                 )
             robot_logger.debug(
@@ -107,9 +114,10 @@ def _get_output_variables(
                 f"Purjo secrets:\n{list(secrets.keys()) if secrets else []}"
             )
         else:
-            if log_html_path.exists():
+            if log_html_path.exists():  # pragma: no cover
                 robot_logger.info(
-                    f'<a href="{log_html_uri}" download="{tmpdir_name}.log.html" target="_blank">Purjo log.html</a>',
+                    f'<a href="{log_html_uri}" download="{tmpdir_name}.log.html"'
+                    ' target="_blank">Purjo log.html</a>',
                     html=True,
                 )
             robot_logger.info(
@@ -135,6 +143,13 @@ def _get_output_variables(
             fail_reason_ = (
                 fail_reason(output_xml_path) if output_xml_path.exists() else ""
             )
+            # NOTE: This test helper intentionally simplifies error handling
+            # compared to the runner.  It always adds errorCode/errorMessage
+            # as plain dict values on failure, regardless of on_fail mode,
+            # because its purpose is to let outer Robot Framework tests
+            # inspect the output – not to communicate with the BPM engine.
+            # The runner (handle_failure_result / handle_success_result) is
+            # the source of truth for how errors are reported to Operaton.
             variables.update(
                 {
                     "errorCode": fail_reason_.split("\n", 1)[0].strip(),
