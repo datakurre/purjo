@@ -201,11 +201,6 @@ let
     {
       services.operaton.basicAuth.enable = true;
     };
-  devcontainer =
-    { ... }:
-    {
-      devcontainer.enable = true;
-    };
 in
 {
   profiles.base.module = {
@@ -226,8 +221,5 @@ in
     module = {
       imports = [ basicAuthEngine ];
     };
-  };
-  profiles.devcontainer.module = {
-    imports = [ devcontainer ];
   };
 }

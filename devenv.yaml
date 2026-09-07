@@ -1,6 +1,4 @@
 inputs:
-  devenv-module-devcontainer-nixpkgs:
-    url: github:nixos/nixpkgs/nixos-unstable
   devenv-module-operaton:
     url: gitlab:vasara-bpm/devenv-module-operaton
   git-hooks:
@@ -34,5 +32,4 @@ inputs:
 allow_unfree: true
 imports:
 - devenv-module-operaton/module.nix
-- devenv-module-devcontainer
 profile: shell

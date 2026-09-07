@@ -4,7 +4,7 @@ help:
 INDEX_URL ?= https://pypi.python.org/simple
 INDEX_HOSTNAME ?= pypi.python.org
 
-export NETRC ?= $(HOME)/.netrc
+# export NETRC ?= $(HOME)/.netrc
 
 export PYTHONPATH=$(PWD)/src
 MODULE := purjo
@@ -16,7 +16,7 @@ DEVENV := nix run nixpkgs/nixos-25.05\#devenv --
 else
 DEVENV := devenv
 endif
-DEVENV_OPTIONS ?= --nix-option extra-sandbox-paths $(NETRC)
+# DEVENV_OPTIONS ?= --nix-option extra-sandbox-paths $(NETRC)
 
 build:  ## Build application
 	$(DEVENV) $(DEVENV_OPTIONS) build outputs.python.app
