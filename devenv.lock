@@ -17,22 +17,6 @@
         "type": "github"
       }
     },
-    "devenv-module-devcontainer": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1784659822,
-        "narHash": "sha256-sDjzZoqUjwVVzIGtUULqT8tN8eiOGtCOUXyF0bEe5Wg=",
-        "owner": "datakurre",
-        "repo": "devenv-module-devcontainer",
-        "rev": "d18345b498b06999e66a22f485cd2ae7bc973fc3",
-        "type": "github"
-      },
-      "original": {
-        "owner": "datakurre",
-        "repo": "devenv-module-devcontainer",
-        "type": "github"
-      }
-    },
     "devenv-module-devcontainer-nixpkgs": {
       "locked": {
         "lastModified": 1788316716,
@@ -56,11 +40,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1788353093,
-        "narHash": "sha256-w2aEOTqj9AC3BaDFZIjhi5dkj1QLYdq3pLJtivYBz5E=",
+        "lastModified": 1788773114,
+        "narHash": "sha256-2W/yl/1IQ6LNUSoIoBtHgSQDChddfo5rggDjEvN173s=",
         "owner": "vasara-bpm",
         "repo": "devenv-module-operaton",
-        "rev": "c8aa383ed8756ad4b9605409e2cf2056cc56a3c9",
+        "rev": "3b3721719ca69cc7f3081e34050ac9634116aa10",
         "type": "gitlab"
       },
       "original": {
@@ -231,7 +215,6 @@
     "root": {
       "inputs": {
         "devenv": "devenv",
-        "devenv-module-devcontainer": "devenv-module-devcontainer",
         "devenv-module-devcontainer-nixpkgs": "devenv-module-devcontainer-nixpkgs",
         "devenv-module-operaton": "devenv-module-operaton",
         "git-hooks": "git-hooks",
