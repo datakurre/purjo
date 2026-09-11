@@ -1,3 +1,9 @@
+## 1.0rc2 (unreleased)
+
+
+- Nothing changed yet.
+
+
 ## 1.0rc1 (2026-09-11)
 
 
