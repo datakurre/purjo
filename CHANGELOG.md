@@ -1,4 +1,4 @@
-## 1.0b8 (unreleased)
+## 1.0rc1 (2026-09-11)
 
 
 - Fix 'pur wrap' to exclude secrets.json, and stop copying it into the task sandbox
