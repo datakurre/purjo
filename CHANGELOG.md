@@ -1,7 +1,9 @@
 ## 1.0rc2 (unreleased)
 
 
-- Nothing changed yet.
+- Verify compatibility with Robot Framework 7.5 and lock dev/test dependencies
+  to it, bumping robotframework-robocop to 9.0.0 (7.2.0 excludes RF 7.5) and
+  typer to 0.27.2 (pulled in transitively by the robocop upgrade)
 
 
 ## 1.0rc1 (2026-09-11)
