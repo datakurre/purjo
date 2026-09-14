@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Testing tasks &#8212; purjo documentation 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Handling variables" href="handling_variables.html" />
+    <link rel="prev" title="Creating tasks" href="creating_tasks.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section class="tex2jax_ignore mathjax_ignore" id="testing-tasks">
+<h1>Testing tasks<a class="headerlink" href="#testing-tasks" title="Link to this heading">¶</a></h1>
+<p>You can test <code class="docutils literal notranslate"><span class="pre">purjo</span></code> Robot Framework tasks without running Operaton (or any BPM engine) using two complementary approaches:</p>
+<ul class="simple">
+<li><p><strong>Integration testing</strong>: Use <code class="docutils literal notranslate"><span class="pre">robotframework-robotlibrary</span></code> to run a task/test from another <code class="docutils literal notranslate"><span class="pre">.robot</span></code> file and verify variable behavior in-process.</p></li>
+<li><p><strong>Functional testing</strong>: Use the <code class="docutils literal notranslate"><span class="pre">purjo</span></code> Robot Framework library to execute a configured topic and get output variables back as a dictionary.</p></li>
+</ul>
+<p>Both approaches are fast and local. Pick integration tests for “does this Robot suite behave as expected when called with variables?”, and functional tests for “does my <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> topic config + <code class="docutils literal notranslate"><span class="pre">purjo</span></code> execution produce the right BPMN-style outputs?”</p>
+<section id="integration-testing-robotlibrary">
+<h2>Integration testing (RobotLibrary)<a class="headerlink" href="#integration-testing-robotlibrary" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">RobotLibrary</span></code> is a Robot Framework library for meta-testing: it lets you write Robot Framework tests that execute tests/tasks from another <code class="docutils literal notranslate"><span class="pre">.robot</span></code> file.</p>
+<p>This style is especially useful with <code class="docutils literal notranslate"><span class="pre">purjo</span></code> packages because:</p>
+<ul class="simple">
+<li><p>your task inputs are already expressed as suite variables (e.g. <code class="docutils literal notranslate"><span class="pre">${name}</span></code>), and</p></li>
+<li><p>you can override those variables as keyword arguments when calling <code class="docutils literal notranslate"><span class="pre">Run</span> <span class="pre">Robot</span> <span class="pre">Test</span></code> / <code class="docutils literal notranslate"><span class="pre">Run</span> <span class="pre">Robot</span> <span class="pre">Task</span></code>.</p></li>
+</ul>
+<section id="installing">
+<h3>Installing<a class="headerlink" href="#installing" title="Link to this heading">¶</a></h3>
+<p>Add <code class="docutils literal notranslate"><span class="pre">robotframework-robotlibrary</span></code> as a development dependency in your robot package:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">uv add --dev robotframework-robotlibrary&gt;=1.0a3</span>
+</pre></div>
+</div>
+<p>If you created your package using <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">init</span></code>, this dependency and a ready-made example test (<code class="docutils literal notranslate"><span class="pre">test_hello.robot</span></code>) are already included.</p>
+</section>
+<section id="how-input-variables-are-mapped">
+<h3>How input variables are mapped<a class="headerlink" href="#how-input-variables-are-mapped" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">RobotLibrary</span></code> provides these keywords:</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="c">Run Robot Test</span><span class="p">    </span><span class="c">suite_path</span><span class="p">    </span><span class="c">test_name</span><span class="p">    </span><span class="c">**variables</span>
+<span class="c">Run Robot Task</span><span class="p">    </span><span class="c">suite_path</span><span class="p">    </span><span class="c">task_name</span><span class="p">    </span><span class="c">**variables</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">**variables</span></code> part is passed as <code class="docutils literal notranslate"><span class="pre">NAME=value</span></code> pairs. Each pair overrides the corresponding suite variable in the target suite.</p>
+<p>In other words, a call like:</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="c">Run Robot Test</span><span class="p">    </span><span class="c">${CURDIR}/hello.robot</span><span class="p">    </span><span class="c">My Test in Robot</span>
+<span class="c">...</span><span class="p">    </span><span class="c">name=John Doe</span>
+<span class="c">...</span><span class="p">    </span><span class="c">answer=42</span>
+</pre></div>
+</div>
+<p>overrides <code class="docutils literal notranslate"><span class="pre">${name}</span></code> and <code class="docutils literal notranslate"><span class="pre">${answer}</span></code> inside <code class="docutils literal notranslate"><span class="pre">hello.robot</span></code> for that run.</p>
+<p>If you have inputs as a dictionary, you can expand it into keyword arguments:</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="c">&amp;{inputs}=</span><span class="p">    </span><span class="c">Create Dictionary</span><span class="p">    </span><span class="c">name=John Doe</span><span class="p">    </span><span class="c">answer=42</span>
+<span class="c">Run Robot Test</span><span class="p">    </span><span class="c">${CURDIR}/hello.robot</span><span class="p">    </span><span class="c">My Test in Robot</span>
+<span class="c">...</span><span class="p">    </span><span class="c">&amp;{inputs}</span>
+</pre></div>
+</div>
+</section>
+<section id="making-output-variables-assertable-bpmn-process-global">
+<h3>Making output variables assertable (BPMN:PROCESS=global)<a class="headerlink" href="#making-output-variables-assertable-bpmn-process-global" title="Link to this heading">¶</a></h3>
+<p>The default <code class="docutils literal notranslate"><span class="pre">purjo</span></code> task fixtures typically set:</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="c">${BPMN:PROCESS}</span><span class="p">     </span><span class="c">local</span>
+</pre></div>
+</div>
+<p>and then emit output variables using Robot Framework’s built-in <code class="docutils literal notranslate"><span class="pre">VAR</span></code> keyword:</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="c">VAR</span><span class="p">    </span><span class="c">${message}</span><span class="p">    </span><span class="c">${message}</span><span class="p">    </span><span class="c">scope=${BPMN:PROCESS}</span>
+</pre></div>
+</div>
+<p>When you run the target suite via <code class="docutils literal notranslate"><span class="pre">RobotLibrary</span></code>, output variables written with <code class="docutils literal notranslate"><span class="pre">VAR</span> <span class="pre">...</span> <span class="pre">scope=${BPMN:PROCESS}</span></code> are easiest to assert from the calling (meta) test when the scope is set to <strong>global process scope</strong>. In the default fixture, you enable that by overriding <code class="docutils literal notranslate"><span class="pre">${BPMN:PROCESS}</span></code>:</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="c">Run Robot Test</span><span class="p">    </span><span class="c">${CURDIR}/hello.robot</span><span class="p">    </span><span class="c">My Test in Robot</span>
+<span class="c">...</span><span class="p">    </span><span class="c">BPMN:PROCESS=global</span>
+<span class="c">...</span><span class="p">    </span><span class="c">name=${name}</span>
+<span class="c">Should Be Equal</span><span class="p">    </span><span class="c">${message}</span><span class="p">    </span><span class="c">Hello ${name}!</span>
+</pre></div>
+</div>
+<p>That <code class="docutils literal notranslate"><span class="pre">BPMN:PROCESS=global</span></code> is just another variable override: it sets <code class="docutils literal notranslate"><span class="pre">${BPMN:PROCESS}</span></code> inside the called suite so that <code class="docutils literal notranslate"><span class="pre">VAR</span> <span class="pre">...</span> <span class="pre">scope=${BPMN:PROCESS}</span></code> writes variables to a scope that the meta-test can assert afterwards.</p>
+</section>
+<section id="example-from-the-init-fixture">
+<h3>Example (from the init fixture)<a class="headerlink" href="#example-from-the-init-fixture" title="Link to this heading">¶</a></h3>
+<p>The default <code class="docutils literal notranslate"><span class="pre">pur</span> <span class="pre">init</span></code> Robot template includes an integration test like this:</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="gh">*** Settings ***</span>
+<span class="kn">Library</span><span class="p">             </span><span class="nn">RobotLibrary</span>
+
+<span class="kn">Test Template</span><span class="p">       </span><span class="nf">Test Hello</span>
+
+
+<span class="gh">*** Test Cases ***</span><span class="p">    </span><span class="gh">NAME</span>
+<span class="gu">Hello John</span><span class="p">      </span><span class="s">John Doe</span>
+<span class="gu">Hello Jane</span><span class="p">      </span><span class="s">Jane Doe</span>
+
+
+<span class="gh">*** Keywords ***</span>
+<span class="gu">Test Hello</span>
+<span class="p">    [</span><span class="kn">Arguments</span><span class="p">]    ${</span><span class="nv">name</span><span class="p">}</span>
+<span class="p">    </span><span class="nf">Run Robot Test</span><span class="p">    ${</span><span class="nv">CURDIR</span><span class="p">}</span><span class="s">/hello.robot</span>
+<span class="p">    ...    </span><span class="s">My Test in Robot</span>
+<span class="p">    ...    </span><span class="s">BPMN:PROCESS=global</span>
+<span class="p">    ...    </span><span class="s">name=</span><span class="p">${</span><span class="nv">name</span><span class="p">}</span>
+<span class="p">    </span><span class="nf">Should Be Equal</span><span class="p">    ${</span><span class="nv">message</span><span class="p">}    </span><span class="s">Hello </span><span class="p">${</span><span class="nv">name</span><span class="p">}</span><span class="s">!</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="functional-testing-purjo-library">
+<h2>Functional testing (purjo library)<a class="headerlink" href="#functional-testing-purjo-library" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">purjo</span></code> includes a Robot Framework library, also named <code class="docutils literal notranslate"><span class="pre">purjo</span></code>, which executes a configured topic from a robot package and returns the resulting output variables.</p>
+<p>Use this when you want to validate:</p>
+<ul class="simple">
+<li><p>topic configuration in <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">[tool.purjo.topics.&quot;...&quot;]</span></code>),</p></li>
+<li><p>variable mapping in/out as the engine would do it,</p></li>
+<li><p>error handling behavior (<code class="docutils literal notranslate"><span class="pre">on-fail</span></code>), and</p></li>
+<li><p>secrets handling.</p></li>
+</ul>
+</section>
+<section id="the-purjo-library">
+<h2>The <code class="docutils literal notranslate"><span class="pre">purjo</span></code> Library<a class="headerlink" href="#the-purjo-library" title="Link to this heading">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">purjo</span></code> library allows you to execute tasks defined in your project as if they were being called by the BPM engine, but locally within a Robot Framework test suite. This is crucial for verifying task logic, variable mapping, and error handling before deployment.</p>
+<section id="get-output-variables">
+<h3><code class="docutils literal notranslate"><span class="pre">Get</span> <span class="pre">Output</span> <span class="pre">Variables</span></code><a class="headerlink" href="#get-output-variables" title="Link to this heading">¶</a></h3>
+<p>The core keyword provided by the library is <code class="docutils literal notranslate"><span class="pre">Get</span> <span class="pre">Output</span> <span class="pre">Variables</span></code>. It executes a specific task (identified by its topic) from a robot package using a set of input variables and returns the resulting output variables.</p>
+<section id="syntax">
+<h4>Syntax<a class="headerlink" href="#syntax" title="Link to this heading">¶</a></h4>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="c">Get Output Variables</span><span class="p">    </span><span class="c">path=&lt;path_to_package&gt;</span><span class="p">    </span><span class="c">topic=&lt;topic_name&gt;</span><span class="p">    </span><span class="c">variables=&lt;input_variables_dict&gt;</span><span class="p">    </span><span class="c">secrets=&lt;secrets_dict&gt;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">path</span></code>: Path to the robot package. This can be the current directory (<code class="docutils literal notranslate"><span class="pre">.</span></code>) during development or a path to a packaged <code class="docutils literal notranslate"><span class="pre">robot.zip</span></code> file.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">topic</span></code>: The BPMN topic name as configured in your <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> file (under <code class="docutils literal notranslate"><span class="pre">[tool.purjo.topics.&quot;&lt;Topic</span> <span class="pre">Name&gt;&quot;]</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">variables</span></code>: A dictionary containing the input variables that the task expects.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">secrets</span></code>: (Optional) A dictionary containing the secrets that the task expects.</p></li>
+</ul>
+</section>
+<section id="example">
+<h4>Example<a class="headerlink" href="#example" title="Link to this heading">¶</a></h4>
+<p>Suppose you have a task configured for the topic “My Topic in BPMN” that expects a <code class="docutils literal notranslate"><span class="pre">name</span></code> variable and returns a <code class="docutils literal notranslate"><span class="pre">message</span></code> variable. You can test it as follows:</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="gh">*** Settings ***</span>
+<span class="kn">Library</span><span class="p">    </span><span class="nn">purjo</span>
+<span class="kn">Library</span><span class="p">    </span><span class="nn">Collections</span>
+
+<span class="gh">*** Tasks ***</span>
+<span class="gu">Test My Task</span>
+<span class="p">    </span><span class="c"># Define input variables</span>
+<span class="p">    &amp;{</span><span class="nv">inputs</span><span class="p">}=    </span><span class="nf">Create Dictionary</span><span class="p">    </span><span class="s">name=Alice</span>
+
+<span class="p">    </span><span class="c"># Execute the task locally</span>
+<span class="p">    &amp;{</span><span class="nv">outputs</span><span class="p">}=   </span><span class="nf">Get Output Variables</span><span class="p">    </span><span class="s">path=.</span><span class="p">    </span><span class="s">topic=My Topic in BPMN</span><span class="p">    </span><span class="s">variables=</span><span class="p">${</span><span class="nv">inputs</span><span class="p">}</span>
+
+<span class="p">    </span><span class="c"># Verify the output</span>
+<span class="p">    </span><span class="nf">Should Be Equal</span><span class="p">    ${</span><span class="nv">outputs</span><span class="p">}</span><span class="s">[message]</span><span class="p">    </span><span class="s">Hello, Alice!</span>
+</pre></div>
+</div>
+<p>In this example:</p>
+<ol class="arabic simple">
+<li><p>We import the <code class="docutils literal notranslate"><span class="pre">purjo</span></code> library.</p></li>
+<li><p>We create a dictionary <code class="docutils literal notranslate"><span class="pre">&amp;{inputs}</span></code> with the test data.</p></li>
+<li><p>We call <code class="docutils literal notranslate"><span class="pre">Get</span> <span class="pre">Output</span> <span class="pre">Variables</span></code>, pointing to the current directory (<code class="docutils literal notranslate"><span class="pre">.</span></code>) and the specific topic.</p></li>
+<li><p>We assert that the returned <code class="docutils literal notranslate"><span class="pre">message</span></code> in <code class="docutils literal notranslate"><span class="pre">&amp;{outputs}</span></code> matches our expectation.</p></li>
+</ol>
+<p>This approach allows you to build a comprehensive regression test suite for your BPMN tasks, ensuring they behave correctly with various inputs and edge cases.</p>
+</section>
+</section>
+<section id="testing-with-secrets">
+<h3>Testing with Secrets<a class="headerlink" href="#testing-with-secrets" title="Link to this heading">¶</a></h3>
+<p>If your task requires secrets, you can pass them as a dictionary using the <code class="docutils literal notranslate"><span class="pre">secrets</span></code> argument.</p>
+<p>For example, consider a task defined in <code class="docutils literal notranslate"><span class="pre">hello/hello.robot</span></code> that uses a secret variable:</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="gh">*** Variables ***</span>
+<span class="p">${</span><span class="nv">BPMN:PROCESS</span><span class="p">}     </span><span class="s">local</span>
+<span class="p">${</span><span class="nv">name</span><span class="p">}             </span><span class="s">n/a</span>
+<span class="p">${</span><span class="nv">birthday</span><span class="p">}</span>
+
+<span class="gh">*** Test Cases ***</span>
+<span class="gu">My Test in Robot</span>
+<span class="p">    </span><span class="nf">VAR</span><span class="p">    ${</span><span class="nv">message</span><span class="p">}    </span><span class="s">John&#39;s birthday is </span><span class="p">${</span><span class="nv">birthday.value</span><span class="p">}    </span><span class="s">scope=</span><span class="p">${</span><span class="nv">BPMN:PROCESS</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>And its configuration in <code class="docutils literal notranslate"><span class="pre">hello/pyproject.toml</span></code>:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[tool.purjo.topics.</span><span class="s2">&quot;My Topic in BPMN&quot;</span><span class="k">]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;My Test in Robot&quot;</span>
+<span class="n">on-fail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;ERROR&quot;</span>
+<span class="n">process-variables</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</pre></div>
+</div>
+<p>You can test this task as follows:</p>
+<div class="highlight-robotframework notranslate"><div class="highlight"><pre><span></span><span class="gh">*** Settings ***</span>
+<span class="kn">Library</span><span class="p">     </span><span class="nn">purjo</span>
+<span class="kn">Library</span><span class="p">     </span><span class="nn">Collections</span>
+
+
+<span class="gh">*** Variables ***</span>
+<span class="p">&amp;{</span><span class="nv">Input Variables</span><span class="p">}              </span><span class="s">name=John</span>
+<span class="p">&amp;{</span><span class="nv">Expected Output Variables</span><span class="p">}    </span><span class="s">message=John&#39;s birthday is tomorrow</span>
+<span class="p">&amp;{</span><span class="nv">Secret Variables</span><span class="p">}             </span><span class="s">birthday=tomorrow</span>
+
+
+<span class="gh">*** Test Cases ***</span>
+<span class="gu">Test Hello World</span>
+<span class="p">    ${</span><span class="nv">Output Variables</span><span class="p">}=    </span><span class="nf">Get Output Variables</span><span class="p">    ${</span><span class="nv">CURDIR</span><span class="p">}${</span><span class="nv">/</span><span class="p">}</span><span class="s">hello</span><span class="p">    </span><span class="s">My Topic in BPMN</span><span class="p">    ${</span><span class="nv">Input Variables</span><span class="p">}   ${</span><span class="nv">Secret Variables</span><span class="p">}</span>
+<span class="p">    </span><span class="nf">Dictionaries Should Be Equal</span><span class="p">    ${</span><span class="nv">Output Variables</span><span class="p">}    ${</span><span class="nv">Expected Output Variables</span><span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">purjo documentation</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating_tasks.html">Creating tasks</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Testing tasks</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#integration-testing-robotlibrary">Integration testing (RobotLibrary)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#functional-testing-purjo-library">Functional testing (purjo library)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-purjo-library">The <code class="docutils literal notranslate"><span class="pre">purjo</span></code> Library</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="handling_variables.html">Handling variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="managing_secrets.html">Managing secrets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_use_cases.html">Advanced use cases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli_reference.html">CLI reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="library_reference.html">Library reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development_environment.html">Development environment</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="creating_tasks.html" title="previous chapter">Creating tasks</a></li>
+      <li>Next: <a href="handling_variables.html" title="next chapter">Handling variables</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, datakurre.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/testing_tasks.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
