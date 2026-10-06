@@ -13,13 +13,17 @@ from purjo.secrets import FileSecretsAdapter
 from purjo.secrets import get_secrets_provider
 from purjo.secrets import rebase_provider_config
 from purjo.secrets import SecretsConfigurationError
+from purjo.secrets import SecretSpecProviderConfig
+from purjo.secrets import SecretSpecSecretsAdapter
 from purjo.secrets import SecretsProvider
+from purjo.secrets import SecretsProviderError
 from purjo.secrets import VaultProviderConfig
 from purjo.secrets import VaultSecretsAdapter
 from unittest.mock import Mock
 from unittest.mock import patch
 import json
 import pytest
+import sys
 
 
 class TestFileSecretsProvider:
@@ -272,6 +276,173 @@ class TestRelativeSecretsPaths:
         config: dict[str, object] = {"provider": "file"}
 
         assert rebase_provider_config(config, Path("/somewhere")) == config
+
+
+SECRETSPEC_MANIFEST = """\
+[project]
+name = "robot"
+revision = "1.0"
+
+[profiles.default]
+API_KEY = { description = "API key" }
+CERTIFICATE = { description = "TLS certificate", as_path = true }
+OPTIONAL = { description = "Optional setting", required = false }
+
+[profiles.production]
+REGION = { description = "Deployment region", default = "eu-north" }
+"""
+
+
+@pytest.fixture
+def secretspec_package(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A robot package with a secretspec.toml backed by a dotenv file.
+
+    secretspec keeps an access audit log and reads a user config from the
+    XDG directories, so point those into the test's own temp directory.
+    """
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.delenv("SECRETSPEC_PROVIDER", raising=False)
+    monkeypatch.delenv("SECRETSPEC_PROFILE", raising=False)
+    package = tmp_path / "package"
+    package.mkdir()
+    (package / "secretspec.toml").write_text(SECRETSPEC_MANIFEST)
+    (package / ".env").write_text(
+        "API_KEY=secret-api-key\nCERTIFICATE=-----BEGIN CERTIFICATE-----\n"
+    )
+    return package
+
+
+class TestSecretSpecSecretsProvider:
+    """Tests for SecretSpecSecretsAdapter class.
+
+    Related: US-004
+    """
+
+    def test_reading_secrets_from_manifest(self, secretspec_package: Path) -> None:
+        """Test that declared secrets are resolved from the configured backend."""
+        config = SecretSpecProviderConfig.model_validate(
+            {
+                "provider": "secretspec",
+                "path": str(secretspec_package / "secretspec.toml"),
+                "secretspec-provider": f"dotenv://{secretspec_package}/.env",
+            }
+        )
+
+        result = SecretSpecSecretsAdapter(config).read()
+
+        assert "REGION" not in result
+        assert result == {
+            "API_KEY": "secret-api-key",
+            "CERTIFICATE": "-----BEGIN CERTIFICATE-----",
+        }
+
+    def test_as_path_secret_file_is_removed(
+        self, secretspec_package: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that a secret materialized to a file does not outlive the read."""
+        import secretspec
+
+        materialized: list[str] = []
+        original_load = secretspec._Builder.load
+
+        def recording_load(builder: object) -> object:
+            resolved = original_load(builder)
+            materialized.extend(
+                s.path for s in resolved.secrets.values() if s.path is not None
+            )
+            return resolved
+
+        monkeypatch.setattr(secretspec._Builder, "load", recording_load)
+        config = SecretSpecProviderConfig.model_validate(
+            {
+                "provider": "secretspec",
+                "path": str(secretspec_package / "secretspec.toml"),
+                "secretspec-provider": f"dotenv://{secretspec_package}/.env",
+            }
+        )
+
+        SecretSpecSecretsAdapter(config).read()
+
+        assert len(materialized) == 1
+        assert not Path(materialized[0]).exists()
+
+    def test_reading_secrets_for_a_secretspec_profile(
+        self, secretspec_package: Path
+    ) -> None:
+        """Test that the secretspec profile selects the declared secrets."""
+        config = SecretSpecProviderConfig.model_validate(
+            {
+                "provider": "secretspec",
+                "path": str(secretspec_package / "secretspec.toml"),
+                "profile": "production",
+                "secretspec-provider": f"dotenv://{secretspec_package}/.env",
+            }
+        )
+
+        result = SecretSpecSecretsAdapter(config).read()
+
+        assert result["REGION"] == "eu-north"
+        assert result["API_KEY"] == "secret-api-key"
+
+    def test_missing_required_secret(self, secretspec_package: Path) -> None:
+        """Test that a missing required secret raises SecretsProviderError."""
+        (secretspec_package / ".env").write_text("CERTIFICATE=pem\n")
+        config = SecretSpecProviderConfig.model_validate(
+            {
+                "provider": "secretspec",
+                "path": str(secretspec_package / "secretspec.toml"),
+                "secretspec-provider": f"dotenv://{secretspec_package}/.env",
+            }
+        )
+
+        with pytest.raises(SecretsProviderError, match="API_KEY"):
+            SecretSpecSecretsAdapter(config).read()
+
+    def test_secretspec_not_installed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that a missing optional dependency names the extra to install."""
+        monkeypatch.setitem(sys.modules, "secretspec", None)
+        config = SecretSpecProviderConfig(provider="secretspec")
+
+        with pytest.raises(SecretsConfigurationError, match=r"purjo\[secretspec\]"):
+            SecretSpecSecretsAdapter(config).read()
+
+    def test_profile_from_pyproject_resolves_next_to_package(
+        self,
+        secretspec_package: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Test that secretspec.toml is found next to the package by default."""
+        monkeypatch.chdir(tmp_path)
+        config = {
+            "default": {
+                "provider": "secretspec",
+                "secretspec-provider": f"dotenv://{secretspec_package}/.env",
+            },
+        }
+
+        provider = get_secrets_provider(config=config, base_path=secretspec_package)
+
+        assert provider is not None
+        assert isinstance(provider.config, SecretSpecProviderConfig)
+        assert provider.config.path == str(secretspec_package / "secretspec.toml")
+        assert provider.read()["API_KEY"] == "secret-api-key"
+
+    def test_relative_manifest_path_is_rebased(self) -> None:
+        """Test that a configured relative manifest path is rebased."""
+        config = {"provider": "secretspec", "path": "conf/secretspec.toml"}
+
+        assert rebase_provider_config(config, Path("/package")) == {
+            "provider": "secretspec",
+            "path": "/package/conf/secretspec.toml",
+        }
+
+    def test_manifest_path_without_base_path_is_unchanged(self) -> None:
+        """Test that a zipped package resolves secretspec.toml from the cwd."""
+        config = {"provider": "secretspec"}
+
+        assert rebase_provider_config(config, None) == config
 
 
 class TestSecretsProvider:

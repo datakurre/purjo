@@ -26,6 +26,11 @@ dependencies =[
 [project.scripts]
 pur = "purjo.main:main"
 
+[project.optional-dependencies]
+secretspec = [
+    "secretspec>=0.21.1",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -46,6 +51,7 @@ dev = [
     "pytest-cov>=7.0.0",
     "robotframework>=7.5",
     "robotframework-robocop>=7.2.0",
+    "secretspec>=0.21.1",
     "sphinx>=8.1.3",
     "sphinx-autobuild>=2024.10.3",
     "types-hvac>=2.4.0.20251115",
@@ -63,6 +69,11 @@ no_sections = true
 
 [tool.mypy]
 exclude = "src/purjo/data"
+
+[[tool.mypy.overrides]]
+# secretspec ships no type information (no py.typed marker).
+module = ["secretspec", "secretspec.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

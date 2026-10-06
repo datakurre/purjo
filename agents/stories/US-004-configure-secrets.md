@@ -32,6 +32,11 @@ So that I can securely inject sensitive values into tasks.
 **When** a Robot Framework suite runs
 **Then** secrets are available as variables in the suite
 
+### AC-4: SecretSpec Profiles
+**Given** a profile with `provider = "secretspec"` and a `secretspec.toml` manifest in the package
+**When** a task runs
+**Then** the secrets declared in the manifest are resolved through SecretSpec and available as variables in the suite
+
 ---
 
 ## Notes
@@ -39,3 +44,4 @@ So that I can securely inject sensitive values into tasks.
 - Secrets are never logged or included in output artifacts
 - Profiles can be YAML or JSON files
 - Environment variables can also be used as secret sources
+- The `secretspec` provider needs the optional `purjo[secretspec]` extra
