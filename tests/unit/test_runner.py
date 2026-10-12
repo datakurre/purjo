@@ -720,14 +720,19 @@ class TestHandleFailureResult:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "on_fail,posted_names",
+        "on_fail,explicit_fail,posted_names",
         [
-            (OnFail.ERROR, {"greeting", "log.html"}),
-            (OnFail.FAIL, {"log.html"}),
+            (OnFail.ERROR, False, {"greeting", "log.html"}),
+            (OnFail.FAIL, True, {"greeting", "log.html"}),
+            (OnFail.FAIL, False, {"log.html"}),
         ],
     )
     async def test_failure_posts_task_variables_as_local_variables(
-        self, temp_dir: Path, on_fail: OnFail, posted_names: set[str]
+        self,
+        temp_dir: Path,
+        on_fail: OnFail,
+        explicit_fail: bool,
+        posted_names: set[str],
     ) -> None:
         """Task-scope variables set before a BPMN error become local variables.
 
@@ -737,6 +742,8 @@ class TestHandleFailureResult:
         only the output files, so a retry does not see the failed outputs.
         """
         from operaton.tasks.types import ExternalTaskBpmnError
+        from operaton.tasks.types import ExternalTaskComplete
+        from operaton.tasks.types import ExternalTaskFailure
         from operaton.tasks.types import LockedExternalTaskDto
         from operaton.tasks.types import VariableValueDto
         from operaton.tasks.types import VariableValueType
@@ -783,11 +790,15 @@ class TestHandleFailureResult:
                         ),
                     },
                     process_variables={},
+                    explicit_fail=explicit_fail,
                 )
 
-        if on_fail == OnFail.ERROR:
+        if on_fail == OnFail.ERROR or explicit_fail:
+            assert isinstance(result, ExternalTaskComplete)
             assert isinstance(result.response, ExternalTaskBpmnError)
             assert result.response.errorCode == "InvalidTaskInput"
+        else:
+            assert isinstance(result, ExternalTaskFailure)
         request.assert_awaited_once()
         assert request.await_args is not None
         assert request.await_args.args[2].endswith("/execution/exec-1/localVariables")
