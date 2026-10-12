@@ -1,4 +1,4 @@
-## 1.0rc2 (unreleased)
+## 1.0rc2 (2026-10-12)
 
 
 - Fix `pur init --agents` to list `AGENTS.md` among the files it adds; the file
