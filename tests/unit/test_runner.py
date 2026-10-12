@@ -719,6 +719,82 @@ class TestHandleFailureResult:
         assert isinstance(result, ExternalTaskComplete)
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "on_fail,posted_names",
+        [
+            (OnFail.ERROR, {"greeting", "log.html"}),
+            (OnFail.FAIL, {"log.html"}),
+        ],
+    )
+    async def test_failure_posts_task_variables_as_local_variables(
+        self, temp_dir: Path, on_fail: OnFail, posted_names: set[str]
+    ) -> None:
+        """Task-scope variables set before a BPMN error become local variables.
+
+        Output mappings are evaluated before a BPMN error reaches its boundary
+        event, so outputs a robot sets before failing must reach the task
+        execution for those mappings to resolve. A technical failure posts
+        only the output files, so a retry does not see the failed outputs.
+        """
+        from operaton.tasks.types import ExternalTaskBpmnError
+        from operaton.tasks.types import LockedExternalTaskDto
+        from operaton.tasks.types import VariableValueDto
+        from operaton.tasks.types import VariableValueType
+        from purjo.runner import handle_failure_result
+        import json
+
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="test-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+        )
+
+        output_xml = temp_dir / "output.xml"
+        output_xml.write_text(
+            '<robot><status status="FAIL">InvalidTaskInput\nname: required</status></robot>'
+        )
+
+        with patch("purjo.runner.operaton_session") as mock_session:
+            session = AsyncMock()
+            mock_response = AsyncMock()
+            mock_response.raise_for_status = MagicMock()
+            mock_session.return_value.__aenter__ = AsyncMock(return_value=session)
+            mock_session.return_value.__aexit__ = AsyncMock(return_value=None)
+            with patch(
+                "purjo.runner.request_with_auth_retry",
+                AsyncMock(return_value=mock_response),
+            ) as request:
+                result = await handle_failure_result(
+                    task=task,
+                    on_fail=on_fail,
+                    output_xml_path=output_xml,
+                    stdout=b"",
+                    stderr=b"",
+                    task_variables={
+                        "greeting": VariableValueDto(
+                            value="", type=VariableValueType.String
+                        ),
+                        "log.html": VariableValueDto(
+                            value=b"html", type=VariableValueType.File
+                        ),
+                    },
+                    process_variables={},
+                )
+
+        if on_fail == OnFail.ERROR:
+            assert isinstance(result.response, ExternalTaskBpmnError)
+            assert result.response.errorCode == "InvalidTaskInput"
+        request.assert_awaited_once()
+        assert request.await_args is not None
+        assert request.await_args.args[2].endswith("/execution/exec-1/localVariables")
+        posted = json.loads(request.await_args.kwargs["data"])["modifications"]
+        assert set(posted) == posted_names
+
+    @pytest.mark.asyncio
     async def test_failure_with_on_fail_fail(self, temp_dir: Path) -> None:
         """Test failure handling with on_fail=FAIL returns failure response."""
         from operaton.tasks.types import ExternalTaskFailure

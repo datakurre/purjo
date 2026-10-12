@@ -1,6 +1,10 @@
 ## 1.0rc2 (unreleased)
 
 
+- On a BPMN error, post the task-scope variables the failed robot set
+  (``scope=${BPMN:TASK}``) as local variables of the task execution, like
+  log.html and output.xml, so output mappings can resolve before the error
+  reaches its boundary event
 - Verify compatibility with Robot Framework 7.5 and lock dev/test dependencies
   to it, bumping robotframework-robocop to 9.0.0 (7.2.0 excludes RF 7.5) and
   typer to 0.27.2 (pulled in transitively by the robocop upgrade)

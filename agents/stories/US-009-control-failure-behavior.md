@@ -43,4 +43,8 @@ So that I can handle task failures appropriately.
 
 - FAIL allows the engine to retry the task based on configuration
 - ERROR enables BPMN-level error handling
+- On a BPMN error, task-scope variables the robot already set are stored as
+  local variables of the task execution (with log.html and output.xml). Output
+  mappings run before a BPMN error reaches its boundary event, so a robot can
+  set its outputs (e.g. to empty values) before it may fail
 - COMPLETE is useful for tasks that should always proceed in the workflow

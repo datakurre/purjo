@@ -414,12 +414,21 @@ async def handle_failure_result(
         explicit_fail: Whether the failure was caused by Robot Framework's
             built-in ``Fail`` keyword (detected from output.xml).
     """
-    # Only post output file attachments if they were actually produced
-    modifications: Dict[str, VariableValueDto] = {}
-    if "log.html" in task_variables:
-        modifications["log.html"] = task_variables["log.html"]
-    if "output.xml" in task_variables:
-        modifications["output.xml"] = task_variables["output.xml"]
+    # BPMN error: on_fail=ERROR always, or on_fail=FAIL when the robot task
+    # used the explicit Fail keyword (intentional BPMN error signal).
+    bpmn_error = on_fail == OnFail.ERROR or (on_fail == OnFail.FAIL and explicit_fail)
+
+    # Post the output file attachments that were actually produced as local
+    # variables of the task execution. For a BPMN error, also post the
+    # task-scope variables the robot set before it failed: output mappings are
+    # evaluated before the error reaches its boundary event, so outputs set
+    # first (e.g. to None) let those mappings resolve. A technical failure
+    # keeps them out, so a retry does not receive the failed attempt's outputs.
+    modifications: Dict[str, VariableValueDto] = {
+        name: variable
+        for name, variable in task_variables.items()
+        if bpmn_error or name in ("log.html", "output.xml")
+    }
 
     if modifications:
         async with operaton_session() as session:
@@ -439,9 +448,7 @@ async def handle_failure_result(
             "utf-8", errors="replace"
         )
 
-    # BPMN error: on_fail=ERROR always, or on_fail=FAIL when the robot task
-    # used the explicit Fail keyword (intentional BPMN error signal).
-    if on_fail == OnFail.ERROR or (on_fail == OnFail.FAIL and explicit_fail):
+    if bpmn_error:
         return ExternalTaskComplete(
             task=task,
             response=ExternalTaskBpmnError(
