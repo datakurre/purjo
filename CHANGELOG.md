@@ -3,6 +3,11 @@
 
 - Fix `pur init --agents` to list `AGENTS.md` among the files it adds; the file
   was created without being reported
+- Complete the package metadata: project URLs, keywords, SPDX license
+  expression and classifiers
+- Publish releases to PyPI from GitHub Actions with trusted publishing, and
+  limit the source distribution to the package, README, LICENSE and changelog
+  (it used to carry the whole repository, including e2e fixtures and examples)
 - On a BPMN error, post the task-scope variables the failed robot set
   (``scope=${BPMN:TASK}``) as local variables of the task execution, like
   log.html and output.xml, so output mappings can resolve before the error

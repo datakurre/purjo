@@ -6,12 +6,40 @@ readme = "README.md"
 authors = [
     {name = "Asko Soukka", email = "asko.soukka@iki.fi"},
 ]
-license = {text = "Apache Software License" }
+maintainers = [
+    {name = "Asko Soukka", email = "asko.soukka@iki.fi"},
+]
+# SPDX expression (PEP 639). It replaces the "License ::" classifier, which
+# may not be combined with it.
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+keywords = [
+    "robotframework",
+    "operaton",
+    "bpmn",
+    "bpm",
+    "external-task",
+    "rpa",
+    "automation",
+    "uv",
+]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Framework :: Robot Framework",
+  "Framework :: Robot Framework :: Tool",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Office/Business",
+  "Topic :: Software Development :: Testing",
+  "Typing :: Typed",
 ]
 requires-python = ">= 3.10"
 dependencies =[
@@ -23,6 +51,13 @@ dependencies =[
     "tzlocal>=5.3.1",
 ]
 
+[project.urls]
+Homepage = "https://github.com/datakurre/purjo"
+Documentation = "https://datakurre.github.io/purjo/"
+Repository = "https://github.com/datakurre/purjo"
+Issues = "https://github.com/datakurre/purjo/issues"
+Changelog = "https://github.com/datakurre/purjo/blob/main/CHANGELOG.md"
+
 [project.scripts]
 pur = "purjo.main:main"
 
@@ -32,6 +67,23 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/purjo"]
+
+# Without this hatchling ships every file git tracks: the e2e fixtures,
+# examples, CI config, the nix environment and uv.lock. pyproject.toml,
+# PKG-INFO and .gitignore are added by hatchling itself.
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "src/purjo",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+]
+
+# Releases are uploaded by .github/workflows/release.yml through PyPI trusted
+# publishing when the release tag is pushed. This makes "no" the default answer
+# to zest.releaser's upload prompt; it still tags and pushes.
+[tool.zest-releaser]
+release = false
 
 [dependency-groups]
 dev = [
