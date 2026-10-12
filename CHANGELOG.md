@@ -1,6 +1,8 @@
 ## 1.0rc2 (unreleased)
 
 
+- Fix `pur init --agents` to list `AGENTS.md` among the files it adds; the file
+  was created without being reported
 - On a BPMN error, post the task-scope variables the failed robot set
   (``scope=${BPMN:TASK}``) as local variables of the task execution, like
   log.html and output.xml, so output mappings can resolve before the error

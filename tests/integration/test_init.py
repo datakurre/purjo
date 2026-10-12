@@ -95,6 +95,26 @@ class TestInitIntegration:
         assert "AGENTS.md" in (temp_dir / ".wrapignore").read_text()
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("agents", [True, False])
+    async def test_init_reports_agents_md_only_when_created(
+        self, temp_dir: Path, capsys: pytest.CaptureFixture[str], agents: bool
+    ) -> None:
+        """Test that --agents lists AGENTS.md among the files it adds.
+
+        The listing comes from wrapping the package, which excludes AGENTS.md,
+        so without a line of its own the file is created silently.
+        """
+        if not shutil.which("uv"):
+            pytest.skip("uv not available")
+
+        await initialize_robot_package(temp_dir, python=False, agents=agents)
+
+        added = capsys.readouterr().out.splitlines()
+        assert "Adding hello.robot" in added
+        assert ("Adding AGENTS.md" in added) is agents
+        assert added.count("Adding AGENTS.md") == int(agents)
+
+    @pytest.mark.asyncio
     async def test_init_with_agents_and_task_flags(self, temp_dir: Path) -> None:
         """Test that --agents --task creates an AGENTS.md for the task template."""
         if not shutil.which("uv"):

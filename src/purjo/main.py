@@ -510,6 +510,10 @@ process-variables = true
     (cwd_path / ".wrapignore").write_text("AGENTS.md\n" if agents else "")
     wrap_package(cwd_path)
     (cwd_path / "robot.zip").unlink(missing_ok=True)
+    if agents:
+        # The listing above is what goes into the robot package, which
+        # .wrapignore keeps AGENTS.md out of, so report it separately.
+        print("Adding AGENTS.md")
     if (cwd_path / ".venv").exists():  # pragma: no cover
         shutil.rmtree(cwd_path / ".venv")  # pragma: no cover
 
