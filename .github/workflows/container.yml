@@ -3,8 +3,10 @@ on:
   push:
     branches:
       - main
+    # Release tags are bare versions as zest.releaser creates them (1.0rc1),
+    # not v-prefixed; the old v*.*.* filter matched none of them.
     tags:
-      - v*.*.*
+      - "[0-9]+.[0-9]+*"
 
 env:
   REGISTRY: ghcr.io
@@ -37,31 +39,36 @@ jobs:
           # Via stdin, not -p: an argv password is readable from /proc by any
           # other process on the runner for as long as the login runs.
           printenv REGISTRY_PASSWORD \
-            | podman login -u "${{ github.actor }}" --password-stdin "${{ env.REGISTRY }}"
+            | podman login -u "$GITHUB_ACTOR" --password-stdin "$REGISTRY"
 
+      # Reads the ref from the environment, never through a workflow
+      # expression: a tag name is attacker-chosen text, and an expression is
+      # pasted into the script before bash parses it.
       - name: Determine container tags
         id: meta
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/}
-            TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}"
-            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            # Only the version. A release pushes main and the tag together, so
+            # two runs race; `latest` stays with main rather than going to
+            # whichever of them finishes last.
+            TAGS="${REGISTRY}/${IMAGE_NAME}:${GITHUB_REF_NAME}"
           else
             SHORT_SHA=$(git rev-parse --short HEAD)
-            TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}"
+            TAGS="${REGISTRY}/${IMAGE_NAME}:latest"
+            TAGS="${TAGS},${REGISTRY}/${IMAGE_NAME}:${SHORT_SHA}"
           fi
-          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
 
       - name: Build container image
         run: devenv shell -- make container-dist
 
       - name: Push container image
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
         run: |
-          IMAGE_ID="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          IFS=',' read -ra TAGS <<< "${{ steps.meta.outputs.tags }}"
-          
+          IFS=',' read -ra TAGS <<< "$IMAGE_TAGS"
+
           for TAG in "${TAGS[@]}"; do
-            podman tag localhost/${{ env.IMAGE_NAME }}:latest "${TAG}"
+            podman tag "localhost/${IMAGE_NAME}:latest" "${TAG}"
             podman push "${TAG}"
           done
