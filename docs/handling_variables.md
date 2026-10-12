@@ -64,6 +64,20 @@ In Robot Framework tasks, you can use the built-in `VAR` keyword to set variable
 *   `scope=${BPMN:TASK}`: Sets a variable that is local to the current external task instance.
 *   `scope=${BPMN:PROCESS}`: Sets a variable that is available throughout the entire BPMN process instance.
 
+### Variables of a failed task
+
+When a task ends in a BPMN error (`on-fail = "ERROR"`, or `on-fail = "FAIL"` with an explicit `Fail`), the `scope=${BPMN:TASK}` variables it had already set are still stored as local variables of the task, together with `log.html` and `output.xml`.
+
+This matters for output mappings: the engine evaluates them before the error reaches its boundary event, and a mapping that refers to a variable the failed task never set breaks the error handling. Set such outputs first, to an empty value if necessary, before the step that may fail:
+
+```robotframework
+    VAR    ${result}    ${None}    scope=${BPMN:TASK}
+    Step That May Fail
+    VAR    ${result}    ${value}    scope=${BPMN:TASK}
+```
+
+A technical failure (`on-fail = "FAIL"` without an explicit `Fail`) stores only `log.html` and `output.xml`, so a retry does not see the outputs of the failed attempt.
+
 ### Getting and setting variables from Python
 
 For Python-based tasks, `purjo` provides utilities to interact with BPMN variables.

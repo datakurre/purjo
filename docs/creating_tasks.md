@@ -63,7 +63,7 @@ pythonpath = ["./libs", "./modules"]
 
 *   `[tool.purjo.topics."<Topic Name>"]`: Defines the configuration for a specific BPMN topic.
 *   `name`: The name of the Robot Framework task (or Python function) to execute.
-*   `on-fail`: Determines the behavior when the task fails (e.g., "ERROR", "FAIL").
+*   `on-fail`: Determines the behavior when the task fails (e.g., "ERROR", "FAIL"). See [Variables of a failed task](handling_variables.md#variables-of-a-failed-task) for what a failed task leaves behind.
 *   `process-variables`: If `true`, process variables are passed to the task. If `false`, only task scope variables are passed to the task.
 *   `pythonpath`: (Optional) A list of additional paths to add to Robot Framework's `--pythonpath`. This allows importing custom libraries and modules from specified directories.
 
