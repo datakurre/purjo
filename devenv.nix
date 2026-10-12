@@ -19,6 +19,14 @@ let
         package = devenv-module-operaton.packages.${pkgs.stdenv.hostPlatform.system}.default;
         deployment = ./fixture/operaton;
         postgres.enable = true;
+        # The credentials the Makefile's .env, .env.example and the e2e suite
+        # (BASIC_AUTHORIZATION in tests/e2e/conftest.py) all assume; the
+        # module's own default is admin:admin. Operaton only creates this user
+        # in an empty database, so an existing one keeps the user it has.
+        adminUser = {
+          id = "demo";
+          password = "demo";
+        };
       };
 
       services.vault = {
