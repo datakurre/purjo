@@ -94,6 +94,57 @@ class TestPyFromOperaton:
         assert result["boolVar"] is True
 
     @pytest.mark.asyncio
+    async def test_json_variable_without_value_info(self) -> None:
+        """Test decoding Json variables when Operaton omits serialization metadata."""
+        from purjo.file_utils import py_from_operaton
+
+        variables = {
+            "testVar": VariableValueDto(
+                value='["item-1","item-2"]',
+                type=VariableValueType.Json,
+                valueInfo={},
+            )
+        }
+
+        result = await py_from_operaton(variables)
+
+        assert result["testVar"] == ["item-1", "item-2"]
+
+    @pytest.mark.asyncio
+    async def test_json_text_string_variable_stays_a_string(self) -> None:
+        """Test that JSON-looking String variables are not implicitly decoded."""
+        from purjo.file_utils import py_from_operaton
+
+        value = '["item-1","item-2"]'
+        variables = {
+            "testVar": VariableValueDto(
+                value=value,
+                type=VariableValueType.String,
+            )
+        }
+
+        result = await py_from_operaton(variables)
+
+        assert result["testVar"] == value
+
+    @pytest.mark.asyncio
+    async def test_json_variable_already_decoded(self) -> None:
+        """Test preserving Json values that are already Python objects."""
+        from purjo.file_utils import py_from_operaton
+
+        variables = {
+            "testVar": VariableValueDto(
+                value=["item-1", "item-2"],
+                type=VariableValueType.Json,
+                valueInfo={"serializationDataFormat": "application/json"},
+            )
+        }
+
+        result = await py_from_operaton(variables)
+
+        assert result["testVar"] == ["item-1", "item-2"]
+
+    @pytest.mark.asyncio
     async def test_none_variables(self) -> None:
         """Test with None variables."""
         from purjo.file_utils import py_from_operaton

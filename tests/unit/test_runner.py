@@ -1368,8 +1368,31 @@ class TestCreateTaskResultProcessing:
             variables={
                 # value None in the result -> type is restored from the task
                 "kept": VariableValueDto(value=None, type=VariableValueType.Json),
-                # present in process variables -> type is restored there too
-                "shared": VariableValueDto(value="x", type=VariableValueType.Json),
+                "shared": VariableValueDto(
+                    value='"original"',
+                    type=VariableValueType.Json,
+                    valueInfo={},
+                ),
+                "count": VariableValueDto(
+                    value="0",
+                    type=VariableValueType.Json,
+                    valueInfo={},
+                ),
+                "payload": VariableValueDto(
+                    value='{"original":true}',
+                    type=VariableValueType.Json,
+                    valueInfo={},
+                ),
+                "plain_string": VariableValueDto(
+                    value="initial",
+                    type=VariableValueType.String,
+                    valueInfo={},
+                ),
+                "long_number": VariableValueDto(
+                    value=10,
+                    type=VariableValueType.Long,
+                    valueInfo={},
+                ),
             },
         )
 
@@ -1378,19 +1401,17 @@ class TestCreateTaskResultProcessing:
             task_variables_file = args[3]
             process_variables_file = args[4]
             task_variables_file.write_text('{"kept": null}')
-            process_variables_file.write_text('{"shared": "x"}')
+            process_variables_file.write_text(
+                '{"shared": "updated", "count": 42, "payload": {"ok": true},'
+                ' "plain_string": "updated_string", "long_number": 99}'
+            )
             (working_dir / "log.html").write_text("<html><body>log</body></html>")
             (working_dir / "output.xml").write_text(
                 '<?xml version="1.0" encoding="UTF-8"?><robot></robot>'
             )
             return (0, b"success", b"")
 
-        with (
-            patch("purjo.runner.build_run", side_effect=mock_build_run_coro),
-            patch("purjo.runner.py_from_operaton") as mock_py_from,
-        ):
-            mock_py_from.return_value = {}
-
+        with patch("purjo.runner.build_run", side_effect=mock_build_run_coro):
             result = await task_handler(task)
 
         assert isinstance(result, ExternalTaskComplete)
@@ -1401,9 +1422,21 @@ class TestCreateTaskResultProcessing:
         assert isinstance(response, CompleteExternalTaskDto)
         local_variables = response.localVariables or {}
         process_variables = response.variables or {}
-        # Types were carried over from the locked task
+        # Types and JSON values are preserved across the task round trip.
         assert local_variables["kept"].type == VariableValueType.Json
         assert process_variables["shared"].type == VariableValueType.Json
+        assert isinstance(process_variables["shared"].value, str)
+        assert json.loads(process_variables["shared"].value) == "updated"
+        assert process_variables["count"].type == VariableValueType.Json
+        assert isinstance(process_variables["count"].value, str)
+        assert json.loads(process_variables["count"].value) == 42
+        assert process_variables["payload"].type == VariableValueType.Json
+        assert isinstance(process_variables["payload"].value, str)
+        assert json.loads(process_variables["payload"].value) == {"ok": True}
+        assert process_variables["plain_string"].type == VariableValueType.String
+        assert process_variables["plain_string"].value == "updated_string"
+        assert process_variables["long_number"].type == VariableValueType.Long
+        assert process_variables["long_number"].value == 99
         # Output files were attached to the task-local variables
         assert "log.html" in local_variables
         assert "output.xml" in local_variables

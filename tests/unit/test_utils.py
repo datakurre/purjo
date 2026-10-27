@@ -307,10 +307,26 @@ class TestDeserialize:
         """Test JSON deserialization."""
         json_str = '{"key": "value"}'
         info = ValueInfo(serializationDataFormat="application/json")
-        result = deserialize(json_str, VariableValueType.Json, info)
+        result = deserialize(json_str, VariableValueType.Object, info)
 
         assert isinstance(result, dict)
         assert result["key"] == "value"
+
+    def test_json_type_string_without_value_info(self) -> None:
+        """Test VariableValueType.Json with raw JSON string and no value info."""
+        result = deserialize('{"key": "value"}', VariableValueType.Json, None)
+        assert result == {"key": "value"}
+
+    def test_json_type_already_decoded(self) -> None:
+        """Test VariableValueType.Json with already decoded data and no value info."""
+        data = {"key": "value", "list": [1, 2]}
+        result = deserialize(data, VariableValueType.Json, None)
+        assert result == data
+
+    def test_json_type_none_value(self) -> None:
+        """Test VariableValueType.Json with None value."""
+        result = deserialize(None, VariableValueType.Json, None)
+        assert result is None
 
     @patch("purjo.serialization.javaobj.load")
     def test_java_serialized_object(self, mock_javaobj_load: Any) -> None:

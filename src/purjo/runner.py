@@ -550,8 +550,11 @@ def create_task(
                     json.loads(task_variables_file.read_text()),
                     [robot_dir, working_dir],
                 )
+                process_variable_values: Dict[str, Any] = json.loads(
+                    process_variables_file.read_text()
+                )
                 process_variables = operaton_from_py(
-                    json.loads(process_variables_file.read_text()),
+                    process_variable_values,
                     [robot_dir, working_dir],
                 )
 
@@ -560,7 +563,16 @@ def create_task(
                     if name_ in task_variables and task_variables[name_].value is None:
                         task_variables[name_].type = variable.type
                     if name_ in process_variables:
-                        process_variables[name_].type = variable.type
+                        if variable.type == VariableValueType.Json:
+                            process_variables[name_] = VariableValueDto(
+                                value=json.dumps(
+                                    process_variable_values[name_],
+                                    default=json_serializer,
+                                ),
+                                type=VariableValueType.Json,
+                            )
+                        else:
+                            process_variables[name_].type = variable.type
 
                 # Attach output files
                 log_html_path = working_dir / "log.html"

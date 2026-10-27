@@ -107,9 +107,21 @@ def deserialize(
     ):
         if type_ == VariableValueType.Date:
             return dt_from_operaton(value)
+        if type_ == VariableValueType.Json and value is not None:
+            decoded_json: DeserializedValue
+            decoded_json = (
+                json.loads(value)
+                if isinstance(value, str)
+                else cast(DeserializedValue, value)
+            )
+            return decoded_json
         return cast(DeserializedValue, value)
     elif info.serializationDataFormat == "application/json":
-        result: DeserializedValue = json.loads(value)
+        result: DeserializedValue = (
+            json.loads(value)
+            if isinstance(value, str)
+            else cast(DeserializedValue, value)
+        )
         return result
     elif info.serializationDataFormat == "application/x-java-serialized-object":
         return py_from_javaobj(javaobj.load(BytesIO(base64.b64decode(value))))  # type: ignore[attr-defined]
