@@ -328,7 +328,7 @@ class TestSecretsIntegration:
         """Test migrating from file secrets to Vault."""
         # Start with file provider
         file_provider = get_secrets_provider(profile=str(sample_secrets_file))
-        file_secrets = file_provider.read()  # type: ignore[union-attr]  # type: ignore[union-attr]
+        file_secrets = file_provider.read()  # type: ignore[union-attr]
 
         # Switch to Vault provider
         with patch("purjo.secrets.hvac.Client", return_value=mock_hvac_client):
@@ -342,7 +342,7 @@ class TestSecretsIntegration:
                 }
             }
             vault_provider = get_secrets_provider(config=vault_config, profile="vault")
-            vault_secrets = vault_provider.read()  # type: ignore[union-attr]  # type: ignore[union-attr]
+            vault_secrets = vault_provider.read()  # type: ignore[union-attr]
 
             # Both should provide secrets (though values may differ)
             assert isinstance(file_secrets, dict)
@@ -366,12 +366,12 @@ class TestSecretsIntegration:
 
         # Get dev secrets
         dev_provider = get_secrets_provider(config=config, profile="dev")
-        dev_result = dev_provider.read()  # type: ignore[union-attr]  # type: ignore[union-attr]
+        dev_result = dev_provider.read()  # type: ignore[union-attr]
         assert dev_result["env"] == "dev"
 
         # Get prod secrets
         prod_provider = get_secrets_provider(config=config, profile="prod")
-        prod_result = prod_provider.read()  # type: ignore[union-attr]  # type: ignore[union-attr]
+        prod_result = prod_provider.read()  # type: ignore[union-attr]
         assert prod_result["env"] == "prod"
 
 

@@ -17,12 +17,14 @@ from purjo.data.RobotParser import RobotParser
 from purjo.data.RobotParser import set_bpmn_process
 from purjo.data.RobotParser import set_bpmn_task
 from purjo.data.RobotParser import Variables
-from robot.running import TestDefaults  # type: ignore[import-untyped]  # type: ignore[import-untyped]
+from robot.running import TestDefaults  # type: ignore[import-untyped]
 from typing import Any
 from unittest.mock import Mock
 import json
 import os
 import pytest
+
+TestDefaults.__test__ = False
 
 
 class TestJsonSerializer:

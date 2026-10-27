@@ -8,8 +8,8 @@ Related ADRs:
 - ADR-003: Architecture overview
 """
 
-from javaobj.v2.beans import JavaString  # type: ignore[import-untyped]  # type: ignore[import-untyped]
-from javaobj.v2.transformers import JavaBool  # type: ignore[import-untyped]  # type: ignore[import-untyped]
+from javaobj.v2.beans import JavaString
+from javaobj.v2.transformers import JavaBool
 from javaobj.v2.transformers import JavaInt
 from javaobj.v2.transformers import JavaList
 from javaobj.v2.transformers import JavaMap
@@ -217,7 +217,7 @@ class TestPyFromJavaobj:
         java_val2 = MagicMock(spec=JavaInt)
         java_val2.__int__.return_value = 42
 
-        java_map = JavaMap()
+        java_map = JavaMap()  # type: ignore[no-untyped-call]
         java_map[java_key1] = java_val1
         java_map[java_key2] = java_val2
 
@@ -235,7 +235,7 @@ class TestPyFromJavaobj:
         java_int = MagicMock(spec=JavaInt)
         java_int.__int__.return_value = 42
 
-        java_list = JavaList()
+        java_list = JavaList()  # type: ignore[no-untyped-call]
         java_list.append(java_str)
         java_list.append(java_int)
 
@@ -321,7 +321,7 @@ class TestDeserialize:
         java_val = MagicMock(spec=JavaString)
         java_val.__str__.return_value = "value"  # type: ignore[attr-defined]
 
-        java_map = JavaMap()
+        java_map = JavaMap()  # type: ignore[no-untyped-call]
         java_map[java_key] = java_val
         mock_javaobj_load.return_value = java_map
 
@@ -348,14 +348,14 @@ class TestOperatonValueFromPy:
         result = operaton_value_from_py({"key": "value"})
 
         assert result.type == VariableValueType.Json
-        assert json.loads(result.value) == {"key": "value"}  # type: ignore[arg-type]  # type: ignore[arg-type]
+        assert json.loads(result.value) == {"key": "value"}  # type: ignore[arg-type]
 
     def test_list_to_json(self) -> None:
         """Test list → Json type."""
         result = operaton_value_from_py([1, 2, 3])
 
         assert result.type == VariableValueType.Json
-        assert json.loads(result.value) == [1, 2, 3]  # type: ignore[arg-type]  # type: ignore[arg-type]
+        assert json.loads(result.value) == [1, 2, 3]  # type: ignore[arg-type]
 
     def test_bool_to_boolean(self) -> None:
         """Test bool → Boolean type."""
@@ -394,9 +394,9 @@ class TestOperatonValueFromPy:
         result = operaton_value_from_py(str(test_file), sandbox=[temp_dir])
 
         assert result.type == VariableValueType.File
-        assert result.valueInfo["filename"] == "test.txt"  # type: ignore[index]  # type: ignore[index]
+        assert result.valueInfo["filename"] == "test.txt"  # type: ignore[index]
         # Verify base64 encoding
-        decoded = base64.b64decode(result.value)  # type: ignore[arg-type]  # type: ignore[arg-type]
+        decoded = base64.b64decode(result.value)  # type: ignore[arg-type]
         assert decoded == b"hello"
 
     def test_str_to_string(self) -> None:

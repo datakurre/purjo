@@ -387,8 +387,8 @@ class TestVariableTypeBoundaries:
         nested = {"level": 1}
         current = nested
         for i in range(2, 101):  # Create 100 levels of nesting
-            current["next"] = {"level": i}  # type: ignore[assignment]  # type: ignore[assignment]
-            current = current["next"]  # type: ignore[assignment]  # type: ignore[assignment]
+            current["next"] = {"level": i}  # type: ignore[assignment]
+            current = current["next"]  # type: ignore[assignment]
 
         json_file = temp_dir / "deep.json"
         json_file.write_text(json.dumps(nested))

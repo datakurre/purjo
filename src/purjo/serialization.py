@@ -1,8 +1,8 @@
 """Serialization utilities for Operaton variable conversion."""
 
 from io import BytesIO
-from javaobj.v2.beans import JavaString  # type: ignore
-from javaobj.v2.transformers import JavaBool  # type: ignore
+from javaobj.v2.beans import JavaString
+from javaobj.v2.transformers import JavaBool
 from javaobj.v2.transformers import JavaInt
 from javaobj.v2.transformers import JavaList
 from javaobj.v2.transformers import JavaMap
@@ -20,7 +20,7 @@ from typing import List
 from typing import Optional
 import base64
 import datetime
-import javaobj.v2 as javaobj  # type: ignore
+import javaobj.v2 as javaobj
 import json
 import mimetypes
 import tzlocal
@@ -112,7 +112,7 @@ def deserialize(
         result: DeserializedValue = json.loads(value)
         return result
     elif info.serializationDataFormat == "application/x-java-serialized-object":
-        return py_from_javaobj(javaobj.load(BytesIO(base64.b64decode(value))))
+        return py_from_javaobj(javaobj.load(BytesIO(base64.b64decode(value))))  # type: ignore[attr-defined]
     raise NotImplementedError(info.serializationDataFormat)
 
 
