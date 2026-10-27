@@ -15,6 +15,7 @@ from typing import Literal
 from typing import Optional
 from typing import Union
 import hvac
+import hvac.exceptions
 import json
 import os
 
@@ -57,6 +58,21 @@ class VaultProviderConfig(BaseModel):
     mount_point: str = Field(alias="mount-point")
     address: Optional[str] = Field(default_factory=lambda: os.getenv("VAULT_ADDR"))
     token: Optional[str] = Field(default_factory=lambda: os.getenv("VAULT_TOKEN"))
+    subtree: Optional[bool] = Field(
+        default=None,
+        description="Whether to fetch secrets as a subtree hierarchy. If None, auto-detected.",
+    )
+
+
+def _merge_dicts(d1: Dict[str, Any], d2: Dict[str, Any]) -> Dict[str, Any]:
+    """Recursively merge two dictionaries, with d2 values taking precedence."""
+    merged = dict(d1)
+    for k, v in d2.items():
+        if k in merged and isinstance(merged[k], dict) and isinstance(v, dict):
+            merged[k] = _merge_dicts(merged[k], v)
+        else:
+            merged[k] = v
+    return merged
 
 
 # Adapter implementations
@@ -92,14 +108,81 @@ class VaultSecretsAdapter(SecretsAdapter):
                 "Set it in the environment or configuration."
             )
 
+    def _read_single_record(self, client: hvac.Client, path: str) -> Dict[str, Any]:
+        """Read a single KV v2 secret record and validate response structure."""
+        secret = client.secrets.kv.v2.read_secret_version(
+            path=path, mount_point=self.config.mount_point
+        )
+        if (
+            not isinstance(secret, dict)
+            or not isinstance(secret.get("data"), dict)
+            or not isinstance(secret["data"].get("data"), dict)
+        ):
+            raise ValueError(f"Invalid secret response structure from Vault at {path}")
+        return dict(secret["data"]["data"])
+
+    def _fetch_subtree(self, client: hvac.Client, path: str) -> Dict[str, Any]:
+        """Recursively fetch secrets from a Vault KV v2 subtree."""
+        clean_path = path.strip("/")
+        response = client.secrets.kv.v2.list_secrets(
+            path=clean_path, mount_point=self.config.mount_point
+        )
+        if (
+            not isinstance(response, dict)
+            or not isinstance(response.get("data"), dict)
+            or "keys" not in response["data"]
+            or not isinstance(response["data"]["keys"], list)
+        ):
+            raise ValueError(
+                f"Invalid list_secrets response structure from Vault at {path}"
+            )
+
+        keys = response["data"]["keys"]
+        if not keys:
+            return {}
+
+        result: Dict[str, Any] = {}
+        for key in keys:
+            if key.endswith("/"):
+                subfolder = key.rstrip("/")
+                child_path = f"{clean_path}/{subfolder}" if clean_path else subfolder
+                child_data = self._fetch_subtree(client, child_path)
+                target_key = subfolder
+            else:
+                child_path = f"{clean_path}/{key}" if clean_path else key
+                child_data = self._read_single_record(client, child_path)
+                target_key = key
+
+            if (
+                target_key in result
+                and isinstance(result[target_key], dict)
+                and isinstance(child_data, dict)
+            ):
+                result[target_key] = _merge_dicts(result[target_key], child_data)
+            else:
+                result[target_key] = child_data
+
+        return result
+
     def read(self) -> Dict[str, Any]:
         """Read secrets from HashiCorp Vault."""
         try:
             client = hvac.Client(url=self.config.address, token=self.config.token)
-            secret = client.secrets.kv.v2.read_secret_version(
-                path=self.config.path, mount_point=self.config.mount_point
-            )
-            return dict(secret["data"]["data"])
+            raw_path = self.config.path
+            clean_path = raw_path.strip("/")
+
+            if self.config.subtree is True or (
+                self.config.subtree is None and raw_path.endswith("/")
+            ):
+                return self._fetch_subtree(client, clean_path)
+
+            if self.config.subtree is False:
+                return self._read_single_record(client, clean_path)
+
+            try:
+                return self._read_single_record(client, clean_path)
+            except hvac.exceptions.InvalidPath:
+                return self._fetch_subtree(client, clean_path)
         except Exception as e:
             raise SecretsProviderError(
                 f"Failed to read secrets from Vault at {self.config.path}: {e}"

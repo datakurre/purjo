@@ -32,6 +32,11 @@ So that I can securely inject sensitive values into tasks.
 **When** a Robot Framework suite runs
 **Then** secrets are available as variables in the suite
 
+### AC-4: HashiCorp Vault Subtree Traversal
+**Given** secrets are organized across a directory hierarchy in HashiCorp Vault KV v2
+**When** the Vault profile specifies `subtree = true`, a path with a trailing slash, or points to a folder path
+**Then** secrets in the entire subtree are recursively loaded and structured as nested dictionaries, with name collisions between folders and records merged cleanly
+
 ---
 
 ## Notes

@@ -34,7 +34,7 @@ In this example, the `default` profile uses a file named `secrets.json` in the p
 
 ### Vault provider
 
-The `vault` provider loads secrets from HashiCorp Vault.
+The `vault` provider loads secrets from HashiCorp Vault (KV v2).
 
 ```toml
 [tool.purjo.secrets.prod]
@@ -44,6 +44,26 @@ mount-point = "secret"
 ```
 
 This requires `VAULT_ADDR` and `VAULT_TOKEN` environment variables to be set.
+
+#### Subtree traversal
+
+By default, if `path` refers to a single secret version, its key-value pairs are loaded directly. If the path refers to a folder (or ends with a trailing slash `/`), `purjo` automatically traverses the entire subtree recursively, organizing secrets into nested dictionaries matching the Vault hierarchy.
+
+You can explicitly configure subtree traversal using the `subtree` option:
+
+```toml
+[tool.purjo.secrets.prod]
+provider = "vault"
+path = "secret/my-app"
+mount-point = "secret"
+subtree = true
+```
+
+*   `subtree = true`: Recursively list and fetch all secrets within the directory tree.
+*   `subtree = false`: Disallow fallback and fetch only the single secret record at `path`.
+*   `subtree = null` (default / omitted): If `path` ends with `/`, subtree traversal is used directly. Otherwise, `purjo` attempts to read a single secret record, falling back to subtree traversal if the path is a directory (`InvalidPath`).
+
+When subtree traversal is used, leaf secrets are stored under their key names and nested folders become nested dictionaries. If both a secret record and a folder share the same name at a given path, their dictionaries are automatically merged.
 
 ## Usage
 

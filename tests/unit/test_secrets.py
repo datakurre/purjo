@@ -8,16 +8,20 @@ Related ADRs:
 """
 
 from pathlib import Path
+from purjo.secrets import _merge_dicts
 from purjo.secrets import FileProviderConfig
 from purjo.secrets import FileSecretsAdapter
 from purjo.secrets import get_secrets_provider
 from purjo.secrets import rebase_provider_config
 from purjo.secrets import SecretsConfigurationError
 from purjo.secrets import SecretsProvider
+from purjo.secrets import SecretsProviderError
 from purjo.secrets import VaultProviderConfig
 from purjo.secrets import VaultSecretsAdapter
+from typing import Any
 from unittest.mock import Mock
 from unittest.mock import patch
+import hvac.exceptions
 import json
 import pytest
 
@@ -54,7 +58,7 @@ class TestVaultSecretsProvider:
             config = VaultProviderConfig(
                 provider="vault",
                 path="secret/data/test",
-                **{"mount-point": "secret"},
+                **dict[str, Any]({"mount-point": "secret"}),
                 address="http://vault:8200",
                 token="test-token",
             )
@@ -70,7 +74,7 @@ class TestVaultSecretsProvider:
         config = VaultProviderConfig(
             provider="vault",
             path="secret/data/test",
-            **{"mount-point": "secret"},
+            **dict[str, Any]({"mount-point": "secret"}),
             address=None,
             token="test-token",
         )
@@ -83,7 +87,7 @@ class TestVaultSecretsProvider:
         config = VaultProviderConfig(
             provider="vault",
             path="secret/data/test",
-            **{"mount-point": "secret"},
+            **dict[str, Any]({"mount-point": "secret"}),
             address="http://vault:8200",
             token=None,
         )
@@ -97,7 +101,7 @@ class TestVaultSecretsProvider:
             config = VaultProviderConfig(
                 provider="vault",
                 path="myapp/credentials",
-                **{"mount-point": "custom_mount"},
+                **dict[str, Any]({"mount-point": "custom_mount"}),
                 address="http://vault:8200",
                 token="test-token",
             )
@@ -295,7 +299,7 @@ class TestSecretsProvider:
             config = VaultProviderConfig(
                 provider="vault",
                 path="secret/data/test",
-                **{"mount-point": "secret"},
+                **dict[str, Any]({"mount-point": "secret"}),
                 address="http://vault:8200",
                 token="test-token",
             )
@@ -419,7 +423,7 @@ class TestSecretsAdapterErrorPaths:
             config = VaultProviderConfig(
                 provider="vault",
                 path="secret/data/test",
-                **{"mount-point": "secret"},
+                **dict[str, Any]({"mount-point": "secret"}),
                 address="http://vault:8200",
                 token="test-token",
             )
@@ -442,7 +446,7 @@ class TestSecretsAdapterErrorPaths:
             config = VaultProviderConfig(
                 provider="vault",
                 path="secret/data/test",
-                **{"mount-point": "secret"},
+                **dict[str, Any]({"mount-point": "secret"}),
                 address="http://vault:8200",
                 token="test-token",
             )
@@ -464,3 +468,434 @@ class TestSecretsProviderUnknownConfig:
 
         with pytest.raises(SecretsConfigurationError, match="Unknown secrets"):
             provider.read()
+
+
+class TestVaultSubtreeSecretsProvider:
+    """Tests for Vault subtree secrets retrieval and auto-detection."""
+
+    def test_backwards_compatibility_single_record(self) -> None:
+        """Test single record retrieval when subtree is omitted / None."""
+        mock_client = Mock()
+        mock_client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {"data": {"api_key": "secret123", "env": "prod"}}
+        }
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="myapp/config",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+            )
+            assert config.subtree is None
+            adapter = VaultSecretsAdapter(config)
+            result = adapter.read()
+
+            assert result == {"api_key": "secret123", "env": "prod"}
+            mock_client.secrets.kv.v2.read_secret_version.assert_called_once_with(
+                path="myapp/config", mount_point="secret"
+            )
+            mock_client.secrets.kv.v2.list_secrets.assert_not_called()
+
+    def test_autodetect_fallback_to_subtree_when_root_is_directory(self) -> None:
+        """Test fallback to subtree when path is a directory (raises InvalidPath on read)."""
+        mock_client = Mock()
+        mock_client.secrets.kv.v2.read_secret_version.side_effect = [
+            hvac.exceptions.InvalidPath("Not a secret"),
+            {"data": {"data": {"password": "pass123"}}},
+        ]
+        mock_client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["db"]}}
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="myapp",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=None,
+            )
+            adapter = VaultSecretsAdapter(config)
+            result = adapter.read()
+
+            assert result == {"db": {"password": "pass123"}}
+            mock_client.secrets.kv.v2.read_secret_version.assert_any_call(
+                path="myapp", mount_point="secret"
+            )
+            mock_client.secrets.kv.v2.list_secrets.assert_called_once_with(
+                path="myapp", mount_point="secret"
+            )
+            mock_client.secrets.kv.v2.read_secret_version.assert_any_call(
+                path="myapp/db", mount_point="secret"
+            )
+
+    def test_explicit_subtree_true_directly_calls_list_secrets(self) -> None:
+        """Test explicit subtree=True directly calls list_secrets without reading root."""
+        mock_client = Mock()
+        mock_client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["db"]}}
+        mock_client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {"data": {"password": "pass123"}}
+        }
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="myapp",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=True,
+            )
+            adapter = VaultSecretsAdapter(config)
+            result = adapter.read()
+
+            assert result == {"db": {"password": "pass123"}}
+            mock_client.secrets.kv.v2.list_secrets.assert_called_once_with(
+                path="myapp", mount_point="secret"
+            )
+            mock_client.secrets.kv.v2.read_secret_version.assert_called_once_with(
+                path="myapp/db", mount_point="secret"
+            )
+
+    def test_explicit_subtree_false_disallows_fallback(self) -> None:
+        """Test explicit subtree=False disallows fallback and raises SecretsProviderError."""
+        mock_client = Mock()
+        mock_client.secrets.kv.v2.read_secret_version.side_effect = (
+            hvac.exceptions.InvalidPath("Not a secret")
+        )
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="myapp",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=False,
+            )
+            adapter = VaultSecretsAdapter(config)
+
+            with pytest.raises(SecretsProviderError, match="Failed to read secrets"):
+                adapter.read()
+
+            mock_client.secrets.kv.v2.read_secret_version.assert_called_once_with(
+                path="myapp", mount_point="secret"
+            )
+            mock_client.secrets.kv.v2.list_secrets.assert_not_called()
+
+    def test_trailing_slash_path_triggers_subtree_directly(self) -> None:
+        """Test trailing slash in path triggers subtree traversal directly."""
+        mock_client = Mock()
+        mock_client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["db"]}}
+        mock_client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {"data": {"password": "pass123"}}
+        }
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="myapp/",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=None,
+            )
+            adapter = VaultSecretsAdapter(config)
+            result = adapter.read()
+
+            assert result == {"db": {"password": "pass123"}}
+            mock_client.secrets.kv.v2.list_secrets.assert_called_once_with(
+                path="myapp", mount_point="secret"
+            )
+            mock_client.secrets.kv.v2.read_secret_version.assert_called_once_with(
+                path="myapp/db", mount_point="secret"
+            )
+
+    def test_multilevel_nested_subtree(self) -> None:
+        """Test multi-level nested subtree with files and subfolders."""
+        mock_client = Mock()
+
+        def mock_list_secrets(path: str, mount_point: str) -> dict[str, Any]:
+            if path == "app":
+                return {"data": {"keys": ["config", "projects/"]}}
+            elif path == "app/projects":
+                return {"data": {"keys": ["alpha", "beta"]}}
+            raise hvac.exceptions.InvalidPath(f"Path not found: {path}")
+
+        def mock_read_secret(path: str, mount_point: str) -> dict[str, Any]:
+            if path == "app/config":
+                return {"data": {"data": {"env": "prod", "version": "1.0"}}}
+            elif path == "app/projects/alpha":
+                return {"data": {"data": {"name": "alpha_project"}}}
+            elif path == "app/projects/beta":
+                return {"data": {"data": {"name": "beta_project"}}}
+            raise hvac.exceptions.InvalidPath(f"Secret not found: {path}")
+
+        mock_client.secrets.kv.v2.list_secrets.side_effect = mock_list_secrets
+        mock_client.secrets.kv.v2.read_secret_version.side_effect = mock_read_secret
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="app",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=True,
+            )
+            adapter = VaultSecretsAdapter(config)
+            result = adapter.read()
+
+            assert result == {
+                "config": {"env": "prod", "version": "1.0"},
+                "projects": {
+                    "alpha": {"name": "alpha_project"},
+                    "beta": {"name": "beta_project"},
+                },
+            }
+
+    def test_empty_subtree_returns_empty_dict(self) -> None:
+        """Test empty subtree returns an empty dictionary."""
+        mock_client = Mock()
+        mock_client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": []}}
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="empty_folder",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=True,
+            )
+            adapter = VaultSecretsAdapter(config)
+            result = adapter.read()
+
+            assert result == {}
+
+    def test_nonexistent_path_raises_secrets_provider_error(self) -> None:
+        """Test non-existent path raises SecretsProviderError."""
+        mock_client = Mock()
+        mock_client.secrets.kv.v2.read_secret_version.side_effect = (
+            hvac.exceptions.InvalidPath("No such secret")
+        )
+        mock_client.secrets.kv.v2.list_secrets.side_effect = (
+            hvac.exceptions.InvalidPath("No such path")
+        )
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="nonexistent",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=None,
+            )
+            adapter = VaultSecretsAdapter(config)
+
+            with pytest.raises(SecretsProviderError, match="Failed to read secrets"):
+                adapter.read()
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config_subtree = VaultProviderConfig(
+                provider="vault",
+                path="nonexistent",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=True,
+            )
+            adapter_subtree = VaultSecretsAdapter(config_subtree)
+
+            with pytest.raises(SecretsProviderError, match="Failed to read secrets"):
+                adapter_subtree.read()
+
+    def test_permission_error_on_list_secrets(self) -> None:
+        """Test Forbidden error on list_secrets raises SecretsProviderError."""
+        mock_client = Mock()
+        mock_client.secrets.kv.v2.list_secrets.side_effect = hvac.exceptions.Forbidden(
+            "Access denied"
+        )
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="forbidden_dir",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=True,
+            )
+            adapter = VaultSecretsAdapter(config)
+
+            with pytest.raises(SecretsProviderError, match="Failed to read secrets"):
+                adapter.read()
+
+    def test_permission_error_on_child_read(self) -> None:
+        """Test Forbidden error on reading child secret raises SecretsProviderError."""
+        mock_client = Mock()
+        mock_client.secrets.kv.v2.list_secrets.return_value = {
+            "data": {"keys": ["restricted"]}
+        }
+        mock_client.secrets.kv.v2.read_secret_version.side_effect = (
+            hvac.exceptions.Forbidden("Access denied to child")
+        )
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="myapp",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=True,
+            )
+            adapter = VaultSecretsAdapter(config)
+
+            with pytest.raises(SecretsProviderError, match="Failed to read secrets"):
+                adapter.read()
+
+    def test_malformed_responses_raise_secrets_provider_error(self) -> None:
+        """Test malformed responses from Vault raise SecretsProviderError."""
+        mock_client = Mock()
+        mock_client.secrets.kv.v2.list_secrets.return_value = {"data": {}}
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="myapp",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=True,
+            )
+            adapter = VaultSecretsAdapter(config)
+            with pytest.raises(SecretsProviderError, match="Failed to read secrets"):
+                adapter.read()
+
+        mock_client.secrets.kv.v2.list_secrets.return_value = {
+            "data": {"keys": "invalid"}
+        }
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            adapter = VaultSecretsAdapter(config)
+            with pytest.raises(SecretsProviderError, match="Failed to read secrets"):
+                adapter.read()
+
+        mock_client.secrets.kv.v2.list_secrets.return_value = {"data": None}
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            adapter = VaultSecretsAdapter(config)
+            with pytest.raises(SecretsProviderError, match="Failed to read secrets"):
+                adapter.read()
+
+        mock_client.secrets.kv.v2.list_secrets.return_value = {
+            "data": {"keys": ["child"]}
+        }
+        mock_client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {"data": "not a dict"}
+        }
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            adapter = VaultSecretsAdapter(config)
+            with pytest.raises(SecretsProviderError, match="Failed to read secrets"):
+                adapter.read()
+
+    def test_name_collision_merges_dictionaries(self) -> None:
+        """Test name collision between record and folder merges dictionaries."""
+        mock_client = Mock()
+
+        def mock_list_1(path: str, mount_point: str) -> dict[str, Any]:
+            if path == "app":
+                return {"data": {"keys": ["service", "service/"]}}
+            elif path == "app/service":
+                return {"data": {"keys": ["db"]}}
+            raise hvac.exceptions.InvalidPath(path)
+
+        def mock_read_1(path: str, mount_point: str) -> dict[str, Any]:
+            if path == "app/service":
+                return {"data": {"data": {"port": 8080, "host": "localhost"}}}
+            elif path == "app/service/db":
+                return {"data": {"data": {"user": "admin"}}}
+            raise hvac.exceptions.InvalidPath(path)
+
+        mock_client.secrets.kv.v2.list_secrets.side_effect = mock_list_1
+        mock_client.secrets.kv.v2.read_secret_version.side_effect = mock_read_1
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="app",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=True,
+            )
+            adapter = VaultSecretsAdapter(config)
+            result = adapter.read()
+
+            assert result == {
+                "service": {
+                    "port": 8080,
+                    "host": "localhost",
+                    "db": {"user": "admin"},
+                }
+            }
+
+        def mock_list_2(path: str, mount_point: str) -> dict[str, Any]:
+            if path == "app":
+                return {"data": {"keys": ["service/", "service"]}}
+            elif path == "app/service":
+                return {"data": {"keys": ["db"]}}
+            raise hvac.exceptions.InvalidPath(path)
+
+        mock_client.secrets.kv.v2.list_secrets.side_effect = mock_list_2
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            adapter = VaultSecretsAdapter(config)
+            result2 = adapter.read()
+
+            assert result2 == {
+                "service": {
+                    "db": {"user": "admin"},
+                    "port": 8080,
+                    "host": "localhost",
+                }
+            }
+
+    def test_root_path_subtree(self) -> None:
+        """Test subtree traversal starting at the root mount path."""
+        mock_client = Mock()
+
+        def mock_list(path: str, mount_point: str) -> dict[str, Any]:
+            if path == "":
+                return {"data": {"keys": ["app/"]}}
+            elif path == "app":
+                return {"data": {"keys": ["token"]}}
+            raise hvac.exceptions.InvalidPath(path)
+
+        mock_client.secrets.kv.v2.list_secrets.side_effect = mock_list
+        mock_client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {"data": {"val": 123}}
+        }
+
+        with patch("purjo.secrets.hvac.Client", return_value=mock_client):
+            config = VaultProviderConfig(
+                provider="vault",
+                path="/",
+                **dict[str, Any]({"mount-point": "secret"}),
+                address="http://vault:8200",
+                token="test-token",
+                subtree=True,
+            )
+            adapter = VaultSecretsAdapter(config)
+            result = adapter.read()
+
+            assert result == {"app": {"token": {"val": 123}}}
+
+    def test_merge_dicts_helper(self) -> None:
+        """Test _merge_dicts utility function directly."""
+        d1 = {"a": 1, "nested": {"x": 10, "y": 20}}
+        d2 = {"b": 2, "nested": {"y": 99, "z": 30}}
+        merged = _merge_dicts(d1, d2)
+
+        assert merged == {"a": 1, "b": 2, "nested": {"x": 10, "y": 99, "z": 30}}
