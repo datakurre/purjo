@@ -145,13 +145,18 @@ Violations indicate fundamental architectural problems that must be fixed immedi
 ```toml agent-sandbox
 [network]
 allowed_hosts = [
-    "pypi.org:443",
-    "files.pythonhosted.org:443",
-    "*.nixos.org:443",
-    "*.cachix.org:443",
-    "*.github.com:443",
-    "*.github.io:443",
-    "*.gitlab.com:443",
+    "GET pypi.org:443/**",
+    "GET files.pythonhosted.org:443/**",
+    "GET cache.nixos.org:443/**",
+    "GET tarballs.nixos.org:443/**",
+    "GET channels.nixos.org:443/**",
+    "GET devenv.cachix.org:443/**",
+    "GET datakurre.cachix.org:443/**",
+    "GET vasara-bpm.cachix.org:443/**",
+    "GET github.com:443/**",
+    "GET codeload.github.com:443/**",
+    "GET datakurre.github.io:443/**",
+    "GET gitlab.com:443/**",
 ]
 
 [ports]
