@@ -1,12 +1,11 @@
 ## 1.0rc3 (unreleased)
 
-
-- Run task suites in an isolated uv environment with only runtime dependencies,
-  excluding default dependency groups such as `dev`.
-
+- Fix to install only runtime dependencies in a dedicated per-task uv environment
+- Add support for reading a Vault path as a root for a subtree of secret
+  records, recursively constructing a nested dictionary structure.
+- Fix to issue where JSON variable values were not always parsed:
 
 ## 1.0rc2 (2026-10-12)
-
 
 - Fix `pur init --agents` to list `AGENTS.md` among the files it adds; the file
   was created without being reported
@@ -23,16 +22,13 @@
   to it, bumping robotframework-robocop to 9.0.0 (7.2.0 excludes RF 7.5) and
   typer to 0.27.2 (pulled in transitively by the robocop upgrade)
 
-
 ## 1.0rc1 (2026-09-11)
-
 
 - Fix 'pur wrap' to exclude secrets.json, and stop copying it into the task sandbox
 - Fix relative 'file' secrets paths to resolve against a directory package
 - Fix a Fail keyword that never ran being reported as an explicit robot failure
 - Fix 'pur operaton deploy --variables -' with multiple process definitions
 - Fix 'pur serve' on Python 3.14
-
 
 ## 1.0b7 (2026-01-23)
 
