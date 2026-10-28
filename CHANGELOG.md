@@ -1,7 +1,8 @@
 ## 1.0rc3 (unreleased)
 
 
-- Nothing changed yet.
+- Run task suites in an isolated uv environment with only runtime dependencies,
+  excluding default dependency groups such as `dev`.
 
 
 ## 1.0rc2 (2026-10-12)

@@ -11,7 +11,7 @@ This guide explains how to start a new `purjo` project using the `pur init` comm
 
 ## Prerequisites
 
-`purjo` requires Python 3.10 or newer, and relies on [`uv`](https://github.com/astral-sh/uv) for Python package and environment management. Ensure `uv` is installed and available in your system PATH.
+`purjo` requires Python 3.10 or newer, and relies on [`uv`](https://github.com/astral-sh/uv) 0.5.23 or newer for Python package and environment management. Ensure a compatible `uv` is installed and available in your system PATH.
 
 ## Initializing a new project
 
@@ -148,4 +148,3 @@ Report:  /tmp/nix-shell-49641-0/tmp2721mpez/report.html
 ```
 
 The output shows `purjo` connecting to the Operaton engine, picking up a task ("My Topic in BPMN"), executing the corresponding Robot Framework task ("My Task in Robot"), and then completing the external task in the BPMN process.
-

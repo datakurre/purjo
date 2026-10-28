@@ -154,7 +154,7 @@ process-variables = true
 
 ## Adding dependencies
 
-When your tasks require external Python libraries (e.g., `requests`, `pandas`, `PyPDF2`), you need to add them to your project's dependencies. `purjo` uses `uv` for dependency management.
+When your tasks require external Python libraries (e.g., `requests`, `pandas`, `PyPDF2`), add them to your project's runtime dependencies. Task execution installs runtime dependencies only; dependency groups such as `dev` are not installed. `purjo` uses `uv` for dependency management.
 
 To add a dependency, use the `uv add` command:
 

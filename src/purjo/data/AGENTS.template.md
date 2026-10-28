@@ -168,6 +168,9 @@ $ pur run hello.bpmn --variables '{"name": "Alice"}'
 $ pur serve .                                # run the external task worker
 ```
 
+The worker installs only runtime dependencies. Add libraries imported by task
+code with `uv add`; development-only dependencies are not available at runtime.
+
 The engine is addressed through `ENGINE_REST_BASE_URL` (default
 `http://localhost:8080/engine-rest`) and `ENGINE_REST_AUTHORIZATION`, or the
 equivalent `--base-url` / `--authorization` options.

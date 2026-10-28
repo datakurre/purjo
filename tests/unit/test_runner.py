@@ -13,6 +13,7 @@ Related ADRs:
 from factories import TaskFactory
 from pathlib import Path
 from purjo.config import OnFail
+from purjo.runner import _build_uv_base_args
 from purjo.runner import build_run
 from purjo.runner import fail_reason
 from purjo.runner import is_python_fqfn
@@ -24,8 +25,13 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 from zipfile import ZipFile
 import asyncio
+import base64
+import hashlib
 import json
+import os
 import pytest
+import shutil
+import subprocess
 
 
 class TestRun:
@@ -250,6 +256,10 @@ class TestBuildRun:
             # Verify arguments contain expected parts
             args = call_args[1]
             assert "run" in args
+            assert "--no-default-groups" in args
+            separator = args.index("--")
+            assert args.index("--no-default-groups") < separator
+            assert args.index("--exact") < separator
             assert "--project" in args
             assert robot_dir in args
             assert "--" in args
@@ -353,7 +363,72 @@ class TestBuildRun:
             assert "BPMN_TASK_SCOPE" in env
             assert "UV_NO_SYNC" in env
             assert env["UV_NO_SYNC"] == "0"
+            assert env["UV_PROJECT_ENVIRONMENT"] == str(Path(working_dir) / ".venv")
             assert env["VIRTUAL_ENV"] == ""
+
+    def test_only_runtime_dependencies_are_installed(self, temp_dir: Path) -> None:
+        """Verify uv excludes a local package declared only in the dev group."""
+        uv = shutil.which("uv")
+        if uv is None:
+            pytest.skip("uv not available")
+
+        project_dir = temp_dir / "project"
+        project_dir.mkdir()
+        wheel_path = temp_dir / "dev_group_probe-0.1.0-py3-none-any.whl"
+        dist_info = "dev_group_probe-0.1.0.dist-info"
+        wheel_files = {
+            "dev_group_probe.py": b"VALUE = 'installed'\n",
+            f"{dist_info}/METADATA": (
+                b"Metadata-Version: 2.1\nName: dev-group-probe\nVersion: 0.1.0\n\n"
+            ),
+            f"{dist_info}/WHEEL": (
+                b"Wheel-Version: 1.0\nGenerator: purjo-tests\n"
+                b"Root-Is-Purelib: true\nTag: py3-none-any\n\n"
+            ),
+        }
+        record_rows = []
+        for name, content in wheel_files.items():
+            digest = base64.urlsafe_b64encode(hashlib.sha256(content).digest())
+            encoded_digest = digest.rstrip(b"=").decode()
+            record_rows.append(f"{name},sha256={encoded_digest},{len(content)}")
+        record_rows.append(f"{dist_info}/RECORD,,")
+        wheel_files[f"{dist_info}/RECORD"] = ("\n".join(record_rows) + "\n").encode()
+        with ZipFile(wheel_path, "w") as archive:
+            for name, content in wheel_files.items():
+                archive.writestr(name, content)
+
+        (project_dir / "pyproject.toml").write_text(
+            "[project]\n"
+            'name = "uv-group-probe"\n'
+            'version = "0.1.0"\n'
+            'requires-python = ">=3.10"\n'
+            "dependencies = []\n"
+            "\n"
+            "[dependency-groups]\n"
+            f'dev = ["dev-group-probe @ {wheel_path.as_uri()}"]\n'
+        )
+        env = os.environ.copy() | {
+            "UV_NO_SYNC": "0",
+            "UV_PROJECT_ENVIRONMENT": str(temp_dir / "task-venv"),
+            "VIRTUAL_ENV": "",
+        }
+        args = _build_uv_base_args(str(project_dir)) + [
+            "--",
+            "python",
+            "-c",
+            "import importlib.util; "
+            "assert importlib.util.find_spec('dev_group_probe') is None",
+        ]
+
+        result = subprocess.run(
+            [uv, *args],
+            cwd=project_dir,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0, result.stderr
 
 
 class TestTaskFactory:

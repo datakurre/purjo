@@ -157,6 +157,8 @@ def _build_uv_base_args(robot_dir: str) -> List[str]:
         "run",
         "--link-mode",
         "copy",
+        "--no-default-groups",
+        "--exact",
         "--project",
         robot_dir,
     ]
@@ -243,6 +245,7 @@ def build_run(
         "BPMN_PROCESS_SCOPE": str(process_variables_file),
         "BPMN_TASK_SCOPE": str(task_variables_file),
         "UV_NO_SYNC": "0",
+        "UV_PROJECT_ENVIRONMENT": str(Path(working_dir) / ".venv"),
         "VIRTUAL_ENV": "",
     }
 
