@@ -39,11 +39,13 @@ The `vault` provider loads secrets from HashiCorp Vault (KV v2).
 ```toml
 [tool.purjo.secrets.prod]
 provider = "vault"
-path = "secret/my-app"
+path = "my-app"
 mount-point = "secret"
 ```
 
-This requires `VAULT_ADDR` and `VAULT_TOKEN` environment variables to be set.
+`mount-point` is the KV mount name; `path` is relative to that mount. For
+example, this configuration reads under `secret/my-app` in Vault. This
+requires `VAULT_ADDR` and `VAULT_TOKEN` environment variables to be set.
 
 #### Subtree traversal
 
@@ -54,7 +56,7 @@ You can explicitly configure subtree traversal using the `subtree` option:
 ```toml
 [tool.purjo.secrets.prod]
 provider = "vault"
-path = "secret/my-app"
+path = "my-app"
 mount-point = "secret"
 subtree = true
 ```

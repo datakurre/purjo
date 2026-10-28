@@ -128,9 +128,12 @@ path = "secrets.json"
 
 [tool.purjo.secrets.prod]
 provider = "vault"
-path = "secret/my-app"
+path = "my-app"
 mount-point = "secret"
 ```
+
+`mount-point` is the KV mount name; `path` is relative to that mount. This
+example reads under `secret/my-app` in Vault.
 
 Select one with `pur serve --secrets prod .`, or point at a file directly with
 `pur serve --secrets ./my-secrets.json .`. The `vault` provider needs
