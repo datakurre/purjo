@@ -103,7 +103,9 @@ let
       };
 
       languages.python.enable = true;
-      languages.python.version = "3.13";
+      # Use Nixpkgs' Python 3.15 package until nixpkgs-python adds its missing
+      # 3.15 no-ldconfig patch.
+      languages.python.package = pkgs.python315;
       languages.python.uv.enable = true;
       languages.python.uv.sync = {
         enable = true;
@@ -123,7 +125,7 @@ let
       git-hooks.hooks.treefmt = {
         enable = true;
         stages = [ "manual" ];
-        settings.formatters = [ pkgs.nixfmt-rfc-style ];
+        settings.formatters = [ pkgs.nixfmt ];
       };
       # devenv's own `devenv:git-hooks:run` task (run by `devenv test`) always
       # does a plain `prek run -a`, which filters to the `pre-commit` stage
@@ -152,7 +154,7 @@ let
           pkgs.curl
           pkgs.jq
           pkgs.vault-bin
-          pkgs.nixfmt-rfc-style
+          pkgs.nixfmt
           mockoon-cli
         ];
 

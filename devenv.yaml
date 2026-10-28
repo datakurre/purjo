@@ -7,7 +7,7 @@ inputs:
       nixpkgs:
         follows: nixpkgs
   nixpkgs:
-    url: github:nixos/nixpkgs/nixos-25.11
+    url: github:nixos/nixpkgs/nixos-26.05
   # This matches devenv's own default rather than overriding it: devenv
   # declares the input itself with `follows = [ "nixpkgs" ]` in
   # src/modules/languages/python/default.nix, so removing the line here would

@@ -1,7 +1,7 @@
 {
   description = "purjo";
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
     flake-utils.url = "github:numtide/flake-utils";
     flake-utils-vasara.url = "gitlab:vasara-bpm/flake-utils-vasara";
     flake-utils-vasara.inputs.nixpkgs.follows = "nixpkgs";
@@ -72,6 +72,7 @@
             pkgs.python312
             pkgs.python313
             pkgs.python314
+            pkgs.python315
           ];
         };
 
