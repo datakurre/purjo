@@ -137,6 +137,16 @@ Report:  /tmp/tmp2721mpez/report.html
 
 The example rolls a die and fails with `Bad luck` on a roll below 3, to demonstrate BPMN error handling: about one run in three prints `FAIL` and the process continues through its error boundary event instead.
 
+## Nix builds
+
+Private artifacts in `uv.lock` are fetched by Nix during evaluation. Set `NETRC` to a readable netrc file; the Makefile passes it to Nix as `netrc-file`. For direct Nix commands, use the same Nix option:
+
+```console
+$ nix --option netrc-file "$NETRC" build .#image
+```
+
+The credentials are used by the evaluating Nix client and are not exposed to sandboxed build steps. Do not add the netrc file to `extra-sandbox-paths`.
+
 ## More information
 
 * Documentation: https://datakurre.github.io/purjo/

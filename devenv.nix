@@ -115,6 +115,29 @@ let
 
       outputs.python.app = config.languages.python.import ./. { };
 
+      # Shell realization alone does not build task commands or process info scripts.
+      outputs.devenvCache =
+        let
+          taskCommands = lib.concatLists (
+            lib.mapAttrsToList (
+              name: task:
+              lib.optional (task.command != null) {
+                inherit name;
+                path = task.command;
+              }
+              ++ lib.optional (task.statusCommand != null) {
+                name = "${name}-status";
+                path = task.statusCommand;
+              }
+            ) config.tasks
+          );
+          processCommands = lib.mapAttrsToList (name: process: {
+            inherit name;
+            path = pkgs.writeShellScript name process.exec;
+          }) (lib.filterAttrs (_: process: process.start.enable) config.processes);
+        in
+        pkgs.linkFarm "devenv-cache" (taskCommands ++ processCommands);
+
       # https://devenv.sh/pre-commit-hooks/
       # Keeps `treefmt` runnable as a plain command (via `make format` /
       # `devenv test`) without installing it as an actual git hook: the
@@ -144,17 +167,19 @@ let
           mockoon-cli = pkgs.callPackage ./fixture/mockoon { };
         in
         [
+          pkgs.curl
           pkgs.entr
           pkgs.findutils
           pkgs.git
           pkgs.gnumake
+          pkgs.jfrog-cli
+          pkgs.jq
+          pkgs.nixfmt
+          pkgs.skopeo
           pkgs.openssl
+          pkgs.vault-bin
           pkgs.vim
           pkgs.zip
-          pkgs.curl
-          pkgs.jq
-          pkgs.vault-bin
-          pkgs.nixfmt
           mockoon-cli
         ];
 

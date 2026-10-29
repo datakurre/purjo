@@ -28,7 +28,7 @@
         ];
         pythonApp = flake-utils-vasara.lib.mkPythonApp {
           inherit pkgs;
-          python = pkgs.python313;
+          python = pkgs.python314;
           workspaceRoot = ./.;
           overrides =
             final: prev:
@@ -62,7 +62,7 @@
         packages.default = pythonApp.package;
         packages.image = flake-utils-vasara.lib.mkContainerImage {
           inherit pkgs;
-          path = "datakurre/purjo/purjo";
+          path = "vasara-bpm/purjo";
           package = pythonApp.package;
           callable = "pur";
           labels = ./Labels.json;

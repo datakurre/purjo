@@ -50,7 +50,9 @@ jobs:
           # Via stdin, not -p: an argv password is readable from /proc by any
           # other process on the runner for as long as the login runs.
           printenv REGISTRY_PASSWORD \
-            | podman login -u "$GITHUB_ACTOR" --password-stdin "$REGISTRY"
+            | devenv shell -- skopeo login \
+                --authfile "$RUNNER_TEMP/containers-auth.json" \
+                -u "$GITHUB_ACTOR" --password-stdin "$REGISTRY"
 
       # Reads the ref from the environment, never through a workflow
       # expression: a tag name is attacker-chosen text, and an expression is
@@ -80,6 +82,7 @@ jobs:
           IFS=',' read -ra TAGS <<< "$IMAGE_TAGS"
 
           for TAG in "${TAGS[@]}"; do
-            podman tag "localhost/${IMAGE_NAME}:latest" "${TAG}"
-            podman push "${TAG}"
+            ./result | devenv shell -- skopeo copy \
+              --authfile "$RUNNER_TEMP/containers-auth.json" \
+              docker-archive:/dev/stdin "docker://${TAG}"
           done

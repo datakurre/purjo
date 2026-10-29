@@ -4,7 +4,12 @@ help:
 INDEX_URL ?= https://pypi.python.org/simple
 INDEX_HOSTNAME ?= pypi.python.org
 
-# export NETRC ?= $(HOME)/.netrc
+NETRC ?=
+
+NIX_CACHE ?= https://cache.nixos.org
+NIX_CACHE_OPTIONS ?=
+NIX_INSTALLABLE ?= .
+NIX_OPTIONS = --option substituters "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" $(if $(wildcard $(NETRC)),--option netrc-file "$(NETRC)")
 
 export PYTHONPATH=$(PWD)/src
 MODULE := purjo
@@ -12,14 +17,34 @@ APP := pur
 
 # Check if 'devenv' exists
 ifeq (, $(shell command -v devenv))
-DEVENV := nix run nixpkgs/nixos-25.05\#devenv --
+DEVENV := nix run nixpkgs/nixos-26.05\#devenv --
 else
 DEVENV := devenv
 endif
-# DEVENV_OPTIONS ?= --nix-option extra-sandbox-paths $(NETRC)
+DEVENV_OPTIONS = --nix-option substituters "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" $(if $(wildcard $(NETRC)),--nix-option netrc-file "$(NETRC)")
 
 build:  ## Build application
-	$(DEVENV) $(DEVENV_OPTIONS) build outputs.python.app
+	nix build $(NIX_INSTALLABLE) $(NIX_OPTIONS)
+
+.PHONY: cache cache-devenv
+cache:  ## Copy the selected Nix installable to NIX_CACHE
+	@if [ -n "$(NIX_CACHE)" ] && [ "$(NIX_CACHE)" != "https://cache.nixos.org" ]; then \
+	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)" \
+	    "$$(nix build $(NIX_INSTALLABLE) --no-link --print-out-paths $(NIX_OPTIONS))"; \
+	else \
+	  echo "NIX_CACHE is the read-only public cache; set it to a writable cache to upload"; \
+	fi
+
+cache-devenv:  ## Build and copy devenv store paths to NIX_CACHE
+	@if [ -n "$(NIX_CACHE)" ] && [ "$(NIX_CACHE)" != "https://cache.nixos.org" ]; then \
+	  set -euo pipefail; \
+	  $(DEVENV) $(DEVENV_OPTIONS) shell -- true; \
+	  $(DEVENV) $(DEVENV_OPTIONS) build outputs.devenvCache; \
+	  $(DEVENV) $(DEVENV_OPTIONS) info | grep -Eo '/nix/store/[0-9a-z]{32}-[A-Za-z0-9+._?=-]+' | sort -u | \
+	    xargs -r nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)"; \
+	else \
+	  echo "NIX_CACHE is the read-only public cache; set it to a writable cache to upload"; \
+	fi
 
 build-docs: ## Build the Sphinx documentation site
 	sphinx-build docs docs/_build/html
@@ -123,14 +148,8 @@ watch-tests:  ## Continuously run all tests
 htmlcov: .coverage
 	coverage html
 
-define _env_script
-cat << EOF > .env
-ENGINE_REST_BASE_URL=http://localhost:8080/engine-rest
-ENGINE_REST_AUTHORIZATION=Basic ZGVtbzpkZW1v
-EOF
-endef
-export env_script = $(value _env_script)
-.env: ; @ eval "$$env_script"
+.env:
+	cp .env.example .env
 
 devenv-%:  ## Run command in $(DEVENV) $(DEVENV_OPTIONS) shell
 	$(DEVENV) $(DEVENV_OPTIONS) shell -- $(MAKE) $*
