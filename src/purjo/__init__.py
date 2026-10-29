@@ -4,11 +4,21 @@ This package provides tools for orchestrating Robot Framework test suites
 and Python tasks with the Operaton BPM engine through external task workers.
 """
 
-from purjo.Purjo import Purjo as purjo
 from typing import Any
 from typing import Optional
 from typing import Tuple
 from typing import Type
+
+purjo: Optional[Type[Any]]
+# The Robot Framework library export is optional requiring robotframework.
+try:
+    from purjo.Purjo import Purjo as _Purjo
+except ModuleNotFoundError as error:
+    if error.name != "robot":
+        raise
+    purjo = None
+else:
+    purjo = _Purjo
 
 
 def _import_parsers() -> Tuple[Optional[Type[Any]], Optional[Type[Any]]]:
@@ -21,8 +31,7 @@ def _import_parsers() -> Tuple[Optional[Type[Any]], Optional[Type[Any]]]:
         from purjo.data.RobotParser import RobotParser
 
         return PythonParser, RobotParser
-    # Only taken when Robot Framework is absent, which never happens in the
-    # test environment because robotframework is a development dependency.
+    # Robot Framework parsers are only needed by Robot Framework tests.
     except ModuleNotFoundError:  # pragma: no cover
         # PythonParser depends on robot
         return None, None
