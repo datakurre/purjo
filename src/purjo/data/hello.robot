@@ -1,14 +1,14 @@
 *** Settings ***
-Library     Hello.py
-Library     random
+Library    Hello.py
+Library    random
 
 
 *** Variables ***
-${BPMN:PROCESS}     local
-${name}             n/a
+${BPMN:PROCESS}    local
+${name}            n/a
 # Roll below this fails the run, to demonstrate BPMN error handling.
 # The bundled test suite overrides it to 0 for a deterministic run.
-${threshold}        ${3}
+${threshold}       ${3}
 
 
 *** Test Cases ***

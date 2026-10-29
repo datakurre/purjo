@@ -1,11 +1,11 @@
 *** Settings ***
-Library     Hello.py
-Library     random
+Library    Hello.py
+Library    random
 
 
 *** Variables ***
-${BPMN:PROCESS}     local
-${name}             n/a
+${BPMN:PROCESS}    local
+${name}            n/a
 
 
 *** Test Cases ***

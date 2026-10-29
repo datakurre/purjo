@@ -1,11 +1,11 @@
 *** Settings ***
-Library             RobotLibrary
+Library          RobotLibrary
 
-Test Template       Test Hello
+Test Template    Test Hello
 
 
 *** Variables ***
-${message}      Hello World
+${message}    Hello World
 
 
 *** Test Cases ***    NAME

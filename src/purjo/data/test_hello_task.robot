@@ -1,11 +1,11 @@
 *** Settings ***
-Library             RobotLibrary
+Library          RobotLibrary
 
-Task Template       Test Hello
+Task Template    Test Hello
 
 
 *** Variables ***
-${message}      Hello World
+${message}    Hello World
 
 
 *** Tasks ***    NAME
