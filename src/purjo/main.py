@@ -47,6 +47,7 @@ from typing import Annotated
 from typing import List
 from typing import Optional
 from typing import Union
+from zipfile import ZIP_DEFLATED
 from zipfile import ZipFile
 import asyncio
 import importlib.resources
@@ -606,7 +607,7 @@ def wrap_package(
         )
     spec = get_wrap_pathspec(cwd_path)
     zip_path = cwd_path / "robot.zip"
-    with ZipFile(zip_path, "w") as zipf:
+    with ZipFile(zip_path, "w", compression=ZIP_DEFLATED, compresslevel=9) as zipf:
         for file_path in spec.match_tree_files(
             cwd_path, negate=True, follow_links=False
         ):

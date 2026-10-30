@@ -17,6 +17,7 @@ from purjo.main import wrap_package
 from typing import Any
 from unittest.mock import Mock
 from unittest.mock import patch
+from zipfile import ZIP_DEFLATED
 from zipfile import ZipFile
 import pytest
 
@@ -54,6 +55,7 @@ name = "Test"
             names = zf.namelist()
             assert "pyproject.toml" in names
             assert "test.robot" in names
+            assert zf.getinfo("test.robot").compress_type == ZIP_DEFLATED
 
     def test_wrap_respects_wrapignore(self, temp_dir: Path, monkeypatch: Any) -> None:
         """Test that cli_wrap respects .wrapignore file."""
