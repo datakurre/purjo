@@ -127,6 +127,13 @@ jobs:
         run: nix profile add nixpkgs#devenv
         shell: bash
 
+      # devenv loads dotenv on shell entry, so create .env before the first
+      # step that uses the default devenv shell.
+      - name: Configure OAuth2 credentials
+        if: matrix.auth == 'oauth2'
+        run: cp .env.example .env
+        shell: bash
+
       # Build the profile's environment before the timed step below, so its
       # port wait budgets service startup only, not a cold-runner nix
       # download. Each matrix job gets its own runner with an empty store, and
@@ -147,12 +154,6 @@ jobs:
       - name: Run ${{ matrix.auth }} e2e tests
         timeout-minutes: 15
         run: |
-          # Only the OAuth2 engine needs credentials on the environment: the
-          # basic tests pass ENGINE_REST_AUTHORIZATION to `pur` themselves via
-          # the basic_auth_env fixture, and operaton-tasks rejects a config
-          # that sets both auth methods at once. .env is gitignored, and
-          # devenv's dotenv loader reads it on shell entry.
-          if [ "${{ matrix.auth }}" = "oauth2" ]; then cp .env.example .env; fi
           devenv --profile ${{ matrix.profile }} processes up > processes.log 2>&1 &
           processes_pid=$!
           status=0

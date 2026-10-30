@@ -24,8 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # `make container-dist` derives CONTAINER_TAG from `git describe
-          # --tags`, which finds no names in a depth-1 checkout.
+          # release-container.mk uses git describe to populate tag metadata
+          # in Labels.json, so fetch tags as well as the commit.
           fetch-depth: 0
 
       - name: Install Nix
@@ -75,14 +75,18 @@ jobs:
       - name: Build container image
         run: devenv shell -- make container-dist
 
-      - name: Push container image
+      - name: Push container image tags
         env:
           IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
         run: |
+          set -euo pipefail
           IFS=',' read -ra TAGS <<< "$IMAGE_TAGS"
+          archive=$(mktemp "$RUNNER_TEMP/image-archive.XXXXXX")
+          trap 'rm -f "$archive"' EXIT
+          ./result > "$archive"
 
           for TAG in "${TAGS[@]}"; do
-            ./result | devenv shell -- skopeo copy \
+            devenv shell -- skopeo copy \
               --authfile "$RUNNER_TEMP/containers-auth.json" \
-              docker-archive:/dev/stdin "docker://${TAG}"
+              "docker-archive:${archive}" "docker://${TAG}"
           done
