@@ -1,9 +1,10 @@
-## 1.0rc3 (unreleased)
+## 1.0rc3 (2026-10-30)
 
 - Fix to install only runtime dependencies in a dedicated per-task uv environment
+- Fix to issue where JSON variable values were not always parsed
+- Fix `pur wrap` to apply compression
 - Add support for reading a Vault path as a root for a subtree of secret
   records, recursively constructing a nested dictionary structure.
-- Fix to issue where JSON variable values were not always parsed:
 
 ## 1.0rc2 (2026-10-12)
 
