@@ -89,6 +89,58 @@ Secrets are injected as variables into your Robot Framework or Python tasks.
 
 In Robot Framework, secrets are available as standard variables. If `robotframework` >= 7.4b2 is used, they are automatically converted to `Secret` objects, which mask their values in logs.
 
+Structured secrets are **not** wrapped as one large `Secret`. Dictionaries and
+lists keep their structure and readable keys; each scalar leaf value is
+wrapped individually as a `Secret`.
+
+For example, this input has multiple levels of mappings, like a credential
+tree keyed by project:
+
+```json
+{
+  "credentials": {
+    "project-a": {
+      "service_account": {
+        "client_email": "account@example.invalid",
+        "private_key": "secret-value"
+      }
+    }
+  },
+  "service_api": {
+    "primary": {
+      "endpoint": "https://service.example",
+      "token": "another-secret"
+    }
+  }
+}
+```
+
+is injected conceptually as the same mapping tree, with each leaf value masked
+separately:
+
+```text
+{
+  "credentials": {
+    "project-a": {
+      "service_account": {
+        "client_email": Secret(value=<secret>),
+        "private_key": Secret(value=<secret>)
+      }
+    }
+  },
+  "service_api": {
+    "primary": {
+      "endpoint": Secret(value=<secret>),
+      "token": Secret(value=<secret>)
+    }
+  }
+}
+```
+
+Every key, including project IDs and nested record names, remains readable for
+lookup. A task that needs a secret's actual content reads that leaf's `.value`;
+avoid logging that value.
+
 ```robotframework
 *** Tasks ***
 Use API Key

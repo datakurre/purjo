@@ -17,6 +17,7 @@ from purjo.data.RobotParser import RobotParser
 from purjo.data.RobotParser import set_bpmn_process
 from purjo.data.RobotParser import set_bpmn_task
 from purjo.data.RobotParser import Variables
+from robot.api.types import Secret
 from robot.running import TestDefaults  # type: ignore[import-untyped]
 from typing import Any
 from unittest.mock import Mock
@@ -331,6 +332,33 @@ class TestVariables:
         # Check that the secret object is present (not checking its string representation)
         assert result["api_key"] is not None
         assert result["password"] is not None
+
+    def test_load_nested_secrets_preserving_structure(self, temp_dir: Path) -> None:
+        """Nested secret containers remain mappings while leaf values are masked."""
+        variables_file = temp_dir / "variables.json"
+        variables_file.write_text("{}")
+
+        secrets_file = temp_dir / "secrets.json"
+        secrets_file.write_text(
+            json.dumps(
+                {
+                    "nested": {"record": {"field": "secret-a"}},
+                    "items": [{"field": "secret-b"}],
+                }
+            )
+        )
+
+        result = Variables().get_variables(str(variables_file), str(secrets_file))
+
+        assert isinstance(result["nested"], dict)
+        assert isinstance(result["nested"]["record"], dict)
+        nested_value = result["nested"]["record"]["field"]
+        assert isinstance(nested_value, Secret)
+        assert nested_value.value == "secret-a"
+        assert isinstance(result["items"], list)
+        list_value = result["items"][0]["field"]
+        assert isinstance(list_value, Secret)
+        assert list_value.value == "secret-b"
 
     def test_missing_variables_file(self, temp_dir: Path) -> None:
         """Test that missing variables file returns empty dict."""

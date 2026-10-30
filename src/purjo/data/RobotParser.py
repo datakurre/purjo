@@ -24,7 +24,15 @@ except ImportError:  # pragma: no cover
 
     class Secret(str):  # type: ignore
         def __repr__(self) -> str:
-            return f"<Secret: {self}>"
+            return f"<Secret: {self}>"  # pragma: no cover
+
+
+def _wrap_secret(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _wrap_secret(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_wrap_secret(item) for item in value]
+    return Secret(value)
 
 
 BPMN_TASK_SCOPE = "BPMN_TASK_SCOPE"
@@ -138,7 +146,7 @@ class Variables:
         if HAS_SECRET and pathlib.Path(secrets).exists():
             with open(secrets, "r") as f:
                 data = json.load(f)
-            result.update({k: Secret(v) for k, v in data.items()})
+            result.update({key: _wrap_secret(value) for key, value in data.items()})
         return result
 
 
