@@ -1,3 +1,9 @@
+## 1.0rc4 (unreleased)
+
+
+- Nothing changed yet.
+
+
 ## 1.0rc3 (2026-10-30)
 
 - Fix to install only runtime dependencies in a dedicated per-task uv environment
