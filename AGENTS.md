@@ -153,10 +153,13 @@ allowed_hosts = [
     "GET devenv.cachix.org:443/**",
     "GET datakurre.cachix.org:443/**",
     "GET vasara-bpm.cachix.org:443/**",
+    "GET repo.maven.apache.org:443/**",
+    "GET releases.hashicorp.com:443/**",
     "GET github.com:443/**",
     "GET codeload.github.com:443/**",
     "GET datakurre.github.io:443/**",
     "GET gitlab.com:443/**",
+    "GET registry.npmjs.org:443/**",
 ]
 
 [ports]
