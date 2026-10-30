@@ -18,7 +18,11 @@ concurrency:
   cancel-in-progress: true
 jobs:
   test:
+    name: Unit Tests and Coverage
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: devenv shell -- bash -e {0}
     # Without this a hung process takes GitHub's 6 hour default with it. 60
     # rather than 45 because a cold runner can spend up to ~40 min in a single
     # slow NAR fetch (see the cachix note in the setup-devenv action).
@@ -26,16 +30,26 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup devenv
-        uses: ./.github/actions/setup-devenv
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
         with:
-          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v16
+        with:
+          name: datakurre
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Install devenv
+        run: nix profile add nixpkgs#devenv
+        shell: bash
 
       - name: Run static analysis checks
-        run: devenv shell -- make check
+        run: make check
 
       - name: Run tests with coverage
-        run: devenv shell -- python -m pytest --cov-report=xml
+        run: python -m pytest --cov-report=xml
 
       - name: Report coverage in job summary
         if: always()
@@ -44,7 +58,7 @@ jobs:
             echo "## Test coverage"
             echo
             echo '```'
-            devenv shell -- python -m coverage report
+            python -m coverage report
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -74,8 +88,11 @@ jobs:
   # `profile: shell` default in devenv.yaml rather than adding to it, so the
   # basic matrix entry really does get an engine without OAuth2 or Keycloak.
   e2e:
-    name: e2e (${{ matrix.auth }})
+    name: E2E Tests (${{ matrix.auth }})
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: devenv --profile ${{ matrix.profile }} shell -- bash -e {0}
     timeout-minutes: 60
     strategy:
       # One auth scenario failing should still report the other.
@@ -95,10 +112,20 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup devenv
-        uses: ./.github/actions/setup-devenv
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
         with:
-          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v16
+        with:
+          name: datakurre
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Install devenv
+        run: nix profile add nixpkgs#devenv
+        shell: bash
 
       # Build the profile's environment before the timed step below, so its
       # port wait budgets service startup only, not a cold-runner nix
@@ -107,7 +134,7 @@ jobs:
       # downloading when the wait expired -- the cleanup listed no service
       # processes at all, because none had started yet.
       - name: Build the ${{ matrix.auth }} environment
-        run: devenv --profile ${{ matrix.profile }} shell -- true
+        run: true
 
       # Deliberately not `devenv test`. It does not run enterTest until every
       # process reports ready, and the daemon it waits on never signals ready
@@ -126,16 +153,14 @@ jobs:
           # that sets both auth methods at once. .env is gitignored, and
           # devenv's dotenv loader reads it on shell entry.
           if [ "${{ matrix.auth }}" = "oauth2" ]; then cp .env.example .env; fi
-          devenv --profile ${{ matrix.profile }} shell -- \
-            devenv --profile ${{ matrix.profile }} processes up > processes.log 2>&1 &
+          devenv --profile ${{ matrix.profile }} processes up > processes.log 2>&1 &
           processes_pid=$!
           status=0
-          devenv --profile ${{ matrix.profile }} shell -- \
-            make test-e2e-ci \
-              E2E_PORTS="${{ matrix.ports }}" \
-              E2E_MARKERS="e2e and auth_${{ matrix.auth }}" \
-              E2E_READY_URL="${{ matrix.ready_url }}" \
-              E2E_WAIT_SECONDS=300 || status=$?
+          make test-e2e-ci \
+            E2E_PORTS="${{ matrix.ports }}" \
+            E2E_MARKERS="e2e and auth_${{ matrix.auth }}" \
+            E2E_READY_URL="${{ matrix.ready_url }}" \
+            E2E_WAIT_SECONDS=300 || status=$?
           kill "$processes_pid" 2>/dev/null || true
           if [ "$status" -ne 0 ]; then
             echo "::group::devenv processes output"

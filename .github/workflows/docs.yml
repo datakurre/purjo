@@ -1,4 +1,4 @@
-name: Build and deploy docs
+name: Build and Deploy Docs
 on:
   push:
     branches:
@@ -7,7 +7,11 @@ permissions:
   contents: read
 jobs:
   build:
+    name: Build Docs
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: devenv shell -- bash -e {0}
     timeout-minutes: 30
     permissions:
       contents: read
@@ -16,14 +20,24 @@ jobs:
 
       - uses: actions/configure-pages@v5
 
-      - name: Setup devenv
-        uses: ./.github/actions/setup-devenv
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
         with:
-          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v16
+        with:
+          name: datakurre
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Install devenv
+        run: nix profile add nixpkgs#devenv
+        shell: bash
 
       - name: Build docs
         run: |
-          devenv shell -- make build-docs
+          make build-docs
           touch docs/_build/html/.nojekyll
 
       - uses: actions/upload-pages-artifact@v3
@@ -31,6 +45,7 @@ jobs:
           path: docs/_build/html
 
   deploy:
+    name: Deploy Docs
     needs: build
     runs-on: ubuntu-latest
     environment:
