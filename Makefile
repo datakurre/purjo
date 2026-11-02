@@ -29,8 +29,9 @@ build:  ## Build application
 .PHONY: cache cache-devenv
 cache:  ## Copy the selected Nix installable to NIX_CACHE
 	@if [ -n "$(NIX_CACHE)" ] && [ "$(NIX_CACHE)" != "https://cache.nixos.org" ]; then \
-	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)" \
-	    "$$(nix build $(NIX_INSTALLABLE) --no-link --print-out-paths $(NIX_OPTIONS))"; \
+	  set -e; \
+	  out=$$(nix build $(NIX_INSTALLABLE) --no-link --print-out-paths $(NIX_OPTIONS)); \
+	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)" "$$out"; \
 	else \
 	  echo "NIX_CACHE is the read-only public cache; set it to a writable cache to upload"; \
 	fi
