@@ -10,6 +10,7 @@ NIX_CACHE ?= https://cache.nixos.org
 NIX_CACHE_OPTIONS ?=
 NIX_INSTALLABLE ?= .
 NIX_OPTIONS = --option substituters "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" $(if $(wildcard $(NETRC)),--option netrc-file "$(NETRC)")
+NIX_CACHE_PUSH = $(filter-out https://cache.nixos.org,$(NIX_CACHE))
 
 export PYTHONPATH=$(PWD)/src
 MODULE := purjo
@@ -28,23 +29,36 @@ build:  ## Build application
 
 .PHONY: cache cache-devenv
 cache:  ## Copy the selected Nix installable to NIX_CACHE
-	@if [ -n "$(NIX_CACHE)" ] && [ "$(NIX_CACHE)" != "https://cache.nixos.org" ]; then \
-	  set -e; \
-	  out=$$(nix build $(NIX_INSTALLABLE) --no-link --print-out-paths $(NIX_OPTIONS)); \
-	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)" "$$out"; \
+	@if [ -z "$(NIX_CACHE_PUSH)" ]; then \
+	  echo "Skipping upload: NIX_CACHE is empty or points to the read-only public cache"; \
 	else \
-	  echo "NIX_CACHE is the read-only public cache; set it to a writable cache to upload"; \
+	  set -eu; \
+	  out=$$(nix build $(NIX_INSTALLABLE) --no-link --print-out-paths $(NIX_OPTIONS)); \
+	  if [ -z "$$out" ]; then \
+	    echo "No Nix store paths found to upload" >&2; \
+	    exit 1; \
+	  fi; \
+	  set -f; \
+	  set -- $$out; \
+	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" "$$@"; \
 	fi
 
 cache-devenv:  ## Build and copy devenv store paths to NIX_CACHE
-	@if [ -n "$(NIX_CACHE)" ] && [ "$(NIX_CACHE)" != "https://cache.nixos.org" ]; then \
-	  set -euo pipefail; \
-	  $(DEVENV) $(DEVENV_OPTIONS) shell -- true; \
-	  $(DEVENV) $(DEVENV_OPTIONS) build outputs.devenvCache; \
-	  $(DEVENV) $(DEVENV_OPTIONS) info | grep -Eo '/nix/store/[0-9a-z]{32}-[A-Za-z0-9+._?=-]+' | sort -u | \
-	    xargs -r nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)"; \
+	@if [ -z "$(NIX_CACHE_PUSH)" ]; then \
+	  echo "Skipping upload: NIX_CACHE is empty or points to the read-only public cache"; \
 	else \
-	  echo "NIX_CACHE is the read-only public cache; set it to a writable cache to upload"; \
+	  set -eu; \
+	  $(DEVENV) --quiet $(DEVENV_OPTIONS) shell -- true; \
+	  $(DEVENV) --quiet $(DEVENV_OPTIONS) build outputs.devenvCache >/dev/null; \
+	  info=$$($(DEVENV) --quiet $(DEVENV_OPTIONS) info); \
+	  paths=$$(printf '%s\n' "$$info" | grep -Eo '/nix/store/[0-9a-z]{32}-[A-Za-z0-9+._?=-]+' | sort -u); \
+	  if [ -z "$$paths" ]; then \
+	    echo "No devenv store paths found to upload" >&2; \
+	    exit 1; \
+	  fi; \
+	  set -f; \
+	  set -- $$paths; \
+	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" "$$@"; \
 	fi
 
 build-docs: ## Build the Sphinx documentation site

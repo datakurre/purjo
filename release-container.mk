@@ -82,6 +82,16 @@ container-publish: container-required-vars container-jfrog-required-vars contain
 		$(CONTAINER_RT_BUILD_NUMBER)
 else
 container-publish: container-dist
+	@if [ -n "$$CI_REGISTRY_IMAGE" ]; then \
+		case "$(CONTAINER_NAME)" in \
+			"$$CI_REGISTRY_IMAGE"|"$$CI_REGISTRY_IMAGE"/*) \
+				test -n "$$CI_REGISTRY" || { echo "Error: CI_REGISTRY is not set"; exit 1; }; \
+				test -n "$$CI_REGISTRY_USER" || { echo "Error: CI_REGISTRY_USER is not set"; exit 1; }; \
+				test -n "$$CI_REGISTRY_PASSWORD" || { echo "Error: CI_REGISTRY_PASSWORD is not set"; exit 1; }; \
+				printf '%s' "$$CI_REGISTRY_PASSWORD" | $(SKOPEO) login --username "$$CI_REGISTRY_USER" --password-stdin "$$CI_REGISTRY"; \
+				;; \
+		esac; \
+	fi
 	@archive=$$(mktemp image-archive.XXXXXX) && trap 'rm -f "$$archive"' EXIT && ./result > "$$archive" && $(SKOPEO) copy docker-archive:"$$archive" docker://$(CONTAINER_NAME):$(CONTAINER_TAG)
 	$(SKOPEO) copy docker://$(CONTAINER_NAME):$(CONTAINER_TAG) docker://$(CONTAINER_NAME):latest
 endif
