@@ -638,6 +638,10 @@ class TestDeployAndStart:
             base_url="http://localhost:8080/engine-rest",
         )
 
+        start_request = mock_session_instance.post.call_args_list[1].kwargs["json"]
+        assert start_request["businessKey"] == "custom-key"
+        assert "businessKey" not in start_request["variables"]
+
 
 class TestEngineResponseValidationErrors:
     """Tests for malformed engine responses.

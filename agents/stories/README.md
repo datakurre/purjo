@@ -55,7 +55,7 @@ Additional context, edge cases, or implementation hints.
 ## Story Index
 
 ### `pur serve` Command
-- [US-001](./US-001-serve-robot-packages.md): Serve robot packages as BPMN service tasks
+- [US-001](./US-001-serve-robot-packages.md): Serve robot packages as BPMN service tasks, including selected task metadata
 - [US-002](./US-002-configure-engine-url.md): Configure BPM engine base URL
 - [US-003](./US-003-provide-authorization.md): Provide authorization credentials
 - [US-004](./US-004-configure-secrets.md): Configure secrets profiles

@@ -42,6 +42,7 @@ Three names must agree. Renaming one means renaming all three.
 name = "My Test in Robot"
 on-fail = "ERROR"
 process-variables = true
+task-metadata = ["activityId", "createTime"]
 ```
 
 1. The table key `"My Topic in BPMN"` must equal `camunda:topic` on the
@@ -58,6 +59,17 @@ Fields:
   `false` passes only task-scope variables.
 - `pythonpath` — optional list of extra directories added to Robot's
   `--pythonpath`, e.g. `pythonpath = ["./libs", "./modules"]`.
+- `task-metadata` — optional list of exact `LockedExternalTaskDto` field
+  names to expose as `TASK_METADATA_<FIELD_IN_SCREAMING_SNAKE>` Robot
+  variables. The DTO's `variables` map is excluded; omit the option or use an
+  empty list to disable metadata variables. Reserve the `TASK_METADATA_`
+  prefix for metadata, not BPMN inputs or secrets. Selected null values are
+  Robot `None` values, nested fields remain dictionaries, and secrets keep
+  their existing precedence over variables. If a BPMN input collides with a
+  metadata variable after Robot's case/space/underscore normalization, the
+  task fails before Robot runs. `FAIL` and `COMPLETE` report a technical task
+  failure (COMPLETE does not suppress the collision); `ERROR` reports a BPMN
+  error.
 
 ---
 

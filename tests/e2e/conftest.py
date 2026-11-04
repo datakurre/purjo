@@ -80,18 +80,21 @@ def _port_open(host: str, port: int, timeout: float = 1.0) -> bool:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def require_live_services() -> None:
+def require_live_services(request: pytest.FixtureRequest) -> None:
     """Skip the e2e session outright when devenv's services aren't running."""
     engine_host = urlparse(ENGINE_BASE_URL).hostname or "localhost"
     keycloak_host = urlparse(OAUTH2_TOKEN_URL).hostname or "localhost"
+    required_services = [
+        ("Operaton", engine_host, 8080),
+        ("Vault", "localhost", 8200),
+    ]
+    if any(
+        item.get_closest_marker("auth_oauth2") is not None
+        for item in request.session.items
+    ):
+        required_services.append(("Keycloak", keycloak_host, 8081))
     missing = [
-        name
-        for name, host, port in (
-            ("Operaton", engine_host, 8080),
-            ("Vault", "localhost", 8200),
-            ("Keycloak", keycloak_host, 8081),
-        )
-        if not _port_open(host, port)
+        name for name, host, port in required_services if not _port_open(host, port)
     ]
     if missing:
         pytest.skip(

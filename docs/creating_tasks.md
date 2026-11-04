@@ -59,6 +59,7 @@ name = "My Task in Robot"
 on-fail = "ERROR"
 process-variables = true
 pythonpath = ["./libs", "./modules"]
+task-metadata = ["activityId", "createTime", "businessKey"]
 ```
 
 *   `[tool.purjo.topics."<Topic Name>"]`: Defines the configuration for a specific BPMN topic.
@@ -66,6 +67,30 @@ pythonpath = ["./libs", "./modules"]
 *   `on-fail`: Determines the behavior when the task fails (e.g., "ERROR", "FAIL"). See [Variables of a failed task](handling_variables.md#variables-of-a-failed-task) for what a failed task leaves behind.
 *   `process-variables`: If `true`, process variables are passed to the task. If `false`, only task scope variables are passed to the task.
 *   `pythonpath`: (Optional) A list of additional paths to add to Robot Framework's `--pythonpath`. This allows importing custom libraries and modules from specified directories.
+*   `task-metadata`: (Optional) A list of string `LockedExternalTaskDto` field names to expose as Robot variables named `TASK_METADATA_<FIELD_IN_SCREAMING_SNAKE>`, such as `${TASK_METADATA_ACTIVITY_ID}`. See [available metadata selections and their Robot variable names](handling_variables.md#reading-external-task-metadata). The DTO's `variables` map is not selectable. Omit the option or use an empty list to disable metadata variables; `null`, unknown names, and duplicate names are invalid.
+
+The `TASK_METADATA_` prefix is reserved for these variables; do not use it for
+BPMN inputs or secret names. Selected null values remain available as Robot
+`None` values, and nested values such as `extensionProperties` remain
+dictionaries. A BPMN input that collides with a metadata variable after
+Robot's case/space/underscore normalization fails the task before Robot runs.
+Collision handling follows `on-fail`: `FAIL` and `COMPLETE` produce a
+technical task failure (`COMPLETE` does not suppress the collision), while
+`ERROR` produces a BPMN error.
+
+For example, if a process is started with a known `businessKey`, the topic
+can expose it and copy it to a distinct BPMN process variable:
+
+```console
+$ pur run process.bpmn --variables '{"businessKey": "invoice-42"}'
+```
+
+```robotframework
+*** Test Cases ***
+Keep Business Key
+    Should Be Equal    ${TASK_METADATA_BUSINESS_KEY}    invoice-42
+    VAR    ${metadata_business_key}    ${TASK_METADATA_BUSINESS_KEY}    scope=${BPMN:PROCESS}
+```
 
 ## Advanced task (Pure Python)
 

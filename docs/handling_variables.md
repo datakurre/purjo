@@ -48,6 +48,66 @@ Test Variable Tpyes
 
 In this example, variables like `${String Input}`, `${Number Input}`, `${Boolean Input}`, `${Date Input}`, `@{List Input}`, and `&{Dict Input}` are expected to be set by the BPMN process. `purjo` ensures these are available to the Robot Framework task in the appropriate format.
 
+## Reading external task metadata
+
+Topic configuration can select fields from Operaton's locked external task
+DTO for use in a Robot task:
+
+```toml
+[tool.purjo.topics."My Topic in BPMN"]
+task-metadata = ["activityId", "createTime", "extensionProperties"]
+```
+
+These are available selections, not enabled by default: only fields listed in
+`task-metadata` are exposed, and an omitted or empty list exposes none. The
+field names below come from the project's locked
+`operaton-tasks==1.0rc1` `LockedExternalTaskDto`; the DTO's `variables` map is
+not selectable.
+
+| `task-metadata` field | Robot variable |
+|---|---|
+| `activityId` | `${TASK_METADATA_ACTIVITY_ID}` |
+| `activityInstanceId` | `${TASK_METADATA_ACTIVITY_INSTANCE_ID}` |
+| `errorMessage` | `${TASK_METADATA_ERROR_MESSAGE}` |
+| `errorDetails` | `${TASK_METADATA_ERROR_DETAILS}` |
+| `executionId` | `${TASK_METADATA_EXECUTION_ID}` |
+| `id` | `${TASK_METADATA_ID}` |
+| `lockExpirationTime` | `${TASK_METADATA_LOCK_EXPIRATION_TIME}` |
+| `processDefinitionId` | `${TASK_METADATA_PROCESS_DEFINITION_ID}` |
+| `processDefinitionKey` | `${TASK_METADATA_PROCESS_DEFINITION_KEY}` |
+| `processDefinitionVersionTag` | `${TASK_METADATA_PROCESS_DEFINITION_VERSION_TAG}` |
+| `processInstanceId` | `${TASK_METADATA_PROCESS_INSTANCE_ID}` |
+| `tenantId` | `${TASK_METADATA_TENANT_ID}` |
+| `retries` | `${TASK_METADATA_RETRIES}` |
+| `suspended` | `${TASK_METADATA_SUSPENDED}` |
+| `workerId` | `${TASK_METADATA_WORKER_ID}` |
+| `priority` | `${TASK_METADATA_PRIORITY}` |
+| `topicName` | `${TASK_METADATA_TOPIC_NAME}` |
+| `businessKey` | `${TASK_METADATA_BUSINESS_KEY}` |
+| `extensionProperties` | `${TASK_METADATA_EXTENSION_PROPERTIES}` |
+| `createTime` | `${TASK_METADATA_CREATE_TIME}` |
+
+Each selected field is provided as a Robot variable in the variable-file
+scope, using a reserved `TASK_METADATA_` prefix and a screaming-snake-case
+field suffix. For example, `activityId` is `${TASK_METADATA_ACTIVITY_ID}`.
+The metadata variables are separate from BPMN process/task variables; they
+are not automatically written back to Operaton.
+
+Field names must match fields on the installed `LockedExternalTaskDto`;
+unknown names, duplicates, and `variables` are configuration errors. Selected
+null fields remain Robot `None` values. Nested values, including
+`extensionProperties`, remain dictionaries, while date/time fields are
+serialized as JSON strings.
+
+Reserve the `TASK_METADATA_` prefix for metadata; do not use it for BPMN
+inputs or secret names. If a secret is nevertheless configured with a
+metadata variable name, the existing secret-over-variable precedence remains
+in effect, so the secret value wins. If a BPMN input collides with a metadata
+variable after Robot's case/space/underscore normalization, the task fails
+before Robot runs. Collision handling follows `on-fail`: `FAIL` and
+`COMPLETE` produce a technical task failure (`COMPLETE` does not suppress the
+collision), while `ERROR` produces a BPMN error.
+
 ## Setting variables from tasks to BPMN
 
 You can also set variables within your tasks to be passed back to the BPMN process. `purjo` supports setting variables with specific scopes: task-local or process-global.

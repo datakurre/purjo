@@ -391,7 +391,7 @@ class TestVariables:
         variables_file.write_text('{"var1": "value1", "var2": 42}')
 
         secrets_file = temp_dir / "secrets.json"
-        secrets_file.write_text('{"api_key": "secret123"}')
+        secrets_file.write_text('{"api_key": "secret123", "var1": "secret override"}')
 
         variables = Variables()
         result = variables.get_variables(str(variables_file), str(secrets_file))
@@ -400,6 +400,7 @@ class TestVariables:
         assert "var1" in result
         assert "var2" in result
         assert "api_key" in result
+        assert result["var1"].value == "secret override"
 
 
 class TestVarScope:

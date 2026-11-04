@@ -200,6 +200,31 @@ def _build_parser_arg(config: Task, is_python: bool) -> str:
     return "RobotParser"
 
 
+def _task_metadata_variable_name(field: str) -> str:
+    """Map a DTO field name to its prefixed Robot variable name."""
+    screaming_snake = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", field).upper()
+    return f"TASK_METADATA_{screaming_snake}"
+
+
+def _task_metadata_variable_collision(
+    input_variables: Dict[str, Any],
+    task_metadata_variables: Dict[str, Any],
+) -> Optional[str]:
+    """Return a helpful error if Robot-normalized metadata names overlap inputs."""
+    normalized_inputs = {
+        re.sub(r"[\s_]+", "", name).casefold(): name for name in input_variables
+    }
+    for metadata_name in task_metadata_variables:
+        normalized_name = re.sub(r"[\s_]+", "", metadata_name).casefold()
+        input_name = normalized_inputs.get(normalized_name)
+        if input_name is not None:
+            return (
+                f"Task metadata variable {metadata_name!r} collides with BPMN "
+                f"variable {input_name!r} after Robot Framework name normalization."
+            )
+    return None
+
+
 def build_run(
     config: Task,
     robot_dir: str,
@@ -524,12 +549,40 @@ def create_task(
                 working_dir = Path(working_dir_str)
 
                 # Prepare variables
-                variables = await py_from_operaton(
+                task_metadata = task.model_dump(
+                    mode="json", include=set(config.task_metadata)
+                )
+                input_variables = await py_from_operaton(
                     task.variables, task, working_dir
-                ) | {
-                    "BPMN:PROCESS": "BPMN:PROCESS",
-                    "BPMN:TASK": "BPMN:TASK",
+                )
+                task_metadata_variables = {
+                    _task_metadata_variable_name(name): value
+                    for name, value in task_metadata.items()
                 }
+                collision = _task_metadata_variable_collision(
+                    input_variables, task_metadata_variables
+                )
+                if collision:
+                    return await handle_failure_result(
+                        task,
+                        # COMPLETE must not suppress a worker-input collision;
+                        # FAIL and ERROR retain their configured handling.
+                        OnFail.FAIL if on_fail == OnFail.COMPLETE else on_fail,
+                        working_dir / "output.xml",
+                        b"",
+                        collision.encode("utf-8"),
+                        {},
+                        {},
+                    )
+
+                variables = (
+                    input_variables
+                    | {
+                        "BPMN:PROCESS": "BPMN:PROCESS",
+                        "BPMN:TASK": "BPMN:TASK",
+                    }
+                    | task_metadata_variables
+                )
 
                 # Prepare working directories
                 prepare_working_directories(robot, working_dir, robot_dir)

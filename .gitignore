@@ -52,3 +52,4 @@ TODO.md
 # Local example scratch, but keep the committed example project
 examples/*
 !examples/pdf/
+!examples/task-metadata/

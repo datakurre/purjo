@@ -1,8 +1,9 @@
 ## 1.0rc4 (unreleased)
 
-
-- Nothing changed yet.
-
+- Add per-topic `task-metadata` configuration to expose selected external
+  task DTO fields as prefixed Robot variables. Report Robot-normalized
+  metadata/BPMN input collisions using the configured `on-fail` behavior;
+  `COMPLETE` does not suppress these failures.
 
 ## 1.0rc3 (2026-10-30)
 

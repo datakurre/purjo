@@ -3,7 +3,7 @@
 **Status:** Active
 **Date:** 2026-01-25
 **Related ADRs:** ADR-000, ADR-002
-**Related Tests:** tests/cli/test_cli_advanced.py, tests/unit/test_runner.py, tests/unit/test_purjo_lib.py, tests/unit/test_robot_parser.py, tests/integration/test_workflows.py
+**Related Tests:** tests/cli/test_cli_advanced.py, tests/unit/test_runner.py, tests/unit/test_purjo_lib.py, tests/unit/test_robot_parser.py, tests/integration/test_workflows.py, tests/e2e/test_task_metadata.py
 
 ---
 
@@ -32,6 +32,11 @@ So that I can execute automated tasks from the BPM engine.
 **When** the execution finishes
 **Then** the results are reported back to the BPM engine
 
+### AC-4: Expose Selected Task Metadata
+**Given** a topic selects valid task DTO fields with `task-metadata`
+**When** a task is locked and its Robot suite runs
+**Then** each selected field is available as a `TASK_METADATA_`-prefixed Robot variable without exposing the DTO's `variables` map
+
 ---
 
 ## Notes
@@ -39,3 +44,5 @@ So that I can execute automated tasks from the BPM engine.
 - The worker uses long-polling to efficiently wait for tasks
 - Each topic maps to a specific robot package
 - Execution happens in an isolated environment managed by `uv`
+- Selected task metadata is provided only to the Robot execution and is not
+  automatically reported back as a BPMN variable

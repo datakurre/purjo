@@ -148,6 +148,31 @@ class TestTask:
         assert task.on_fail is None
         assert task.process_variables is False
         assert task.pythonpath is None
+        assert task.task_metadata == []
+
+    def test_alias_parsing_task_metadata(self) -> None:
+        """Test alias parsing for task-metadata."""
+        task = Task(**{"task-metadata": ["topicName", "createTime"]})  # type: ignore[arg-type]
+
+        assert task.task_metadata == ["topicName", "createTime"]
+        assert Task(**{"task-metadata": []}).task_metadata == []  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        "task_metadata",
+        [
+            ["unknownField"],
+            ["variables"],
+            ["topicName", "topicName"],
+            ["topicName", 1],
+            None,
+        ],
+    )
+    def test_rejects_invalid_task_metadata(self, task_metadata: Any) -> None:
+        """Test invalid task-metadata entries are rejected."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            Task(**{"task-metadata": task_metadata})
 
     def test_alias_parsing_on_fail(self) -> None:
         """Test alias parsing for on-fail."""
@@ -1407,6 +1432,194 @@ class TestCreateTaskResultProcessing:
 
     Related: US-001, US-009
     """
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "on_fail, expected_result",
+        [
+            (OnFail.COMPLETE, "technical"),
+            (OnFail.ERROR, "bpmn"),
+        ],
+    )
+    async def test_task_metadata_collision_obeys_on_fail(
+        self, temp_dir: Path, on_fail: OnFail, expected_result: str
+    ) -> None:
+        """Route normalized collisions according to the topic failure policy."""
+        from operaton.tasks.types import ExternalTaskBpmnError
+        from operaton.tasks.types import ExternalTaskComplete
+        from operaton.tasks.types import ExternalTaskFailure
+        from operaton.tasks.types import LockedExternalTaskDto
+        from operaton.tasks.types import VariableValueDto
+        from purjo.runner import create_task
+
+        robot_dir = temp_dir / "robot"
+        robot_dir.mkdir()
+        (robot_dir / "pyproject.toml").write_text("[project]\nname='test'")
+
+        task_handler = create_task(
+            config=Task(**{"task-metadata": ["topicName"]}),  # type: ignore[arg-type]
+            robot=robot_dir,
+            on_fail=on_fail,
+            semaphore=asyncio.Semaphore(1),
+            secrets_provider=None,
+            robot_parser_content="# Mock RobotParser",
+        )
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="metadata-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+            variables={
+                "task metadata topic name": VariableValueDto(
+                    value="input-value", type="String"
+                )
+            },
+        )
+
+        with patch("purjo.runner.build_run") as mock_build_run:
+            result = await task_handler(task)
+
+        mock_build_run.assert_not_called()
+        if expected_result == "technical":
+            assert isinstance(result, ExternalTaskFailure)
+            assert "TASK_METADATA_TOPIC_NAME" in result.response.errorMessage
+            assert "task metadata topic name" in result.response.errorMessage
+        else:
+            assert isinstance(result, ExternalTaskComplete)
+            assert isinstance(result.response, ExternalTaskBpmnError)
+            error_message = result.response.errorMessage or ""
+            assert "TASK_METADATA_TOPIC_NAME" in error_message
+            assert "task metadata topic name" in error_message
+
+    @pytest.mark.asyncio
+    async def test_exposes_selected_task_metadata_to_robot_variables(
+        self, temp_dir: Path
+    ) -> None:
+        """Expose metadata as prefixed globals without returning it to Operaton."""
+        from datetime import datetime
+        from datetime import timezone
+        from operaton.tasks.types import ExternalTaskComplete
+        from operaton.tasks.types import LockedExternalTaskDto
+        from operaton.tasks.types import VariableValueDto
+        from purjo.runner import create_task
+
+        robot_dir = temp_dir / "robot"
+        robot_dir.mkdir()
+        (robot_dir / "pyproject.toml").write_text("[project]\nname='test'")
+
+        task_handler = create_task(
+            config=Task(
+                **{  # type: ignore[arg-type]
+                    "task-metadata": [
+                        "activityId",
+                        "topicName",
+                        "createTime",
+                        "extensionProperties",
+                        "processDefinitionVersionTag",
+                    ]
+                }
+            ),
+            robot=robot_dir,
+            on_fail=OnFail.COMPLETE,
+            semaphore=asyncio.Semaphore(1),
+            secrets_provider=None,
+            robot_parser_content="# Mock RobotParser",
+        )
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="metadata-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+            createTime=datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+            extensionProperties={"region": "west"},
+            variables={
+                "input": VariableValueDto(value="input-value", type="String"),
+            },
+        )
+        observed: dict[str, Any] = {}
+
+        async def mock_build_run_coro(*args: Any, **kwargs: Any) -> Any:
+            working_dir = Path(args[2])
+            observed.update(json.loads((working_dir / "variables.json").read_text()))
+            return (0, b"success", b"")
+
+        with patch("purjo.runner.build_run", side_effect=mock_build_run_coro):
+            result = await task_handler(task)
+
+        assert isinstance(result, ExternalTaskComplete)
+        assert observed["input"] == "input-value"
+        assert observed["TASK_METADATA_ACTIVITY_ID"] == "activity-1"
+        assert observed["TASK_METADATA_TOPIC_NAME"] == "metadata-topic"
+        assert observed["TASK_METADATA_CREATE_TIME"].startswith("2026-01-02T03:04:05")
+        assert observed["TASK_METADATA_EXTENSION_PROPERTIES"] == {"region": "west"}
+        assert observed["TASK_METADATA_PROCESS_DEFINITION_VERSION_TAG"] is None
+        assert "TASK_METADATA_VARIABLES" not in observed
+        response_variables = result.response.variables or {}
+        response_local_variables = result.response.localVariables or {}
+        assert not any(name.startswith("TASK_METADATA_") for name in response_variables)
+        assert not any(
+            name.startswith("TASK_METADATA_") for name in response_local_variables
+        )
+
+    @pytest.mark.asyncio
+    async def test_secret_overrides_injected_task_metadata_variable(
+        self, temp_dir: Path
+    ) -> None:
+        """A same-named secret retains the Robot variable-file precedence."""
+        from operaton.tasks.types import ExternalTaskComplete
+        from operaton.tasks.types import LockedExternalTaskDto
+        from purjo.runner import create_task
+
+        robot_dir = temp_dir / "robot"
+        robot_dir.mkdir()
+        (robot_dir / "pyproject.toml").write_text("[project]\nname='test'")
+
+        secrets_provider = MagicMock()
+        secrets_provider.read.return_value = {
+            "TASK_METADATA_TOPIC_NAME": "secret override"
+        }
+        task_handler = create_task(
+            config=Task(**{"task-metadata": ["topicName"]}),  # type: ignore[arg-type]
+            robot=robot_dir,
+            on_fail=OnFail.FAIL,
+            semaphore=asyncio.Semaphore(1),
+            secrets_provider=secrets_provider,
+            robot_parser_content="# Mock RobotParser",
+        )
+        task = LockedExternalTaskDto(
+            id="task-1",
+            workerId="worker-1",
+            topicName="metadata-topic",
+            activityId="activity-1",
+            processInstanceId="process-1",
+            processDefinitionId="def-1",
+            executionId="exec-1",
+            variables={},
+        )
+        observed: dict[str, Any] = {}
+
+        async def mock_build_run_coro(*args: Any, **kwargs: Any) -> Any:
+            working_dir = Path(args[2])
+            from purjo.data.RobotParser import Variables
+
+            robot_variables = Variables().get_variables(
+                str(working_dir / "variables.json"),
+                str(working_dir / "secrets.json"),
+            )
+            observed["value"] = robot_variables["TASK_METADATA_TOPIC_NAME"].value
+            return (0, b"success", b"")
+
+        with patch("purjo.runner.build_run", side_effect=mock_build_run_coro):
+            result = await task_handler(task)
+
+        assert isinstance(result, ExternalTaskComplete)
+        assert observed["value"] == "secret override"
 
     @pytest.mark.asyncio
     async def test_preserves_types_and_attaches_output_files(
