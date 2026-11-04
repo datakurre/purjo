@@ -1,4 +1,4 @@
-## 1.0rc4 (unreleased)
+## 1.0rc4 (2026-11-04)
 
 - Add per-topic `task-metadata` configuration to expose selected external
   task DTO fields as prefixed Robot variables. Report Robot-normalized
