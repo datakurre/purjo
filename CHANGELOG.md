@@ -1,3 +1,9 @@
+## 1.0rc5 (unreleased)
+
+
+- Nothing changed yet.
+
+
 ## 1.0rc4 (2026-11-04)
 
 - Add per-topic `task-metadata` configuration to expose selected external
