@@ -1,0 +1,14 @@
+[project]
+name = "task-metadata-example"
+version = "0.1.0"
+description = "Example: expose selected external task metadata to Robot Framework"
+requires-python = ">=3.12"
+dependencies = [
+    "robotframework>=7.4.1",
+]
+
+[tool.purjo.topics."Task Metadata"]
+name = "Read task metadata"
+on-fail = "COMPLETE"
+process-variables = true
+task-metadata = ["activityId", "topicName", "createTime", "businessKey"]
