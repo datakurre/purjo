@@ -27,40 +27,6 @@ DEVENV_OPTIONS = --nix-option substituters "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" $(
 build:  ## Build application
 	nix build $(NIX_INSTALLABLE) $(NIX_OPTIONS)
 
-.PHONY: cache cache-devenv
-cache:  ## Copy the selected Nix installable to NIX_CACHE
-	@if [ -z "$(NIX_CACHE_PUSH)" ]; then \
-	  echo "Skipping upload: NIX_CACHE is empty or points to the read-only public cache"; \
-	else \
-	  set -eu; \
-	  out=$$(nix build $(NIX_INSTALLABLE) --no-link --print-out-paths $(NIX_OPTIONS)); \
-	  if [ -z "$$out" ]; then \
-	    echo "No Nix store paths found to upload" >&2; \
-	    exit 1; \
-	  fi; \
-	  set -f; \
-	  set -- $$out; \
-	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" "$$@"; \
-	fi
-
-cache-devenv:  ## Build and copy devenv store paths to NIX_CACHE
-	@if [ -z "$(NIX_CACHE_PUSH)" ]; then \
-	  echo "Skipping upload: NIX_CACHE is empty or points to the read-only public cache"; \
-	else \
-	  set -eu; \
-	  $(DEVENV) --quiet $(DEVENV_OPTIONS) shell -- true; \
-	  $(DEVENV) --quiet $(DEVENV_OPTIONS) build outputs.devenvCache >/dev/null; \
-	  info=$$($(DEVENV) --quiet $(DEVENV_OPTIONS) info); \
-	  paths=$$(printf '%s\n' "$$info" | grep -Eo '/nix/store/[0-9a-z]{32}-[A-Za-z0-9+._?=-]+' | sort -u); \
-	  if [ -z "$$paths" ]; then \
-	    echo "No devenv store paths found to upload" >&2; \
-	    exit 1; \
-	  fi; \
-	  set -f; \
-	  set -- $$paths; \
-	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" "$$@"; \
-	fi
-
 build-docs: ## Build the Sphinx documentation site
 	sphinx-build docs docs/_build/html
 
@@ -165,6 +131,40 @@ htmlcov: .coverage
 
 .env:
 	cp .env.example .env
+
+.PHONY: cache cache-devenv
+cache:  ## Copy the selected Nix installable to NIX_CACHE
+	@if [ -z "$(NIX_CACHE_PUSH)" ]; then \
+	  echo "Skipping upload: NIX_CACHE is empty or points to the read-only public cache"; \
+	else \
+	  set -eu; \
+	  out=$$(nix build $(NIX_INSTALLABLE) --no-link --print-out-paths $(NIX_OPTIONS) --accept-flake-config); \
+	  if [ -z "$$out" ]; then \
+	    echo "No Nix store paths found to upload" >&2; \
+	    exit 1; \
+	  fi; \
+	  set -f; \
+	  set -- $$out; \
+	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" "$$@"; \
+	fi
+
+cache-devenv:  ## Build and copy devenv store paths to NIX_CACHE
+	@if [ -z "$(NIX_CACHE_PUSH)" ]; then \
+	  echo "Skipping upload: NIX_CACHE is empty or points to the read-only public cache"; \
+	else \
+	  set -eu; \
+	  $(DEVENV) --quiet $(DEVENV_OPTIONS) shell -- true; \
+	  $(DEVENV) --quiet $(DEVENV_OPTIONS) build outputs.devenvCache >/dev/null; \
+	  info=$$($(DEVENV) --quiet $(DEVENV_OPTIONS) info); \
+	  paths=$$(printf '%s\n' "$$info" | grep -Eo '/nix/store/[0-9a-z]{32}-[A-Za-z0-9+._?=-]+' | sort -u); \
+	  if [ -z "$$paths" ]; then \
+	    echo "No devenv store paths found to upload" >&2; \
+	    exit 1; \
+	  fi; \
+	  set -f; \
+	  set -- $$paths; \
+	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" "$$@"; \
+	fi
 
 devenv-%:  ## Run command in $(DEVENV) $(DEVENV_OPTIONS) shell
 	$(DEVENV) $(DEVENV_OPTIONS) shell -- $(MAKE) $*
