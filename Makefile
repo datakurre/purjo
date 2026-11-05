@@ -162,10 +162,10 @@ cache-devenv:  ## Copy the devenv profile to NIX_CACHE
 	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" "$$profile"; \
 	fi
 
-devenv-%:  ## Run command in $(DEVENV) $(DEVENV_OPTIONS) shell
+nix-%:  ## Run command in $(DEVENV) $(DEVENV_OPTIONS) shell
 	$(DEVENV) $(DEVENV_OPTIONS) shell -- $(MAKE) $*
 
-nix-%:  ## Run command in $(DEVENV) $(DEVENV_OPTIONS) shell
+devenv-%:  ## Run command in $(DEVENV) $(DEVENV_OPTIONS) shell
 	$(DEVENV) $(DEVENV_OPTIONS) shell -- $(MAKE) $*
 
 FORCE:
