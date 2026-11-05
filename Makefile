@@ -70,7 +70,8 @@ test: check test-pytest  ## Run all tests and checks
 test-coverage: htmlcov  ## Generate HTML coverage reports
 
 test-pytest:  ## Run unit tests with pytest
-	pytest --cov=$(MODULE) tests
+	mkdir -p build/reports
+	pytest --cov=$(MODULE) --cov-report=xml:build/reports/coverage.xml --junitxml=build/reports/pytest.xml tests
 
 E2E_WAIT_SECONDS ?= 180
 # The engine authenticates one way at a time, so each auth scenario is its own

@@ -14,6 +14,7 @@ coverage.xml
 .pytest_cache/
 htmlcov/
 results/
+/build/
 
 # Development Tools
 .devenv*
@@ -44,10 +45,10 @@ output/
 *.pem
 
 # Project-Specific
-result
+/result
 dist/
 fixture/target/
-TODO.md
+/TODO.md
 
 # Local example scratch, but keep the committed example project
 examples/*
