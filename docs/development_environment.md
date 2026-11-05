@@ -5,7 +5,7 @@ title: Development Environment
 
 # Development environment
 
-`purjo` utilizes [`devenv`](https://devenv.sh/) to provide a reproducible and feature-rich development environment. This setup includes not only the necessary Python tools but also a suite of services to simulate a production-like ecosystem.
+`purjo` utilizes [`devenv`](https://devenv.sh/) to provide a reproducible and feature-rich development environment. The unprofiled shell provides the Python and Make tooling for checks and unit tests; service-backed environments are selected explicitly with a profile.
 
 ## Prerequisites
 
@@ -14,13 +14,13 @@ title: Development Environment
 
 ## Services
 
-When you run `devenv up`, the following services are started automatically:
+Run `devenv --profile oauth up` to start the OAuth2 development services:
 
 ### Operaton BPM Engine
 *   **Port:** `8080`
 *   **URL:** `http://localhost:8080/operaton`
 *   **Description:** A lightweight, open-source BPM engine. It serves as the orchestration core for your `purjo` tasks.
-*   **Authentication:** OAuth2-protected by default (via the Keycloak service below), rather than the plain HTTP Basic credential used in older setups. Requests need either a valid OAuth2 bearer token or `ENGINE_REST_AUTHORIZATION` -- never both (see [CLI Reference](cli_reference.md)).
+*   **Authentication:** OAuth2-protected in this profile (via the Keycloak service below), rather than the plain HTTP Basic credential used in older setups. Requests need either a valid OAuth2 bearer token or `ENGINE_REST_AUTHORIZATION` -- never both (see [CLI Reference](cli_reference.md)).
 
 ### Keycloak
 *   **Port:** `8081`
@@ -56,10 +56,10 @@ When working with `purjo` in VS Code, the following extensions are recommended:
 ## Running tests
 
 ```console
-$ devenv test
+$ devenv shell -- make check test
 ```
 
-This command waits for all services (Operaton, Vault, Keycloak) to be ready, then runs the unit test suite (`make test`) followed by the end-to-end suite against those live services (`make test-e2e`; see [End-to-end testing](#end-to-end-testing) below). It covers the default (OAuth2) profile only; CI does not use it.
+This runs static analysis and the unit test suite without starting services. To run the end-to-end suite, start the appropriate profile's services and use the profile-specific commands below.
 
 ## Testing strategies
 
@@ -84,7 +84,7 @@ test is marked with the one it needs:
 
 | Profile | Engine | Marker |
 | --- | --- | --- |
-| `shell` (the default) | OAuth2-protected, with Keycloak | `auth_oauth2` |
+| `oauth` | OAuth2-protected, with Keycloak | `auth_oauth2` |
 | `basic` | HTTP Basic on `/engine-rest`, no Keycloak | `auth_basic` |
 
 `services.operaton` asserts that its `oauth2` and `basicAuth` options are
@@ -92,12 +92,12 @@ mutually exclusive, which is why these are separate profiles. Each profile
 proves its own engine is actually protected rather than merely reachable:
 `test_unauthenticated_request_is_rejected` carries both markers and runs in
 either, and a scheme-specific test either side of it checks that the Basic
-credential is accepted under `basic` and rejected under `shell`.
+credential is accepted under `basic` and rejected under `oauth`.
 
 ```console
-$ devenv up                                     # OAuth2 engine (default profile)
+$ devenv --profile oauth up                    # OAuth2 engine
 $ cp .env.example .env                          # client credentials it needs
-$ devenv shell -- make test-e2e E2E_MARKERS="e2e and auth_oauth2"
+$ devenv --profile oauth shell -- make test-e2e E2E_MARKERS="e2e and auth_oauth2"
 
 $ devenv --profile basic up                     # Basic-auth engine
 $ devenv --profile basic shell -- make test-e2e E2E_MARKERS="e2e and auth_basic"
@@ -113,7 +113,7 @@ than letting the suite skip itself green).
 
 You can also drive the same flow by hand, which is what `tests/e2e/`
 automates:
-1.  Start the services with `devenv up`.
+1.  Start the services with `devenv --profile oauth up`.
 2.  Deploy your process using `pur run` or `pur operaton deploy`.
 3.  Start a process instance.
 4.  Run `pur serve` to execute the tasks.

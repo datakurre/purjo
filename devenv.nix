@@ -1,4 +1,33 @@
 let
+  # The unprofiled shell is the lightweight development environment for
+  # `make check` and `make test`. Service-backed environments add a profile.
+  development =
+    {
+      pkgs,
+      config,
+      ...
+    }:
+    {
+      languages.python.enable = true;
+      # Use Nixpkgs' Python 3.15 package until nixpkgs-python adds its missing
+      # 3.15 no-ldconfig patch.
+      languages.python.package = pkgs.python315;
+      languages.python.uv.enable = true;
+      languages.python.uv.sync = {
+        enable = true;
+        allGroups = true;
+      };
+      languages.python.venv.enable = true;
+
+      outputs.python.app = config.languages.python.import ./. { };
+
+      packages = [
+        pkgs.gnumake
+        pkgs.jfrog-cli
+        pkgs.jq
+        pkgs.skopeo
+      ];
+    };
   # Everything that is the same whichever way the engine authenticates.
   # The auth-specific pieces live in the two profiles at the bottom, because
   # the engine can only be configured one way at a time -- so exercising both
@@ -102,19 +131,6 @@ let
         period = 1;
       };
 
-      languages.python.enable = true;
-      # Use Nixpkgs' Python 3.15 package until nixpkgs-python adds its missing
-      # 3.15 no-ldconfig patch.
-      languages.python.package = pkgs.python315;
-      languages.python.uv.enable = true;
-      languages.python.uv.sync = {
-        enable = true;
-        allGroups = true;
-      };
-      languages.python.venv.enable = true;
-
-      outputs.python.app = config.languages.python.import ./. { };
-
       # Shell realization alone does not build task commands or process info scripts.
       outputs.devenvCache =
         let
@@ -171,11 +187,7 @@ let
           pkgs.entr
           pkgs.findutils
           pkgs.git
-          pkgs.gnumake
-          pkgs.jfrog-cli
-          pkgs.jq
           pkgs.nixfmt
-          pkgs.skopeo
           pkgs.openssl
           pkgs.vault-bin
           pkgs.vim
@@ -238,12 +250,13 @@ let
     };
 in
 {
+  imports = [ development ];
+
   profiles.base.module = {
     imports = [ base ];
   };
-  # The default (devenv.yaml sets `profile: shell`), so a plain `devenv shell`
-  # still gets the OAuth2 engine it did before.
-  profiles.shell = {
+  # OAuth2-protected engine.
+  profiles.oauth = {
     extends = [ "base" ];
     module = {
       imports = [ oauth2Engine ];

@@ -1,30 +1,39 @@
 # Required inputs:
 CONTAINER_PATH ?= datakurre/purjo/purjo
 CONTAINER_DOMAIN ?= ghcr.io
+
+CONTAINER_RT_REPO_STAGING ?=
+CONTAINER_RT_REPO_PROMOTED ?=
+
 CONTAINER_NAME = $(CONTAINER_DOMAIN)/$(CONTAINER_PATH)
 
 ifdef CI_PIPELINE_ID
 CONTAINER_TAG = $(if $(CI_COMMIT_TAG),$(CI_COMMIT_TAG),$(CI_PIPELINE_ID)-$(CI_COMMIT_SHORT_SHA))
 else
-CONTAINER_TAG = $(shell git describe --dirty --tags)
+CONTAINER_TAG = $(shell git describe --dirty --tags --always)
 endif
 
 CONTAINER_RT_BUILD_NAME := $(CI_PROJECT_ID)
 CONTAINER_RT_BUILD_NUMBER := $(CI_PIPELINE_ID)
 CONTAINER_RT_IMAGE = $(CONTAINER_DOMAIN)/$(CONTAINER_PATH)
-CONTAINER_RT_REPO_STAGING ?=
-CONTAINER_RT_REPO_PROMOTED ?=
 
 # Optional: fill in some meta for local builds
 CI_COMMIT_TAG ?= $(shell git describe --exact-match --tags 2>/dev/null)
 CI_COMMIT_SHA ?= $(shell git rev-parse HEAD)
+CI_COMMIT_SHORT_SHA ?= $(shell git rev-parse --short HEAD)
 
 # Bash is needed for pipefail
 SHELL := bash
+FLAKE_OUTPUT ?= image
 JF_CLI ?= jf
+JF_AUTH_OPTS ?=
 SKOPEO ?= skopeo
 CONTAINER_PUBLISHER ?= skopeo
 
+.PHONY: container-show container-show-image .FORCE Labels.json container-dist container-clean \
+	container-publish container-promote container-required-vars \
+	container-registry-required-vars container-jfrog-required-vars \
+	container-promoted-required-vars
 container-show:  ## Show container details
 	# CONTAINER_NAME = $(CONTAINER_NAME)
 	# CONTAINER_TAG = $(CONTAINER_TAG)
@@ -36,9 +45,10 @@ container-show:  ## Show container details
 	# CI_COMMIT_TAG = $(CI_COMMIT_TAG)
 
 container-show-image:
-	@echo $(CONTAINER_NAME):$(CONTAINER_TAG)
+	@echo "$(CONTAINER_NAME):$(CONTAINER_TAG)"
 
 .PHONY: .FORCE
+.FORCE:
 Labels.json: .FORCE
 	@echo '{' > Labels.json
 	@echo '  "fi.jyu.vasara.rev": "$(CI_COMMIT_SHA)",' >> Labels.json
@@ -49,37 +59,40 @@ Labels.json: .FORCE
 	@echo '  "fi.jyu.vasara.ci_pipeline_id": "$(CI_PIPELINE_ID)"' >> Labels.json
 	@echo '}' >> Labels.json
 
-container-dist: Labels.json  ## Build container image
-	@echo "# Build the image"
-	nix --extra-experimental-features 'nix-command flakes' build .#image
-	git restore Labels.json
+container-dist:  ## Build the container image
+	@set -euo pipefail; \
+	$(MAKE) --no-print-directory Labels.json; \
+	nix build $(NIX_OPTIONS) .#$(FLAKE_OUTPUT)
+	@echo "{}" > Labels.json
 
 container-clean:
-	rm -fr result-image.json result-image.digest result-image-details.txt image-archive.*
+	rm -f result result-image.digest result-image-details.txt image-archive.tar
 
 ifeq ($(CONTAINER_PUBLISHER),jf)
 container-publish: container-required-vars container-jfrog-required-vars container-dist
-	# Stage the Nix image stream so an early Skopeo exit does not break the producer pipe.
-	@archive=$$(mktemp image-archive.XXXXXX) && trap 'rm -f "$$archive"' EXIT && ./result > "$$archive" && $(SKOPEO) copy --dest-registry-token "$$ARTIFACTORY_ACCESS_TOKEN" --digestfile result-image.digest docker-archive:"$$archive" docker://$(CONTAINER_RT_IMAGE):$(CONTAINER_TAG)
+	@set -euo pipefail; \
+	archive=image-archive.tar; \
+	test ! -e "$$archive" || { echo "Error: $$archive already exists"; exit 1; }; \
+	trap 'rm -f "$$archive"' EXIT; \
+	./result > "$$archive"; \
+	$(SKOPEO) copy --dest-registry-token "$$ARTIFACTORY_ACCESS_TOKEN" --digestfile result-image.digest docker-archive:"$$archive" docker://$(CONTAINER_RT_IMAGE):$(CONTAINER_TAG)
 	# Copy the versioned image to the mutable latest tag in Artifactory.
 	@$(SKOPEO) copy --src-registry-token "$$ARTIFACTORY_ACCESS_TOKEN" --dest-registry-token "$$ARTIFACTORY_ACCESS_TOKEN" docker://$(CONTAINER_RT_IMAGE):$(CONTAINER_TAG) docker://$(CONTAINER_RT_IMAGE):latest
 	# JFrog expects the image tag and registry manifest digest in this file.
 	@digest=$$(cat result-image.digest) && test -n "$$digest" && printf '%s@%s\n' "$(CONTAINER_RT_IMAGE):$(CONTAINER_TAG)" "$$digest" > result-image-details.txt
 	# Associate the current Git revision and CI build number with build-info.
-	$(JF_CLI) rt build-add-git \
-		$(CONTAINER_RT_BUILD_NAME) \
-		$(CONTAINER_RT_BUILD_NUMBER)
+	@$(JF_CLI) rt build-add-git "$(CONTAINER_RT_BUILD_NAME)" "$(CONTAINER_RT_BUILD_NUMBER)"
 	# Record only the versioned image; latest remains a rolling tag.
-	@$(JF_CLI) rt build-docker-create $(CONTAINER_RT_REPO_STAGING) \
-	--image-file=result-image-details.txt \
-	--build-name="$(CONTAINER_RT_BUILD_NAME)" \
-	--build-number="$(CONTAINER_RT_BUILD_NUMBER)" \
-	$(JF_AUTH_OPTS)
+	@$(JF_CLI) rt build-docker-create "$(CONTAINER_RT_REPO_STAGING)" \
+		--image-file=result-image-details.txt \
+		--build-name="$(CONTAINER_RT_BUILD_NAME)" \
+		--build-number="$(CONTAINER_RT_BUILD_NUMBER)" \
+		$(JF_AUTH_OPTS)
 	# Publish the collected Git and image metadata to Artifactory.
 	@$(JF_CLI) rt build-publish \
 		$(JF_AUTH_OPTS) \
-		$(CONTAINER_RT_BUILD_NAME) \
-		$(CONTAINER_RT_BUILD_NUMBER)
+		"$(CONTAINER_RT_BUILD_NAME)" \
+		"$(CONTAINER_RT_BUILD_NUMBER)"
 else
 container-publish: container-dist
 	@if [ -n "$$CI_REGISTRY_IMAGE" ]; then \
@@ -92,22 +105,37 @@ container-publish: container-dist
 				;; \
 		esac; \
 	fi
-	@archive=$$(mktemp image-archive.XXXXXX) && trap 'rm -f "$$archive"' EXIT && ./result > "$$archive" && $(SKOPEO) copy docker-archive:"$$archive" docker://$(CONTAINER_NAME):$(CONTAINER_TAG)
+	@set -euo pipefail; \
+	archive=image-archive.tar; \
+	test ! -e "$$archive" || { echo "Error: $$archive already exists"; exit 1; }; \
+	trap 'rm -f "$$archive"' EXIT; \
+	./result > "$$archive"; \
+	$(SKOPEO) copy docker-archive:"$$archive" docker://$(CONTAINER_NAME):$(CONTAINER_TAG)
 	$(SKOPEO) copy docker://$(CONTAINER_NAME):$(CONTAINER_TAG) docker://$(CONTAINER_NAME):latest
 endif
 
-container-promote: container-required-vars
-	$(JF_CLI) rt build-promote \
+container-promote: container-required-vars container-jfrog-required-vars container-promoted-required-vars
+	@$(JF_CLI) rt build-promote \
 		$(JF_AUTH_OPTS) \
-		$(CONTAINER_RT_BUILD_NAME) \
-		$(CONTAINER_RT_BUILD_NUMBER) \
-		$(CONTAINER_RT_REPO_PROMOTED)
+		"$(CONTAINER_RT_BUILD_NAME)" \
+		"$(CONTAINER_RT_BUILD_NUMBER)" \
+		"$(CONTAINER_RT_REPO_PROMOTED)"
 
 container-required-vars:
-	@test -n "$(CONTAINER_RT_BUILD_NAME)" || { echo "Error: CONTAINER_RT_BUILD_NAME is not set"; exit 1; }
-	@test -n "$(CONTAINER_RT_BUILD_NUMBER)" || { echo "Error: CONTAINER_RT_BUILD_NUMBER is not set"; exit 1; }
+	@[[ -n "$(CONTAINER_RT_BUILD_NAME)" ]] \
+		|| (echo "Error: CONTAINER_RT_BUILD_NAME is not set"; exit 1)
+	@[[ -n "$(CONTAINER_RT_BUILD_NUMBER)" ]] \
+		|| (echo "Error: CONTAINER_RT_BUILD_NUMBER is not set"; exit 1)
 
 container-jfrog-required-vars:
 	@test -n "$$ARTIFACTORY_URL" || { echo "Error: ARTIFACTORY_URL is not set"; exit 1; }
 	@test -n "$$ARTIFACTORY_ACCESS_TOKEN" || { echo "Error: ARTIFACTORY_ACCESS_TOKEN is not set"; exit 1; }
 	@test -n "$(CONTAINER_RT_REPO_STAGING)" || { echo "Error: CONTAINER_RT_REPO_STAGING is not set"; exit 1; }
+
+container-registry-required-vars:
+	@test -n "$$CI_REGISTRY" || { echo "Error: CI_REGISTRY is not set"; exit 1; }
+	@test -n "$$CI_REGISTRY_USER" || { echo "Error: CI_REGISTRY_USER is not set"; exit 1; }
+	@test -n "$$CI_REGISTRY_PASSWORD" || { echo "Error: CI_REGISTRY_PASSWORD is not set"; exit 1; }
+
+container-promoted-required-vars:
+	@test -n "$(CONTAINER_RT_REPO_PROMOTED)" || { echo "Error: CONTAINER_RT_REPO_PROMOTED is not set"; exit 1; }

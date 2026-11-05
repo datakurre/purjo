@@ -84,9 +84,8 @@ jobs:
 
   # The engine can only be configured for one authentication method at a time,
   # so covering both means two environments rather than two fixtures: a devenv
-  # profile each (see devenv.nix) and a job each. `--profile` overrides the
-  # `profile: shell` default in devenv.yaml rather than adding to it, so the
-  # basic matrix entry really does get an engine without OAuth2 or Keycloak.
+  # profile each (see devenv.nix) and a job each. Each matrix job selects its
+  # profile explicitly, so the basic entry gets an engine without OAuth2 or Keycloak.
   e2e:
     name: E2E Tests (${{ matrix.auth }})
     runs-on: ubuntu-latest
@@ -100,7 +99,7 @@ jobs:
       matrix:
         include:
           - auth: oauth2
-            profile: shell
+            profile: oauth
             ports: 8080 8200 8081
             # Keycloak listens on 8081 before it can serve tokens; this is the
             # endpoint that stops returning 503 once the realm is imported.

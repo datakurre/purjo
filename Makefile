@@ -8,9 +8,9 @@ NETRC ?=
 
 NIX_CACHE ?= https://cache.nixos.org
 NIX_CACHE_OPTIONS ?=
-NIX_INSTALLABLE ?= .
-NIX_OPTIONS = --option substituters "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" $(if $(wildcard $(NETRC)),--option netrc-file "$(NETRC)")
 NIX_CACHE_PUSH = $(filter-out https://cache.nixos.org,$(NIX_CACHE))
+NIX_INSTALLABLE ?= .
+NIX_OPTIONS = --accept-flake-config --extra-experimental-features 'nix-command flakes' --option substituters "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" $(if $(wildcard $(NETRC)),--option netrc-file "$(NETRC)")
 
 export PYTHONPATH=$(PWD)/src
 MODULE := purjo
@@ -75,8 +75,8 @@ test-pytest:  ## Run unit tests with pytest
 E2E_WAIT_SECONDS ?= 180
 # The engine authenticates one way at a time, so each auth scenario is its own
 # devenv profile and its own CI job. Override both of these together:
-#   oauth2 (default `shell` profile): ports 8080 8200 8081, -m "e2e and auth_oauth2"
-#   basic  (`basic` profile):         ports 8080 8200,      -m "e2e and auth_basic"
+#   oauth2 (`oauth` profile): ports 8080 8200 8081, -m "e2e and auth_oauth2"
+#   basic  (`basic` profile): ports 8080 8200,      -m "e2e and auth_basic"
 E2E_PORTS ?= 8080 8200 8081
 E2E_MARKERS ?= e2e
 # A listening port is not readiness. Keycloak accepts connections on 8081 while
@@ -138,7 +138,7 @@ cache:  ## Copy the selected Nix installable to NIX_CACHE
 	  echo "Skipping upload: NIX_CACHE is empty or points to the read-only public cache"; \
 	else \
 	  set -eu; \
-	  out=$$(nix build $(NIX_INSTALLABLE) --no-link --print-out-paths $(NIX_OPTIONS) --accept-flake-config); \
+	  out=$$(nix build $(NIX_INSTALLABLE) --no-link --print-out-paths $(NIX_OPTIONS)); \
 	  if [ -z "$$out" ]; then \
 	    echo "No Nix store paths found to upload" >&2; \
 	    exit 1; \
@@ -148,22 +148,17 @@ cache:  ## Copy the selected Nix installable to NIX_CACHE
 	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" "$$@"; \
 	fi
 
-cache-devenv:  ## Build and copy devenv store paths to NIX_CACHE
+cache-devenv:  ## Copy the devenv profile to NIX_CACHE
 	@if [ -z "$(NIX_CACHE_PUSH)" ]; then \
 	  echo "Skipping upload: NIX_CACHE is empty or points to the read-only public cache"; \
 	else \
 	  set -eu; \
-	  $(DEVENV) --quiet $(DEVENV_OPTIONS) shell -- true; \
-	  $(DEVENV) --quiet $(DEVENV_OPTIONS) build outputs.devenvCache >/dev/null; \
-	  info=$$($(DEVENV) --quiet $(DEVENV_OPTIONS) info); \
-	  paths=$$(printf '%s\n' "$$info" | grep -Eo '/nix/store/[0-9a-z]{32}-[A-Za-z0-9+._?=-]+' | sort -u); \
-	  if [ -z "$$paths" ]; then \
-	    echo "No devenv store paths found to upload" >&2; \
+	  profile=$$($(DEVENV) --quiet $(DEVENV_OPTIONS) shell -- printenv DEVENV_PROFILE); \
+	  if [ -z "$$profile" ]; then \
+	    echo "No devenv profile found to upload" >&2; \
 	    exit 1; \
 	  fi; \
-	  set -f; \
-	  set -- $$paths; \
-	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" "$$@"; \
+	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" "$$profile"; \
 	fi
 
 devenv-%:  ## Run command in $(DEVENV) $(DEVENV_OPTIONS) shell
