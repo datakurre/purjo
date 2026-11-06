@@ -59,6 +59,17 @@
         };
       in
       {
+        devShells.ci = pkgs.mkShell {
+          packages = with pkgs; [
+            bash
+            git
+            gnumake
+            jfrog-cli
+            jq
+            skopeo
+          ];
+        };
+
         packages.default = pythonApp.package;
         packages.image = flake-utils-vasara.lib.mkContainerImage {
           inherit pkgs;

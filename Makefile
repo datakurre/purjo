@@ -133,8 +133,8 @@ htmlcov: .coverage
 .env:
 	cp .env.example .env
 
-.PHONY: cache cache-devenv
-cache:  ## Copy the selected Nix installable to NIX_CACHE
+.PHONY: cache-build cache-shell
+cache-build:  ## Copy the selected Nix installable to NIX_CACHE
 	@if [ -z "$(NIX_CACHE_PUSH)" ]; then \
 	  echo "Skipping upload: NIX_CACHE is empty or points to the read-only public cache"; \
 	else \
@@ -149,7 +149,7 @@ cache:  ## Copy the selected Nix installable to NIX_CACHE
 	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" "$$@"; \
 	fi
 
-cache-devenv:  ## Copy the devenv profile to NIX_CACHE
+cache-shell:  ## Copy the devenv profile to NIX_CACHE
 	@if [ -z "$(NIX_CACHE_PUSH)" ]; then \
 	  echo "Skipping upload: NIX_CACHE is empty or points to the read-only public cache"; \
 	else \
@@ -162,8 +162,8 @@ cache-devenv:  ## Copy the devenv profile to NIX_CACHE
 	  nix copy $(NIX_OPTIONS) --to "$(NIX_CACHE)$(NIX_CACHE_OPTIONS)" "$$profile"; \
 	fi
 
-nix-%:  ## Run command in $(DEVENV) $(DEVENV_OPTIONS) shell
-	$(DEVENV) $(DEVENV_OPTIONS) shell -- $(MAKE) $*
+nix-%:  ## Run command in the Nix CI shell
+	nix develop .#ci $(NIX_OPTIONS) --command $(MAKE) $*
 
 devenv-%:  ## Run command in $(DEVENV) $(DEVENV_OPTIONS) shell
 	$(DEVENV) $(DEVENV_OPTIONS) shell -- $(MAKE) $*
